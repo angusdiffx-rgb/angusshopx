@@ -35,6 +35,16 @@ async function startServer() {
     });
   }
 
+  // Start server-side Keep-alive self-ping
+  // Render free tier spins down after 15 minutes of inactivity.
+  // We ping our own public URL every 10 minutes to reset the timer.
+  const EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL || 'https://angusshopx.onrender.com';
+  setInterval(() => {
+    fetch(`${EXTERNAL_URL}/api/health`)
+      .then(res => console.log(`[Keep-Alive] Pinged ${EXTERNAL_URL}: ${res.status}`))
+      .catch(err => console.error(`[Keep-Alive] Ping failed:`, err.message));
+  }, 10 * 60 * 1000); // 10 minutes
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`AngusShop Server running on http://0.0.0.0:${PORT}`);
   });

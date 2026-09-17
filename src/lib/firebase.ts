@@ -137,6 +137,8 @@ export const formatAuthErrorMessage = (error: any): string => {
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
       return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+    case 'auth/operation-not-allowed':
+      return 'การเข้าสู่ระบบด้วยอีเมล/รหัสผ่าน ยังไม่ถูกเปิดใช้งานใน Firebase Console โปรดติดต่อผู้ดูแลระบบ';
     case 'auth/too-many-requests':
       return 'มีการพยายามเข้าสู่ระบบผิดพลาดบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
     case 'auth/network-request-failed':
