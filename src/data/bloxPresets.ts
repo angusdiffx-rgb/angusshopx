@@ -20,6 +20,14 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   stat2Label: 'สินค้าคุณภาพ',
   stat3Label: 'รับประกัน',
   stat4Label: 'บริการ 24 ชม.',
+  categoriesTitle: 'หมวดหมู่สินค้า',
+  categoriesSubtitle: 'เลือกช้อปสินค้า Blox Fruits ตามประเภทที่ท่านต้องการ',
+  categoryCards: [
+    { name: 'ผลปีศาจ', desc: 'คิตสึเนะ มังกร โมจิ ถาวร & กล่องผล', iconType: 'icon', iconName: 'Flame', colorClass: 'from-amber-500/25 to-orange-500/10' },
+    { name: 'Gamepass', desc: 'ดาบโยรุ คูณเงิน คูณชำนาญ เรือเร็ว', iconType: 'icon', iconName: 'Zap', colorClass: 'from-purple-500/25 to-indigo-500/10' },
+    { name: 'ไอเทม', desc: 'ดาบคู่ CDK กีตาร์วิญญาณ รหัสเทพ', iconType: 'icon', iconName: 'Sparkles', colorClass: 'from-emerald-500/25 to-teal-500/10' },
+    { name: 'บริการ', desc: 'ดันดอว์ อเวค V4 ฟาร์มเวลทันใจ', iconType: 'icon', iconName: 'ShieldCheck', colorClass: 'from-rose-500/25 to-pink-500/10' },
+  ],
   // 1. แถบผลปีศาจยอดนิยมประจำสัปดาห์ (Weekly Trending Strip)
   trendingTitle: 'ผลปีศาจยอดนิยมประจำสัปดาห์ (ยอดสั่งซื้อสูงสุด)',
   trendingBadge: 'VIP Server พร้อมเทรด',

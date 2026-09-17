@@ -60,12 +60,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const featuredProducts = products.filter(p => p.isFeatured).slice(0, 4);
   const bestSellers = products.filter(p => p.isBestSeller).slice(0, 4);
 
-  const categories = [
-    { name: 'ผลปีศาจ', desc: 'คิตสึเนะ มังกร โมจิ ถาวร & กล่องผล', icon: Flame, color: 'from-amber-500/25 to-orange-500/10' },
-    { name: 'Gamepass', desc: 'ดาบโยรุ คูณเงิน คูณชำนาญ เรือเร็ว', icon: Zap, color: 'from-purple-500/25 to-indigo-500/10' },
-    { name: 'ไอเทม', desc: 'ดาบคู่ CDK กีตาร์วิญญาณ รหัสเทพ', icon: Sparkles, color: 'from-emerald-500/25 to-teal-500/10' },
-    { name: 'บริการ', desc: 'ดันดอว์ อเวค V4 ฟาร์มเวลทันใจ', icon: ShieldCheck, color: 'from-rose-500/25 to-pink-500/10' },
-  ];
+  const configCategories = homeConfig.categoryCards || DEFAULT_HOME_CONFIG.categoryCards || [];
 
   const steps = [
     { num: '01', title: 'เลือกสินค้า', desc: 'ค้นหาผลปีศาจหรือ Gamepass ที่ต้องการในร้านค้า' },
@@ -240,8 +235,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <section className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between mb-5 sm:mb-8">
           <div>
-            <h2 className="text-xl sm:text-3xl font-black text-white">หมวดหมู่สินค้า</h2>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">เลือกช้อปสินค้า Blox Fruits ตามประเภทที่ท่านต้องการ</p>
+            <h2 className="text-xl sm:text-3xl font-black text-white">{homeConfig.categoriesTitle || DEFAULT_HOME_CONFIG.categoriesTitle}</h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">{homeConfig.categoriesSubtitle || DEFAULT_HOME_CONFIG.categoriesSubtitle}</p>
           </div>
           <button
             onClick={() => onNavigate('shop')}
@@ -252,22 +247,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
+          {configCategories.map((cat, idx) => {
+            const Icon = cat.iconName === 'Zap' ? Zap : cat.iconName === 'Sparkles' ? Sparkles : cat.iconName === 'ShieldCheck' ? ShieldCheck : Flame;
             return (
               <div
-                key={cat.name}
+                key={idx}
                 onClick={() => onNavigate('shop', cat.name)}
-                className="p-4 sm:p-6 rounded-2xl bg-[#11111A] hover:bg-[#161624] border border-[#212133] hover:border-purple-500/50 transition-all duration-300 cursor-pointer group shadow-lg flex flex-col justify-between active:scale-[0.98]"
+                className="p-4 sm:p-6 rounded-2xl bg-[#11111A] hover:bg-[#161624] border border-[#212133] hover:border-purple-500/50 transition-all duration-300 cursor-pointer group shadow-lg flex flex-col justify-between items-center text-center active:scale-[0.98]"
               >
-                <div>
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center text-purple-300 mb-3 group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <div className="flex flex-col items-center w-full">
+                  <div className={`w-32 h-32 sm:w-40 sm:h-40 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform overflow-hidden ${cat.iconType === 'image' && cat.imageUrl ? 'bg-transparent border-0 p-0' : 'bg-gradient-to-br text-purple-300 ' + cat.colorClass}`}>
+                    {cat.iconType === 'image' && cat.imageUrl ? (
+                      <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-contain rounded-2xl shadow-lg" />
+                    ) : (
+                      <Icon className="w-16 h-16 sm:w-20 sm:h-20" />
+                    )}
                   </div>
-                  <h3 className="text-sm sm:text-lg font-bold text-white group-hover:text-purple-300 transition-colors">{cat.name}</h3>
-                  <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 sm:mt-1 leading-relaxed line-clamp-2">{cat.desc}</p>
+                  <h3 className="text-base sm:text-xl font-black text-white group-hover:text-purple-300 transition-colors">{cat.name}</h3>
+                  <p className="text-[11px] sm:text-xs text-zinc-400 mt-1.5 sm:mt-2 leading-relaxed line-clamp-2 max-w-[90%]">{cat.desc}</p>
                 </div>
-                <div className="mt-4 flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-purple-400">
+                <div className="mt-5 flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-semibold text-purple-400 bg-purple-500/10 px-4 py-2 rounded-xl w-full max-w-[120px] group-hover:bg-purple-500/20 transition-colors">
                   <span>เลือกชม</span>
                   <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </div>

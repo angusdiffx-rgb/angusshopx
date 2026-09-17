@@ -237,6 +237,15 @@ export interface PromoShowcaseCard {
   keyword: string;
 }
 
+export interface CategoryCardConfig {
+  name: string;
+  desc: string;
+  iconType: 'icon' | 'image';
+  iconName?: string; // For lucide icons (Flame, Zap, Sparkles, ShieldCheck, etc)
+  imageUrl?: string; // For uploaded images
+  colorClass: string;
+}
+
 export interface HomeConfig {
   siteLogo?: string;
   heroBadgeText?: string;
@@ -248,6 +257,9 @@ export interface HomeConfig {
   stat2Label?: string;
   stat3Label?: string;
   stat4Label?: string;
+  categoriesTitle?: string;
+  categoriesSubtitle?: string;
+  categoryCards?: CategoryCardConfig[];
   trendingTitle: string;
   trendingBadge: string;
   trendingItems: TrendingFruitItem[];

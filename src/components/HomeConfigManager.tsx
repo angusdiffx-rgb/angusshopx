@@ -34,7 +34,7 @@ export const HomeConfigManager: React.FC = () => {
   const [config, setConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'logo' | 'hero' | 'trending' | 'promo'>('all');
+  const [activeSubTab, setActiveSubTab] = useState<'all' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('all');
 
   // Preset picker modal state
   const [presetModalTarget, setPresetModalTarget] = useState<{
@@ -170,6 +170,14 @@ export const HomeConfigManager: React.FC = () => {
       const items = [...prev.trendingItems];
       items[index] = { ...items[index], [field]: value };
       return { ...prev, trendingItems: items };
+    });
+  };
+
+  const handleUpdateCategoryItem = (index: number, field: string, value: string) => {
+    setConfig(prev => {
+      const cards = prev.categoryCards ? [...prev.categoryCards] : [...(DEFAULT_HOME_CONFIG.categoryCards || [])];
+      cards[index] = { ...cards[index], [field]: value };
+      return { ...prev, categoryCards: cards };
     });
   };
 
@@ -359,6 +367,17 @@ export const HomeConfigManager: React.FC = () => {
         >
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
           <span>ข้อความส่วนบน (Hero & Stats)</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('categories')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'categories'
+              ? 'bg-[#1C1C2C] text-purple-300 border border-purple-500/40'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5 text-indigo-400" />
+          <span>หมวดหมู่สินค้า</span>
         </button>
         <button
           onClick={() => setActiveSubTab('trending')}
@@ -993,6 +1012,142 @@ export const HomeConfigManager: React.FC = () => {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SECTION 3: หมวดหมู่สินค้า (Categories) */}
+      {/* ======================================================== */}
+      {(activeSubTab === 'all' || activeSubTab === 'categories') && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-[#12121E] border border-purple-500/20 rounded-2xl p-4 sm:p-5 shadow-lg shadow-purple-900/10">
+            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-purple-400" />
+              หัวข้อหมวดหมู่สินค้า
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">หัวข้อหลัก</label>
+                <input
+                  type="text"
+                  value={config.categoriesTitle || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, categoriesTitle: e.target.value }))}
+                  placeholder="หมวดหมู่สินค้า"
+                  className="w-full px-3 py-2 rounded-xl bg-[#1A1A24] border border-[#2A2A3A] text-white text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">คำอธิบายรอง</label>
+                <input
+                  type="text"
+                  value={config.categoriesSubtitle || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, categoriesSubtitle: e.target.value }))}
+                  placeholder="เลือกช้อปสินค้า Blox Fruits..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#1A1A24] border border-[#2A2A3A] text-zinc-300 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#12121E] border border-purple-500/20 rounded-2xl p-4 sm:p-5 shadow-lg shadow-purple-900/10">
+            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              จัดการการ์ดหมวดหมู่ (4 รายการ)
+            </h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {(config.categoryCards || DEFAULT_HOME_CONFIG.categoryCards || []).map((cat, idx) => (
+                <div key={idx} className="bg-[#161624] border border-[#2A2A3A] rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2 py-1 rounded-md">การ์ดที่ {idx + 1}</span>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 mb-1">ชื่อหมวดหมู่</label>
+                    <input
+                      type="text"
+                      value={cat.name}
+                      onChange={(e) => handleUpdateCategoryItem(idx, 'name', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#101018] border border-white/5 text-white text-xs font-bold"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 mb-1">คำอธิบาย</label>
+                    <input
+                      type="text"
+                      value={cat.desc}
+                      onChange={(e) => handleUpdateCategoryItem(idx, 'desc', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#101018] border border-white/5 text-zinc-300 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 mb-1">ประเภทไอคอน/รูปภาพ</label>
+                    <div className="flex bg-[#101018] rounded-lg p-1">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateCategoryItem(idx, 'iconType', 'icon')}
+                        className={`flex-1 py-1 text-[10px] rounded-md font-bold transition-all ${cat.iconType !== 'image' ? 'bg-purple-600 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                      >
+                        ไอคอนระบบ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateCategoryItem(idx, 'iconType', 'image')}
+                        className={`flex-1 py-1 text-[10px] rounded-md font-bold transition-all ${cat.iconType === 'image' ? 'bg-purple-600 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                      >
+                        รูปภาพกำหนดเอง
+                      </button>
+                    </div>
+                  </div>
+
+                  {cat.iconType !== 'image' ? (
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 mb-1">ชื่อไอคอน (Lucide)</label>
+                      <select
+                        value={cat.iconName || 'Flame'}
+                        onChange={(e) => handleUpdateCategoryItem(idx, 'iconName', e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#101018] border border-white/5 text-white text-xs"
+                      >
+                        <option value="Flame">Flame (ไฟ)</option>
+                        <option value="Zap">Zap (สายฟ้า)</option>
+                        <option value="Sparkles">Sparkles (ประกาย)</option>
+                        <option value="ShieldCheck">ShieldCheck (โล่)</option>
+                        <option value="Star">Star (ดาว)</option>
+                        <option value="ShoppingBag">ShoppingBag (ถุงช้อปปิ้ง)</option>
+                        <option value="Gamepad2">Gamepad2 (จอยเกม)</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 mb-1">URL รูปภาพ (แนะนำ PNG โปร่งใสขนาด 1:1)</label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={cat.imageUrl || ''}
+                          onChange={(e) => handleUpdateCategoryItem(idx, 'imageUrl', e.target.value)}
+                          placeholder="https://... หรืออัปโหลด"
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#101018] border border-white/5 text-zinc-300 text-[10px]"
+                        />
+                        <label className="shrink-0 px-2 py-1.5 bg-[#2A2A40] hover:bg-[#3A3A50] text-white text-[10px] font-bold rounded-lg cursor-pointer flex items-center justify-center transition-colors">
+                          <Upload className="w-3.5 h-3.5" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleFileUpload(e, (base64) => handleUpdateCategoryItem(idx, 'imageUrl', base64))}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ))}
             </div>
           </div>
         </div>

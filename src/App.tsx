@@ -52,6 +52,18 @@ function MainShop() {
     fetchFavicon();
   }, []);
 
+  // Keep-alive Ping to prevent Render from sleeping
+  useEffect(() => {
+    // Ping every 4 minutes (4 * 60 * 1000 = 240000ms)
+    const interval = setInterval(() => {
+      fetch('/api/health')
+        .then(res => res.json())
+        .catch(() => {});
+    }, 240000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Subscribe to products in Firestore (Realtime - manual entry only)
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'products'), (snapshot) => {
