@@ -1,5 +1,5 @@
-import { FormData, File } from 'formdata-node';
 import express, { Request, Response, Router } from 'express';
+import FormData from 'form-data';
 import { 
   initializeApp, 
   getApps, 
@@ -116,33 +116,40 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Prepare FormData for SlipOK API
+    // Prepare FormData for SlipOK API using form-data library
     const formData = new FormData();
-    const file = new File([imageBuffer], 'slip.jpg', { type: 'image/jpeg' });
-    formData.append('files', file);
+    formData.append('files', imageBuffer, {
+      filename: 'slip.jpg',
+      contentType: 'image/jpeg',
+    });
     // Using log=false so SlipOK verifies authentic bank data without failing on Line LIFF bank account mismatch
     formData.append('log', 'false');
 
     // Call SlipOK API
     let slipokResult: any = null;
     try {
-      const slipResponse = await fetch(SLIPOK_URL, {
-        method: 'POST',
+      const axios = (await import('axios')).default;
+      const slipResponse = await axios.post(SLIPOK_URL, formData, {
         headers: {
           'x-authorization': SLIPOK_KEY,
-        },
-        body: formData,
+          ...formData.getHeaders()
+        }
       });
 
-      slipokResult = await slipResponse.json();
+      slipokResult = slipResponse.data;
     } catch (fetchErr: any) {
-      console.error('SlipOK Connection Error:', fetchErr);
-      res.status(502).json({
-        success: false,
-        error: 'SLIPOK_UNAVAILABLE',
-        message: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ SlipOK ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง'
-      });
-      return;
+      console.error('SlipOK Connection Error:', fetchErr?.response?.data || fetchErr);
+      // Sometimes slipok returns 400 with a valid payload, so we try to catch it
+      if (fetchErr?.response?.data) {
+        slipokResult = fetchErr.response.data;
+      } else {
+        res.status(502).json({
+          success: false,
+          error: 'SLIPOK_UNAVAILABLE',
+          message: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ SlipOK ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง'
+        });
+        return;
+      }
     }
 
     // Check if SlipOK returned an error code or failed
