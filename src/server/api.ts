@@ -32,6 +32,11 @@ export const apiRouter = Router();
 
 apiRouter.use(express.json({ limit: '25mb' }));
 
+// Health Check Endpoint (For keep-alive ping)
+apiRouter.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 const SLIPOK_URL = process.env.SLIPOK_API_URL || 'https://api.slipok.com/api/line/apikey/76096';
 const SLIPOK_KEY = process.env.SLIPOK_API_KEY || 'SLIPOKTMX6PUU';
 const PROMPTPAY_ACCOUNT = process.env.PROMPTPAY_ACCOUNT || '0829848852';

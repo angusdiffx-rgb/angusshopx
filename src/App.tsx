@@ -26,6 +26,44 @@ function MainShop() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
 
+  // Dynamic Favicon Setup
+  useEffect(() => {
+    const fetchFavicon = async () => {
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const docRef = doc(db, 'settings', 'homeConfig');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const config = docSnap.data();
+          if (config.siteLogo) {
+            let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+            if (!link) {
+              link = document.createElement('link');
+              link.rel = 'icon';
+              document.head.appendChild(link);
+            }
+            link.href = config.siteLogo;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching site logo for favicon:", error);
+      }
+    };
+    fetchFavicon();
+  }, []);
+
+  // Keep-alive Ping to prevent Render from sleeping
+  useEffect(() => {
+    // Ping every 4 minutes (4 * 60 * 1000 = 240000ms)
+    const interval = setInterval(() => {
+      fetch('/api/health')
+        .then(res => res.json())
+        .catch(() => {});
+    }, 240000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Subscribe to products in Firestore (Realtime - manual entry only)
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'products'), (snapshot) => {
