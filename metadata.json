@@ -1,0 +1,8 @@
+{
+  "name": "Remix AngusShop",
+  "description": "ร้านขายผลปีศาจ Blox Fruits และสินค้า/บริการ Roblox ระบบเติมเงิน PromptPay อัตโนมัติ",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

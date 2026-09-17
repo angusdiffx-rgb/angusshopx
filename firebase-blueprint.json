@@ -1,0 +1,180 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role and wallet balance",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "User display name" },
+        "email": { "type": "string", "maxLength": 150, "description": "User email address" },
+        "photoURL": { "type": "string", "description": "User avatar URL" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User access role" },
+        "balance": { "type": "number", "description": "Wallet balance in THB" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" },
+        "lastLoginAt": { "type": "string", "format": "date-time", "description": "Last login timestamp" }
+      },
+      "required": ["uid", "displayName", "email", "role", "balance"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Blox Fruits game items, gamepasses, and fruits catalog",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "description": "Unique product ID" },
+        "name": { "type": "string", "maxLength": 120, "description": "Product title" },
+        "slug": { "type": "string", "maxLength": 120, "description": "SEO URL slug" },
+        "category": { "type": "string", "enum": ["ผลปีศาจ", "Gamepass", "ไอเทม", "บริการ", "อื่นๆ"], "description": "Product category" },
+        "price": { "type": "number", "description": "Selling price in THB" },
+        "oldPrice": { "type": "number", "description": "Original price before discount" },
+        "stock": { "type": "number", "description": "Current available inventory units" },
+        "image": { "type": "string", "description": "Product image URL" },
+        "description": { "type": "string", "maxLength": 2000, "description": "Full product description" },
+        "shortDescription": { "type": "string", "maxLength": 300, "description": "Short excerpt" },
+        "deliveryType": { "type": "string", "enum": ["fruit_trade", "gamepass_gift", "account_code", "manual_service"], "description": "Delivery mechanism" },
+        "rarity": { "type": "string", "enum": ["Common", "Uncommon", "Rare", "Legendary", "Mythical"], "description": "Rarity tier" },
+        "fruitType": { "type": "string", "enum": ["Natural", "Elemental", "Beast"], "description": "Devil fruit category" },
+        "isFeatured": { "type": "boolean", "description": "Whether highlighted on home page" },
+        "isBestSeller": { "type": "boolean", "description": "Whether marked as best seller" },
+        "isActive": { "type": "boolean", "description": "Whether published for purchase" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["productId", "name", "category", "price", "stock", "deliveryType", "isActive"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order records",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "description": "Unique order tracking ID" },
+        "uid": { "type": "string", "description": "Buyer user ID" },
+        "robloxUsername": { "type": "string", "maxLength": 50, "description": "Customer Roblox account name" },
+        "totalAmount": { "type": "number", "description": "Total order price in THB" },
+        "discountAmount": { "type": "number", "description": "Discount applied" },
+        "status": { "type": "string", "enum": ["pending", "paid", "processing", "completed", "cancelled"], "description": "Order lifecycle status" },
+        "paymentMethod": { "type": "string", "enum": ["wallet"], "description": "Method of payment" },
+        "notes": { "type": "string", "maxLength": 500, "description": "Customer order remarks" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Order creation date" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last status modification" }
+      },
+      "required": ["orderId", "uid", "robloxUsername", "totalAmount", "status", "paymentMethod"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Digital goods, VIP server links, and claim codes delivered to the user",
+      "type": "object",
+      "properties": {
+        "inventoryId": { "type": "string", "description": "Unique inventory entry ID" },
+        "orderId": { "type": "string", "description": "Associated order ID" },
+        "uid": { "type": "string", "description": "Owner user UID" },
+        "productId": { "type": "string", "description": "Product ID" },
+        "name": { "type": "string", "description": "Item title" },
+        "image": { "type": "string", "description": "Item graphic" },
+        "deliveryType": { "type": "string", "description": "Fulfillment method" },
+        "claimCode": { "type": "string", "description": "Digital redemption code" },
+        "robloxServerLink": { "type": "string", "description": "Private VIP server link for in-game trading" },
+        "status": { "type": "string", "enum": ["ready", "claimed", "processing"], "description": "Item status" },
+        "purchasedAt": { "type": "string", "format": "date-time", "description": "Purchase timestamp" }
+      },
+      "required": ["inventoryId", "orderId", "uid", "productId", "name", "status"]
+    },
+    "Deposit": {
+      "title": "Deposit",
+      "description": "PromptPay QR deposit transaction validated via SlipOK",
+      "type": "object",
+      "properties": {
+        "depositId": { "type": "string", "description": "Unique deposit reference" },
+        "uid": { "type": "string", "description": "User UID who made deposit" },
+        "amount": { "type": "number", "description": "Top-up amount in THB" },
+        "qrPayload": { "type": "string", "description": "PromptPay EMVCo payload" },
+        "slipImage": { "type": "string", "description": "Base64 or image URL of payment receipt" },
+        "transRef": { "type": "string", "description": "Bank transaction reference number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"], "description": "Deposit status" },
+        "verifiedAt": { "type": "string", "format": "date-time", "description": "SlipOK verification timestamp" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Deposit request timestamp" }
+      },
+      "required": ["depositId", "uid", "amount", "status"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "Ledger entry for wallet credits and debits",
+      "type": "object",
+      "properties": {
+        "txId": { "type": "string", "description": "Transaction identifier" },
+        "uid": { "type": "string", "description": "User UID" },
+        "type": { "type": "string", "enum": ["deposit", "purchase", "refund", "admin_adjustment"], "description": "Transaction type" },
+        "amount": { "type": "number", "description": "Amount delta" },
+        "balanceAfter": { "type": "number", "description": "Wallet balance after transaction" },
+        "description": { "type": "string", "description": "Transaction note" },
+        "referenceId": { "type": "string", "description": "Related order or deposit ID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Transaction date" }
+      },
+      "required": ["txId", "uid", "type", "amount", "balanceAfter", "createdAt"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount voucher codes",
+      "type": "object",
+      "properties": {
+        "couponId": { "type": "string", "description": "Unique voucher identifier" },
+        "code": { "type": "string", "description": "Redeemable coupon string" },
+        "discountPercent": { "type": "number", "description": "Percentage off" },
+        "discountAmount": { "type": "number", "description": "Flat amount off in THB" },
+        "minSpend": { "type": "number", "description": "Minimum subtotal required" },
+        "isActive": { "type": "boolean", "description": "Whether code is redeemable" }
+      },
+      "required": ["couponId", "code", "isActive"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app system notifications for user events",
+      "type": "object",
+      "properties": {
+        "notifId": { "type": "string", "description": "Notification ID" },
+        "uid": { "type": "string", "description": "Recipient user UID" },
+        "title": { "type": "string", "description": "Notification title" },
+        "message": { "type": "string", "description": "Message content" },
+        "type": { "type": "string", "enum": ["success", "info", "warning", "order"], "description": "Notification type" },
+        "isRead": { "type": "boolean", "description": "Read flag" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Sent timestamp" }
+      },
+      "required": ["notifId", "uid", "title", "message", "isRead", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents keyed by Firebase Auth UID"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Blox Fruits catalog items"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchase orders"
+    },
+    "/inventory/{inventoryId}": {
+      "schema": "InventoryItem",
+      "description": "User purchased digital inventory items and VIP server links"
+    },
+    "/deposits/{depositId}": {
+      "schema": "Deposit",
+      "description": "PromptPay slip deposit transactions"
+    },
+    "/wallet_transactions/{txId}": {
+      "schema": "WalletTransaction",
+      "description": "Audit trail of wallet balance adjustments"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Discount coupons and promotion codes"
+    },
+    "/notifications/{notifId}": {
+      "schema": "Notification",
+      "description": "User notification alerts"
+    }
+  }
+}

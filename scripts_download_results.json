@@ -1,0 +1,713 @@
+[
+  {
+    "item": {
+      "id": "kitsune",
+      "query": "File:Kitsune Fruit.png"
+    },
+    "res": {
+      "id": "kitsune",
+      "path": "/images/blox/kitsune.png",
+      "size": 228630
+    }
+  },
+  {
+    "item": {
+      "id": "dragon",
+      "query": "File:Dragon Fruit.png"
+    },
+    "res": {
+      "id": "dragon",
+      "path": "/images/blox/dragon.png",
+      "size": 51456
+    }
+  },
+  {
+    "item": {
+      "id": "leopard",
+      "query": "File:Leopard Fruit.png"
+    },
+    "res": {
+      "id": "leopard",
+      "path": "/images/blox/leopard.png",
+      "size": 22156
+    }
+  },
+  {
+    "item": {
+      "id": "dough",
+      "query": "File:Dough Fruit.png"
+    },
+    "res": {
+      "id": "dough",
+      "path": "/images/blox/dough.png",
+      "size": 194756
+    }
+  },
+  {
+    "item": {
+      "id": "trex",
+      "query": "File:T-Rex Fruit.png"
+    },
+    "res": {
+      "id": "trex",
+      "path": "/images/blox/trex.png",
+      "size": 29784
+    }
+  },
+  {
+    "item": {
+      "id": "mammoth",
+      "query": "File:Mammoth Fruit.png"
+    },
+    "res": {
+      "id": "mammoth",
+      "path": "/images/blox/mammoth.png",
+      "size": 246354
+    }
+  },
+  {
+    "item": {
+      "id": "spirit",
+      "query": "File:Spirit Fruit.png"
+    },
+    "res": {
+      "id": "spirit",
+      "path": "/images/blox/spirit.png",
+      "size": 35306
+    }
+  },
+  {
+    "item": {
+      "id": "control",
+      "query": "File:Control Fruit.png"
+    },
+    "res": {
+      "id": "control",
+      "path": "/images/blox/control.png",
+      "size": 77934
+    }
+  },
+  {
+    "item": {
+      "id": "venom",
+      "query": "File:Venom Fruit.png"
+    },
+    "res": {
+      "id": "venom",
+      "path": "/images/blox/venom.png",
+      "size": 40172
+    }
+  },
+  {
+    "item": {
+      "id": "shadow",
+      "query": "File:Shadow Fruit.png"
+    },
+    "res": {
+      "id": "shadow",
+      "path": "/images/blox/shadow.png",
+      "size": 16344
+    }
+  },
+  {
+    "item": {
+      "id": "gravity",
+      "query": "File:Gravity Fruit.png"
+    },
+    "res": {
+      "id": "gravity",
+      "path": "/images/blox/gravity.png",
+      "size": 268720
+    }
+  },
+  {
+    "item": {
+      "id": "buddha",
+      "query": "File:Buddha Fruit.png"
+    },
+    "res": {
+      "id": "buddha",
+      "path": "/images/blox/buddha.png",
+      "size": 16062
+    }
+  },
+  {
+    "item": {
+      "id": "portal",
+      "query": "File:Portal Fruit.png"
+    },
+    "res": {
+      "id": "portal",
+      "path": "/images/blox/portal.png",
+      "size": 24480
+    }
+  },
+  {
+    "item": {
+      "id": "rumble",
+      "query": "File:Lightning Fruit.png"
+    },
+    "res": {
+      "id": "rumble",
+      "path": "/images/blox/rumble.png",
+      "size": 243476
+    }
+  },
+  {
+    "item": {
+      "id": "blizzard",
+      "query": "File:Blizzard Fruit.png"
+    },
+    "res": {
+      "id": "blizzard",
+      "path": "/images/blox/blizzard.png",
+      "size": 22130
+    }
+  },
+  {
+    "item": {
+      "id": "sound",
+      "query": "File:Sound Fruit.png"
+    },
+    "res": {
+      "id": "sound",
+      "path": "/images/blox/sound.png",
+      "size": 19754
+    }
+  },
+  {
+    "item": {
+      "id": "phoenix",
+      "query": "File:Phoenix Fruit.png"
+    },
+    "res": {
+      "id": "phoenix",
+      "path": "/images/blox/phoenix.png",
+      "size": 321852
+    }
+  },
+  {
+    "item": {
+      "id": "pain",
+      "query": "File:Pain Fruit.png"
+    },
+    "res": {
+      "id": "pain",
+      "path": "/images/blox/pain.png",
+      "size": 159194
+    }
+  },
+  {
+    "item": {
+      "id": "spider",
+      "query": "File:Spider Fruit.png"
+    },
+    "res": {
+      "id": "spider",
+      "path": "/images/blox/spider.png",
+      "size": 157384
+    }
+  },
+  {
+    "item": {
+      "id": "love",
+      "query": "File:Love Fruit.png"
+    },
+    "res": {
+      "id": "love",
+      "path": "/images/blox/love.png",
+      "size": 13736
+    }
+  },
+  {
+    "item": {
+      "id": "quake",
+      "query": "File:Quake Fruit.png"
+    },
+    "res": {
+      "id": "quake",
+      "path": "/images/blox/quake.png",
+      "size": 206186
+    }
+  },
+  {
+    "item": {
+      "id": "magma",
+      "query": "File:Magma Fruit.png"
+    },
+    "res": {
+      "id": "magma",
+      "path": "/images/blox/magma.png",
+      "size": 18264
+    }
+  },
+  {
+    "item": {
+      "id": "light",
+      "query": "File:Light Fruit.png"
+    },
+    "res": {
+      "id": "light",
+      "path": "/images/blox/light.png",
+      "size": 15460
+    }
+  },
+  {
+    "item": {
+      "id": "ghost",
+      "query": "File:Ghost Fruit.png"
+    },
+    "res": {
+      "id": "ghost",
+      "path": "/images/blox/ghost.png",
+      "size": 89222
+    }
+  },
+  {
+    "item": {
+      "id": "rubber",
+      "query": "File:Rubber Fruit.png"
+    },
+    "res": {
+      "id": "rubber",
+      "path": "/images/blox/rubber.png",
+      "size": 12632
+    }
+  },
+  {
+    "item": {
+      "id": "barrier",
+      "query": "File:Barrier Fruit.png"
+    },
+    "res": {
+      "id": "barrier",
+      "path": "/images/blox/barrier.png",
+      "size": 14572
+    }
+  },
+  {
+    "item": {
+      "id": "dark",
+      "query": "File:Dark Fruit.png"
+    },
+    "res": {
+      "id": "dark",
+      "path": "/images/blox/dark.png",
+      "size": 204264
+    }
+  },
+  {
+    "item": {
+      "id": "diamond",
+      "query": "File:Diamond Fruit.png"
+    },
+    "res": {
+      "id": "diamond",
+      "path": "/images/blox/diamond.png",
+      "size": 146482
+    }
+  },
+  {
+    "item": {
+      "id": "sand",
+      "query": "File:Sand Fruit.png"
+    },
+    "res": {
+      "id": "sand",
+      "path": "/images/blox/sand.png",
+      "size": 197054
+    }
+  },
+  {
+    "item": {
+      "id": "ice",
+      "query": "File:Ice Fruit.png"
+    },
+    "res": {
+      "id": "ice",
+      "path": "/images/blox/ice.png",
+      "size": 173744
+    }
+  },
+  {
+    "item": {
+      "id": "flame",
+      "query": "File:Flame Fruit.png"
+    },
+    "res": {
+      "id": "flame",
+      "path": "/images/blox/flame.png",
+      "size": 242286
+    }
+  },
+  {
+    "item": {
+      "id": "falcon",
+      "query": "File:Falcon Fruit.png"
+    },
+    "res": {
+      "id": "falcon",
+      "path": "/images/blox/falcon.png",
+      "size": 19896
+    }
+  },
+  {
+    "item": {
+      "id": "smoke",
+      "query": "File:Smoke Fruit.png"
+    },
+    "res": {
+      "id": "smoke",
+      "path": "/images/blox/smoke.png",
+      "size": 24068
+    }
+  },
+  {
+    "item": {
+      "id": "spin",
+      "query": "File:Spin Fruit.png"
+    },
+    "res": {
+      "id": "spin",
+      "path": "/images/blox/spin.png",
+      "size": 20044
+    }
+  },
+  {
+    "item": {
+      "id": "rocket",
+      "query": "File:Rocket Fruit.png"
+    },
+    "res": {
+      "id": "rocket",
+      "path": "/images/blox/rocket.png",
+      "size": 17212
+    }
+  },
+  {
+    "item": {
+      "id": "chop",
+      "query": "File:Chop Fruit.png"
+    },
+    "res": {
+      "id": "chop",
+      "path": "/images/blox/chop.png",
+      "size": 20770
+    }
+  },
+  {
+    "item": {
+      "id": "spring",
+      "query": "File:Spring Fruit.png"
+    },
+    "res": {
+      "id": "spring",
+      "path": "/images/blox/spring.png",
+      "size": 10536
+    }
+  },
+  {
+    "item": {
+      "id": "bomb",
+      "query": "File:Bomb Fruit.png"
+    },
+    "res": {
+      "id": "bomb",
+      "path": "/images/blox/bomb.png",
+      "size": 15156
+    }
+  },
+  {
+    "item": {
+      "id": "dark_blade",
+      "query": "File:Dark Blade.png"
+    },
+    "res": {
+      "id": "dark_blade",
+      "path": "/images/blox/dark_blade.png",
+      "size": 82842
+    }
+  },
+  {
+    "item": {
+      "id": "gamepass_2x_money",
+      "query": "File:2x_Money.png"
+    },
+    "res": {
+      "id": "gamepass_2x_money",
+      "path": "/images/blox/gamepass_2x_money.png",
+      "size": 279750
+    }
+  },
+  {
+    "item": {
+      "id": "gamepass_2x_mastery",
+      "query": "File:2x_Mastery.png"
+    },
+    "res": {
+      "id": "gamepass_2x_mastery",
+      "path": "/images/blox/gamepass_2x_mastery.png",
+      "size": 305890
+    }
+  },
+  {
+    "item": {
+      "id": "gamepass_fast_boats",
+      "query": "File:Fast_Boats.png"
+    },
+    "res": {
+      "id": "gamepass_fast_boats",
+      "path": "/images/blox/gamepass_fast_boats.png",
+      "size": 10096
+    }
+  },
+  {
+    "item": {
+      "id": "gamepass_notifier",
+      "query": "File:Fruit_Notifier.png"
+    },
+    "res": {
+      "id": "gamepass_notifier",
+      "path": "/images/blox/gamepass_notifier.png",
+      "size": 258404
+    }
+  },
+  {
+    "item": {
+      "id": "gamepass_2x_drops",
+      "query": "File:2x_Boss_Drops.png"
+    },
+    "res": {
+      "id": "gamepass_2x_drops",
+      "path": "/images/blox/gamepass_2x_drops.png",
+      "size": 261026
+    }
+  },
+  {
+    "item": {
+      "id": "gamepass_fruit_storage",
+      "query": "File:+1_Fruit_Storage.png"
+    },
+    "res": null
+  },
+  {
+    "item": {
+      "id": "cursed_dual_katana",
+      "query": "File:Cursed Dual Katana Icon.png"
+    },
+    "res": {
+      "id": "cursed_dual_katana",
+      "path": "/images/blox/cursed_dual_katana.png",
+      "size": 6166
+    }
+  },
+  {
+    "item": {
+      "id": "true_triple_katana",
+      "query": "File:True Triple Katana.png"
+    },
+    "res": {
+      "id": "true_triple_katana",
+      "path": "/images/blox/true_triple_katana.png",
+      "size": 6798
+    }
+  },
+  {
+    "item": {
+      "id": "soul_guitar",
+      "query": "File:Soul Guitar.png"
+    },
+    "res": {
+      "id": "soul_guitar",
+      "path": "/images/blox/soul_guitar.png",
+      "size": 11878
+    }
+  },
+  {
+    "item": {
+      "id": "hallow_scythe",
+      "query": "File:Hallow Scythe.png"
+    },
+    "res": {
+      "id": "hallow_scythe",
+      "path": "/images/blox/hallow_scythe.png",
+      "size": 12982
+    }
+  },
+  {
+    "item": {
+      "id": "shark_anchor",
+      "query": "File:Shark Anchor.png"
+    },
+    "res": {
+      "id": "shark_anchor",
+      "path": "/images/blox/shark_anchor.png",
+      "size": 6210
+    }
+  },
+  {
+    "item": {
+      "id": "fox_lamp",
+      "query": "File:Fox Lamp.png"
+    },
+    "res": {
+      "id": "fox_lamp",
+      "path": "/images/blox/fox_lamp.png",
+      "size": 7870
+    }
+  },
+  {
+    "item": {
+      "id": "tushita",
+      "query": "File:Tushita.png"
+    },
+    "res": {
+      "id": "tushita",
+      "path": "/images/blox/tushita.png",
+      "size": 3728
+    }
+  },
+  {
+    "item": {
+      "id": "yama",
+      "query": "File:Yama.png"
+    },
+    "res": {
+      "id": "yama",
+      "path": "/images/blox/yama.png",
+      "size": 4266
+    }
+  },
+  {
+    "item": {
+      "id": "saber",
+      "query": "File:Saber.png"
+    },
+    "res": {
+      "id": "saber",
+      "path": "/images/blox/saber.png",
+      "size": 5186
+    }
+  },
+  {
+    "item": {
+      "id": "rengoku",
+      "query": "File:Rengoku.png"
+    },
+    "res": {
+      "id": "rengoku",
+      "path": "/images/blox/rengoku.png",
+      "size": 3716
+    }
+  },
+  {
+    "item": {
+      "id": "godhuman",
+      "query": "File:Godhuman.png"
+    },
+    "res": {
+      "id": "godhuman",
+      "path": "/images/blox/godhuman.png",
+      "size": 177984
+    }
+  },
+  {
+    "item": {
+      "id": "sanguine_art",
+      "query": "File:Sanguine Art.png"
+    },
+    "res": {
+      "id": "sanguine_art",
+      "path": "/images/blox/sanguine_art.png",
+      "size": 73904
+    }
+  },
+  {
+    "item": {
+      "id": "dragon_talon",
+      "query": "File:Dragon Talon.png"
+    },
+    "res": {
+      "id": "dragon_talon",
+      "path": "/images/blox/dragon_talon.png",
+      "size": 133768
+    }
+  },
+  {
+    "item": {
+      "id": "electric_claw",
+      "query": "File:Electric Claw.png"
+    },
+    "res": {
+      "id": "electric_claw",
+      "path": "/images/blox/electric_claw.png",
+      "size": 118864
+    }
+  },
+  {
+    "item": {
+      "id": "death_step",
+      "query": "File:Death Step.png"
+    },
+    "res": {
+      "id": "death_step",
+      "path": "/images/blox/death_step.png",
+      "size": 92098
+    }
+  },
+  {
+    "item": {
+      "id": "sharkman_karate",
+      "query": "File:Sharkman Karate.png"
+    },
+    "res": {
+      "id": "sharkman_karate",
+      "path": "/images/blox/sharkman_karate.png",
+      "size": 105434
+    }
+  },
+  {
+    "item": {
+      "id": "mirror_fractal",
+      "query": "File:Mirror Fractal.png"
+    },
+    "res": {
+      "id": "mirror_fractal",
+      "path": "/images/blox/mirror_fractal.png",
+      "size": 32118
+    }
+  },
+  {
+    "item": {
+      "id": "leviathan_heart",
+      "query": "File:Leviathan Heart.png"
+    },
+    "res": {
+      "id": "leviathan_heart",
+      "path": "/images/blox/leviathan_heart.png",
+      "size": 62444
+    }
+  },
+  {
+    "item": {
+      "id": "valkyrie_helm",
+      "query": "File:Valkyrie Helm.png"
+    },
+    "res": {
+      "id": "valkyrie_helm",
+      "path": "/images/blox/valkyrie_helm.png",
+      "size": 12990
+    }
+  },
+  {
+    "item": {
+      "id": "dark_coat",
+      "query": "File:Dark Coat.png"
+    },
+    "res": {
+      "id": "dark_coat",
+      "path": "/images/blox/dark_coat.png",
+      "size": 11650
+    }
+  }
+]
