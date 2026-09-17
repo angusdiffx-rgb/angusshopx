@@ -239,6 +239,15 @@ export interface PromoShowcaseCard {
 
 export interface HomeConfig {
   siteLogo?: string;
+  heroBadgeText?: string;
+  heroStatusText?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroButtonText?: string;
+  stat1Label?: string;
+  stat2Label?: string;
+  stat3Label?: string;
+  stat4Label?: string;
   trendingTitle: string;
   trendingBadge: string;
   trendingItems: TrendingFruitItem[];

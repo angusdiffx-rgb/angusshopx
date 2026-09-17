@@ -18,7 +18,8 @@ import {
   ArrowDown, 
   Layers, 
   X,
-  RefreshCw
+  RefreshCw,
+  Upload
 } from 'lucide-react';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -33,7 +34,7 @@ export const HomeConfigManager: React.FC = () => {
   const [config, setConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'logo' | 'trending' | 'promo'>('all');
+  const [activeSubTab, setActiveSubTab] = useState<'all' | 'logo' | 'hero' | 'trending' | 'promo'>('all');
 
   // Preset picker modal state
   const [presetModalTarget, setPresetModalTarget] = useState<{
@@ -99,6 +100,60 @@ export const HomeConfigManager: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fieldUpdater: (base64: string) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toastError('ขนาดไฟล์เริ่มต้นต้องไม่เกิน 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // ย่อขนาดรูปภาพให้กว้าง/ยาวสูงสุด 400px เพื่อประหยัดพื้นที่ฐานข้อมูล
+        const MAX_DIMENSION = 400; 
+        
+        if (width > height) {
+          if (width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
+          }
+        } else {
+          if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // บีบอัดเป็น WebP (คุณภาพ 80%) เพื่อให้ขนาดเล็กลงมากที่สุด
+          const dataUrl = canvas.toDataURL('image/webp', 0.8);
+          
+          if (dataUrl.length > 800 * 1024) {
+             toastError('รูปภาพมีขนาดใหญ่เกินไปแม้จะบีบอัดแล้ว กรุณาใช้รูปภาพที่รายละเอียดน้อยกว่านี้');
+             return;
+          }
+          
+          fieldUpdater(dataUrl);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset input
   };
 
   // Reset to default
@@ -295,6 +350,17 @@ export const HomeConfigManager: React.FC = () => {
           <span>โลโก้เว็บไซต์</span>
         </button>
         <button
+          onClick={() => setActiveSubTab('hero')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'hero'
+              ? 'bg-[#1C1C2C] text-purple-300 border border-purple-500/40'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>ข้อความส่วนบน (Hero & Stats)</span>
+        </button>
+        <button
           onClick={() => setActiveSubTab('trending')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === 'trending'
@@ -349,13 +415,151 @@ export const HomeConfigManager: React.FC = () => {
                   }}
                 />
               </div>
-              <input
-                type="text"
-                value={config.siteLogo || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, siteLogo: e.target.value }))}
-                placeholder="https://..."
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
-              />
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={config.siteLogo || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, siteLogo: e.target.value }))}
+                  placeholder="https://... หรืออัปโหลดจากเครื่อง"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+                <label className="shrink-0 px-3.5 py-2.5 bg-[#2A2A40] hover:bg-[#3A3A50] border border-[#3A3A50] text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-2 transition-colors">
+                  <Upload className="w-4 h-4" />
+                  <span>อัปโหลด</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, (base64) => setConfig(prev => ({ ...prev, siteLogo: base64 })))}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SECTION 1.5: Hero & Stats */}
+      {/* ======================================================== */}
+      {(activeSubTab === 'all' || activeSubTab === 'hero') && (
+        <div className="p-5 sm:p-6 rounded-2xl bg-[#11111A] border border-[#212133] space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#1E1E2E]">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                ข้อความส่วนบนและสถิติ (Hero & Stats)
+              </h3>
+              <p className="text-[11px] text-zinc-500 mt-1">ปรับเปลี่ยนข้อความต้อนรับและสถิติใต้ปุ่มเติมเงิน</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-zinc-300">ส่วนหัว (Hero Text)</h4>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Hero Title (ข้อความหลัก)
+                </label>
+                <input
+                  type="text"
+                  value={config.heroTitle ?? DEFAULT_HOME_CONFIG.heroTitle}
+                  onChange={(e) => setConfig(prev => ({ ...prev, heroTitle: e.target.value }))}
+                  placeholder="ANGUS SHOP"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Hero Subtitle (รายละเอียด)
+                </label>
+                <textarea
+                  value={config.heroSubtitle ?? DEFAULT_HOME_CONFIG.heroSubtitle}
+                  onChange={(e) => setConfig(prev => ({ ...prev, heroSubtitle: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500 resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Top Status Tag (ข้อความด้านบนสุด)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.heroBadgeText ?? DEFAULT_HOME_CONFIG.heroBadgeText}
+                    onChange={(e) => setConfig(prev => ({ ...prev, heroBadgeText: e.target.value }))}
+                    placeholder="ROBLOX VERIFIED"
+                    className="w-1/3 px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                  />
+                  <input
+                    type="text"
+                    value={config.heroStatusText ?? DEFAULT_HOME_CONFIG.heroStatusText}
+                    onChange={(e) => setConfig(prev => ({ ...prev, heroStatusText: e.target.value }))}
+                    placeholder="ร้านผลปีศาจ Blox Fruits อัตโนมัติ 24 ชม."
+                    className="w-2/3 px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Button Text (ข้อความปุ่มซื้อ)
+                </label>
+                <input
+                  type="text"
+                  value={config.heroButtonText ?? DEFAULT_HOME_CONFIG.heroButtonText}
+                  onChange={(e) => setConfig(prev => ({ ...prev, heroButtonText: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-zinc-300">สถิติ (Stats Bar)</h4>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Stat 1 Label (เช่น ลูกค้าไว้วางใจ)
+                </label>
+                <input
+                  type="text"
+                  value={config.stat1Label ?? DEFAULT_HOME_CONFIG.stat1Label}
+                  onChange={(e) => setConfig(prev => ({ ...prev, stat1Label: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Stat 2 Label (เช่น สินค้าคุณภาพ)
+                </label>
+                <input
+                  type="text"
+                  value={config.stat2Label ?? DEFAULT_HOME_CONFIG.stat2Label}
+                  onChange={(e) => setConfig(prev => ({ ...prev, stat2Label: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Stat 3 Label (เช่น รับประกัน)
+                </label>
+                <input
+                  type="text"
+                  value={config.stat3Label ?? DEFAULT_HOME_CONFIG.stat3Label}
+                  onChange={(e) => setConfig(prev => ({ ...prev, stat3Label: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Stat 4 Label (เช่น บริการ 24 ชม.)
+                </label>
+                <input
+                  type="text"
+                  value={config.stat4Label ?? DEFAULT_HOME_CONFIG.stat4Label}
+                  onChange={(e) => setConfig(prev => ({ ...prev, stat4Label: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -667,16 +871,30 @@ export const HomeConfigManager: React.FC = () => {
 
                 <div>
                   <label className="block text-[10px] text-zinc-400 mb-1">URL รูปภาพ</label>
-                  <input
-                    type="text"
-                    value={config.promoCard1?.img || ''}
-                    onChange={(e) => setConfig(prev => ({
-                      ...prev,
-                      promoCard1: { ...prev.promoCard1, img: e.target.value }
-                    }))}
-                    placeholder="https://..."
-                    className="w-full px-2.5 py-1 rounded-lg bg-[#101018] border border-white/5 text-[10px] text-zinc-300 font-mono"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={config.promoCard1?.img || ''}
+                      onChange={(e) => setConfig(prev => ({
+                        ...prev,
+                        promoCard1: { ...prev.promoCard1, img: e.target.value }
+                      }))}
+                      placeholder="https://... หรืออัปโหลด"
+                      className="w-full px-2.5 py-1 rounded-lg bg-[#101018] border border-white/5 text-[10px] text-zinc-300 font-mono"
+                    />
+                    <label className="shrink-0 px-2 py-1 bg-[#2A2A40] hover:bg-[#3A3A50] text-white text-[10px] font-bold rounded-lg cursor-pointer flex items-center justify-center transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, (base64) => setConfig(prev => ({
+                          ...prev,
+                          promoCard1: { ...prev.promoCard1, img: base64 }
+                        })))}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -725,16 +943,30 @@ export const HomeConfigManager: React.FC = () => {
 
                 <div>
                   <label className="block text-[10px] text-zinc-400 mb-1">URL รูปภาพ</label>
-                  <input
-                    type="text"
-                    value={config.promoCard2?.img || ''}
-                    onChange={(e) => setConfig(prev => ({
-                      ...prev,
-                      promoCard2: { ...prev.promoCard2, img: e.target.value }
-                    }))}
-                    placeholder="https://..."
-                    className="w-full px-2.5 py-1 rounded-lg bg-[#101018] border border-white/5 text-[10px] text-zinc-300 font-mono"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={config.promoCard2?.img || ''}
+                      onChange={(e) => setConfig(prev => ({
+                        ...prev,
+                        promoCard2: { ...prev.promoCard2, img: e.target.value }
+                      }))}
+                      placeholder="https://... หรืออัปโหลด"
+                      className="w-full px-2.5 py-1 rounded-lg bg-[#101018] border border-white/5 text-[10px] text-zinc-300 font-mono"
+                    />
+                    <label className="shrink-0 px-2 py-1 bg-[#2A2A40] hover:bg-[#3A3A50] text-white text-[10px] font-bold rounded-lg cursor-pointer flex items-center justify-center transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, (base64) => setConfig(prev => ({
+                          ...prev,
+                          promoCard2: { ...prev.promoCard2, img: base64 }
+                        })))}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 

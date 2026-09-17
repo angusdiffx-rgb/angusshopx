@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
 @import "tailwindcss";
 
 @layer base {
@@ -93,6 +94,35 @@
   background: radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.18), transparent 70%);
 }
 
+/* Animated Text Shine */
+.animate-text-shine {
+  background-size: 200% auto;
+  animation: shine 3s linear infinite;
+}
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* RGB Text Animation */
+.animate-rgb-text {
+  background: linear-gradient(
+    to right,
+    #ff2a2a, #ff7a2a, #e5ff2a, #2aff55, #2affff, #2a7aff, #b52aff, #ff2a9d, #ff2a2a
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: rgb-shift 3s linear infinite;
+}
+@keyframes rgb-shift {
+  to {
+    background-position: -200% center;
+  }
+}
+
 /* Mobile Safe Area Inset */
 .pb-safe {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
@@ -105,4 +135,10 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Rapper / Street Font */
+.font-rapper {
+  font-family: 'Permanent Marker', cursive;
+  letter-spacing: 0.05em;
 }

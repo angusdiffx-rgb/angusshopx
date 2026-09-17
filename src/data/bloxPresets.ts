@@ -11,6 +11,15 @@ export interface BloxPreset {
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
   siteLogo: 'https://tr.rbxcdn.com/180DAY-774ec14539b264f85fdb6e8a34dfa344/512/512/Image/Png/noFilter',
+  heroBadgeText: 'ROBLOX VERIFIED',
+  heroStatusText: 'ร้านผลปีศาจ Blox Fruits อัตโนมัติ 24 ชม.',
+  heroTitle: 'ANGUS SHOP',
+  heroSubtitle: 'ศูนย์รวมผลปีศาจ Blox Fruits ถาวร, Gamepass และบริการฟาร์ม Roblox ส่งมอบทันที',
+  heroButtonText: 'เลือกซื้อสินค้าเลย',
+  stat1Label: 'ลูกค้าไว้วางใจ',
+  stat2Label: 'สินค้าคุณภาพ',
+  stat3Label: 'รับประกัน',
+  stat4Label: 'บริการ 24 ชม.',
   // 1. แถบผลปีศาจยอดนิยมประจำสัปดาห์ (Weekly Trending Strip)
   trendingTitle: 'ผลปีศาจยอดนิยมประจำสัปดาห์ (ยอดสั่งซื้อสูงสุด)',
   trendingBadge: 'VIP Server พร้อมเทรด',

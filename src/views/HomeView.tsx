@@ -117,18 +117,28 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-bold text-cyan-400 uppercase tracking-wider">ROBLOX VERIFIED</span>
+            <span className="font-bold text-cyan-400 uppercase tracking-wider">{homeConfig.heroBadgeText || 'ROBLOX VERIFIED'}</span>
             <span className="text-zinc-600">•</span>
-            <span className="text-zinc-300">ร้านผลปีศาจ Blox Fruits อัตโนมัติ 24 ชม.</span>
+            <span className="text-zinc-300">{homeConfig.heroStatusText || 'ร้านผลปีศาจ Blox Fruits อัตโนมัติ 24 ชม.'}</span>
           </div>
 
           {/* Heading */}
-          <h1 className="text-3xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white max-w-5xl mx-auto leading-tight sm:leading-none">
-            ANGUS<span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">SHOP</span>
+          <h1 className="text-3xl sm:text-6xl md:text-7xl lg:text-8xl font-rapper tracking-normal text-white max-w-5xl mx-auto leading-tight sm:leading-none drop-shadow-2xl">
+            {homeConfig.heroTitle ? (
+              homeConfig.heroTitle.includes('SHOP') ? (
+                <>
+                  {homeConfig.heroTitle.split('SHOP')[0]}<span className="animate-rgb-text drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">SHOP</span>{homeConfig.heroTitle.split('SHOP')[1]}
+                </>
+              ) : homeConfig.heroTitle
+            ) : (
+              <>
+                ANGUS<span className="animate-rgb-text drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">SHOP</span>
+              </>
+            )}
           </h1>
 
           <p className="mt-3 sm:mt-5 text-sm sm:text-xl md:text-2xl font-medium text-zinc-300 max-w-2xl mx-auto leading-relaxed">
-            ศูนย์รวมผลปีศาจ <span className="text-white font-bold underline decoration-purple-500 decoration-2">Blox Fruits</span> ถาวร, Gamepass และบริการฟาร์ม Roblox ส่งมอบทันที
+            {homeConfig.heroSubtitle || 'ศูนย์รวมผลปีศาจ ถาวร, Gamepass และบริการฟาร์ม Roblox ส่งมอบทันที'}
           </p>
 
           {/* Blox Fruits Fast Showcase Ribbon */}
@@ -177,7 +187,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               className="py-3 sm:py-3.5 px-4 sm:px-8 rounded-2xl bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 text-white font-bold text-xs sm:text-sm shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all duration-300 active:scale-95"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>เลือกซื้อผลปีศาจ</span>
+              <span>{homeConfig.heroButtonText || 'เลือกซื้อผลปีศาจ'}</span>
             </button>
 
             <button
@@ -207,19 +217,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="mt-8 sm:mt-12 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 max-w-4xl mx-auto">
             <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center">
               <div className="text-xl sm:text-3xl font-black text-white">10,000+</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">ออเดอร์สำเร็จ</div>
+              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{homeConfig.stat1Label || 'ลูกค้าไว้วางใจ'}</div>
             </div>
             <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center">
               <div className="text-xl sm:text-3xl font-black text-emerald-400">3 วินาที</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">ตรวจสลิปอัตโนมัติ</div>
+              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{homeConfig.stat2Label || 'สินค้าคุณภาพ'}</div>
             </div>
             <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center">
               <div className="text-xl sm:text-3xl font-black text-purple-400">100%</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">ปลอดภัย ไร้แบน</div>
+              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{homeConfig.stat3Label || 'รับประกัน'}</div>
             </div>
             <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center">
               <div className="text-xl sm:text-3xl font-black text-amber-400">4.9/5</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">คะแนนรีวิวร้านค้า</div>
+              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5">{homeConfig.stat4Label || 'บริการ 24 ชม.'}</div>
             </div>
           </div>
 
