@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Key,
   MessageSquare,
-  Info
+  Info,
+  Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -23,7 +24,7 @@ import { BloxImage } from '../components/BloxImage';
 import type { InventoryItem } from '../types';
 
 export const InventoryView: React.FC = () => {
-  const { user, loginWithGoogle } = useAuth();
+  const { user, loginWithGoogle, isAdmin } = useAuth();
   const { success, error: toastError } = useToast();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +67,11 @@ export const InventoryView: React.FC = () => {
   };
 
   const handleMarkClaimed = async (item: InventoryItem) => {
+    if (!isAdmin) {
+      toastError('เฉพาะแอดมินเท่านั้น', 'คุณไม่มีสิทธิ์เปลี่ยนสถานะรายการนี้ เฉพาะแอดมินเท่านั้นที่สามารถกดยืนยันการรับของได้');
+      return;
+    }
+
     try {
       const itemRef = doc(db, 'inventory', item.id || item.inventoryId);
       const newStatus = item.status === 'ready' ? 'claimed' : 'ready';
@@ -308,16 +314,37 @@ export const InventoryView: React.FC = () => {
                     <div className="text-xs text-zinc-500">รอทีมงานส่งมอบในเกม</div>
                   )}
 
-                  <button
-                    onClick={() => handleMarkClaimed(item)}
-                    className={`py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs font-semibold border transition-colors cursor-pointer ${
-                      item.status === 'ready'
-                        ? 'border-[#2D2D42] bg-[#141422] text-zinc-300 hover:text-white hover:bg-[#1C1C2E]'
-                        : 'border-purple-500/30 bg-purple-500/10 text-purple-300'
-                    }`}
-                  >
-                    {item.status === 'ready' ? 'รับสินค้าแล้ว' : 'ยังไม่ได้รับ'}
-                  </button>
+                  {isAdmin ? (
+                    <button
+                      id={`inventory-claim-btn-${item.id || item.inventoryId}`}
+                      type="button"
+                      onClick={() => handleMarkClaimed(item)}
+                      title="เฉพาะแอดมิน: คลิกเพื่อเปลี่ยนสถานะรับสินค้า"
+                      className={`py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                        item.status === 'ready'
+                          ? 'border-purple-500/40 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200'
+                          : 'border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span>{item.status === 'ready' ? 'รับสินค้าแล้ว' : 'ยังไม่ได้รับ'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      id={`inventory-claim-btn-${item.id || item.inventoryId}`}
+                      type="button"
+                      disabled
+                      title="เฉพาะแอดมินเท่านั้นที่สามารถกดยืนยันการรับสินค้าได้"
+                      className={`py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs font-semibold border flex items-center gap-1.5 cursor-not-allowed opacity-75 select-none ${
+                        item.status === 'ready'
+                          ? 'border-[#2D2D42] bg-[#141422] text-zinc-400'
+                          : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                      }`}
+                    >
+                      <Lock className="w-3 h-3 text-zinc-500 shrink-0" />
+                      <span>{item.status === 'ready' ? 'รับสินค้าแล้ว' : 'รับสินค้าแล้ว'}</span>
+                    </button>
+                  )}
                 </div>
 
               </div>
