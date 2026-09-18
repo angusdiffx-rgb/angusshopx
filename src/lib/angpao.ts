@@ -29,8 +29,14 @@ export function extractVoucherCode(input: string): string | null {
     // Fallback to regex
   }
 
-  // Regex for ?v=xxx
-  const queryMatch = trimmed.match(/[?&]v=([a-zA-Z0-9]+)/);
+  // Check for /vouchers/{code} pattern
+  const voucherPathMatch = trimmed.match(/\/vouchers\/([a-zA-Z0-9]{10,64})/);
+  if (voucherPathMatch && voucherPathMatch[1]) {
+    return voucherPathMatch[1];
+  }
+
+  // Regex for ?v=xxx or &v=xxx
+  const queryMatch = trimmed.match(/[?&]v=([a-zA-Z0-9]{10,64})/);
   if (queryMatch && queryMatch[1]) {
     return queryMatch[1];
   }

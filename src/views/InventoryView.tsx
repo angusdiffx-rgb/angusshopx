@@ -161,7 +161,7 @@ export const InventoryView: React.FC = () => {
           <div>
             <h3 className="text-xs sm:text-sm font-bold text-white">วิธีเข้ารับผลปีศาจ / สินค้า</h3>
             <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">
-              1. กดปุ่ม <strong className="text-white">"เข้าเซิร์ฟเวอร์ VIP"</strong> เพื่อเปิดเกม Blox Fruits
+              1. กดปุ่ม <strong className="text-white">"ลิงค์รับของ"</strong> เพื่อเปิดเกม Blox Fruits
               <br className="hidden sm:inline" /> 2. แจ้ง Claim Code หรือชื่อ Roblox เพื่อ Trade ผลปีศาจ ปลอดภัย 100%
             </p>
           </div>
@@ -193,7 +193,7 @@ export const InventoryView: React.FC = () => {
             const instructionsTitle = item.instructionsTitle || item.metadata?.instructionsTitle || 'คำแนะนำ / รายละเอียดการรับสินค้า';
 
             const serverLink = item.serverLink || item.tradeServerLink || item.metadata?.serverLink || item.metadata?.tradeServerLink;
-            const serverLinkTitle = item.serverLinkTitle || item.metadata?.serverLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP';
+            const serverLinkTitle = item.serverLinkTitle || item.metadata?.serverLinkTitle || 'ลิงค์รับของ';
 
             const imageSrc = item.image || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=300&auto=format&fit=crop&q=80';
 

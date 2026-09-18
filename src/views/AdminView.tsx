@@ -34,7 +34,10 @@ import {
   Upload,
   Image as ImageIcon,
   Link as LinkIcon,
-  X
+  X,
+  Gift,
+  QrCode,
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -71,6 +74,7 @@ export const AdminView: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [depositFilter, setDepositFilter] = useState<'all' | 'truemoney' | 'promptpay'>('all');
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [systemUsers, setSystemUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,9 +103,9 @@ export const AdminView: React.FC = () => {
   const [isUpdatingBatchVip, setIsUpdatingBatchVip] = useState(false);
   const [vipSettings, setVipSettings] = useState<DeliverySettings>({
     vipServerLink: 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
-    defaultInstructions: 'เข้าสู่เซิร์ฟเวอร์ VIP ผ่านลิงก์ด้านล่างเพื่อรับสินค้าผ่านระบบ Trade ในเกมกับบอท AngusShop',
+    defaultInstructions: 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
     defaultInstructionsTitle: 'คำแนะนำการรับสินค้า',
-    defaultServerLinkTitle: 'เข้าเซิร์ฟเวอร์ VIP',
+    defaultServerLinkTitle: 'ลิงค์รับของ',
     defaultClaimCodeTitle: 'รหัสรับสินค้า (Claim Code)',
     claimCodePrefix: 'AGS-',
   });
@@ -110,7 +114,7 @@ export const AdminView: React.FC = () => {
   const [deliveryForm, setDeliveryForm] = useState({
     instructionsTitle: 'คำแนะนำการรับสินค้า',
     instructions: '',
-    serverLinkTitle: 'เข้าเซิร์ฟเวอร์ VIP',
+    serverLinkTitle: 'ลิงค์รับของ',
     tradeServerLink: '',
     claimCodeTitle: 'รหัสรับสินค้า (Claim Code)',
     claimCode: '',
@@ -127,8 +131,8 @@ export const AdminView: React.FC = () => {
     productName: '',
     quantity: 1,
     instructionsTitle: 'คำแนะนำการรับสินค้า',
-    instructions: 'เข้าเซิร์ฟเวอร์ VIP ด้านล่างเพื่อรับไอเทมผ่านระบบเทรดในเกม Blox Fruits',
-    serverLinkTitle: 'เข้าเซิร์ฟเวอร์ VIP',
+    instructions: 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+    serverLinkTitle: 'ลิงค์รับของ',
     tradeServerLink: '',
     claimCodeTitle: 'รหัสรับสินค้า (Claim Code)',
     claimCode: '',
@@ -149,8 +153,8 @@ export const AdminView: React.FC = () => {
     shortDescription: '',
     deliveryType: 'fruit_trade',
     instructionsTitle: 'คำแนะนำการรับสินค้า',
-    deliveryInstructions: 'เข้าเซิร์ฟเวอร์ VIP ด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
-    serverLinkTitle: 'เข้าเซิร์ฟเวอร์ VIP',
+    deliveryInstructions: 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+    serverLinkTitle: 'ลิงค์รับของ',
     tradeServerLink: '',
     claimCodeTitle: 'รหัสรับสินค้า (Claim Code)',
     claimCode: '',
@@ -229,9 +233,9 @@ export const AdminView: React.FC = () => {
         const data = snap.data() as DeliverySettings;
         setVipSettings({
           vipServerLink: data.vipServerLink || 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
-          defaultInstructions: data.defaultInstructions || 'เข้าสู่เซิร์ฟเวอร์ VIP ผ่านลิงก์ด้านล่างเพื่อรับสินค้าผ่านระบบ Trade ในเกมกับบอท AngusShop',
+          defaultInstructions: data.defaultInstructions || 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
           defaultInstructionsTitle: data.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
-          defaultServerLinkTitle: data.defaultServerLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP',
+          defaultServerLinkTitle: data.defaultServerLinkTitle || 'ลิงค์รับของ',
           defaultClaimCodeTitle: data.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
           claimCodePrefix: data.claimCodePrefix || 'AGS-',
         });
@@ -270,21 +274,48 @@ export const AdminView: React.FC = () => {
       setNewProduct((prev) => ({
         ...prev,
         image: preset.url,
-        name: prev.name ? prev.name : preset.th,
+        name: preset.th,
         rarity: preset.rarity || prev.rarity,
         category: (preset.category as any) || prev.category,
       }));
-      success(`เลือกรูปและข้อมูล ${preset.th} เรียบร้อยแล้ว`);
+      success(`เลือกรูปและใส่ชื่อ ${preset.th} เรียบร้อยแล้ว`);
     } else if (presetPickerTarget === 'edit' && selectedProduct) {
       setSelectedProduct({
         ...selectedProduct,
         image: preset.url,
-        name: selectedProduct.name ? selectedProduct.name : preset.th,
+        name: preset.th,
         category: (preset.category as any) || selectedProduct.category,
         rarity: preset.rarity || selectedProduct.rarity,
       });
-      success(`เลือกรูปและข้อมูล ${preset.th} เรียบร้อยแล้ว`);
+      success(`เลือกรูปและใส่ชื่อ ${preset.th} เรียบร้อยแล้ว`);
     }
+  };
+
+  const handleOpenAddModal = () => {
+    setNewProduct({
+      name: '',
+      slug: '',
+      category: 'ผลปีศาจ',
+      price: 150,
+      oldPrice: 199,
+      stock: 5,
+      image: 'https://static.wikia.nocookie.net/roblox-blox-piece/images/6/65/Kitsune_Fruit.png/revision/latest',
+      description: '',
+      shortDescription: '',
+      deliveryType: 'fruit_trade',
+      instructionsTitle: 'คำแนะนำการรับสินค้า',
+      deliveryInstructions: 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+      serverLinkTitle: 'ลิงค์รับของ',
+      tradeServerLink: '',
+      claimCodeTitle: 'รหัสรับสินค้า (Claim Code)',
+      claimCode: '',
+      rarity: 'Mythical',
+      fruitType: 'Permanent',
+      isFeatured: true,
+      isBestSeller: false,
+      isActive: true,
+    });
+    setIsAddModalOpen(true);
   };
 
   // Clear All Products from Catalog (to start clean with manual entry)
@@ -334,7 +365,7 @@ export const AdminView: React.FC = () => {
         deliveryType: newProduct.deliveryType || 'fruit_trade',
         instructionsTitle: newProduct.instructionsTitle || 'คำแนะนำการรับสินค้า',
         deliveryInstructions: newProduct.deliveryInstructions || '',
-        serverLinkTitle: newProduct.serverLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP',
+        serverLinkTitle: newProduct.serverLinkTitle || 'ลิงค์รับของ',
         tradeServerLink: newProduct.tradeServerLink || '',
         claimCodeTitle: newProduct.claimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
         claimCode: newProduct.claimCode || '',
@@ -403,7 +434,7 @@ export const AdminView: React.FC = () => {
         fruitType: selectedProduct.fruitType || 'Permanent',
         instructionsTitle: selectedProduct.instructionsTitle || 'คำแนะนำการรับสินค้า',
         deliveryInstructions: selectedProduct.deliveryInstructions || '',
-        serverLinkTitle: selectedProduct.serverLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP',
+        serverLinkTitle: selectedProduct.serverLinkTitle || 'ลิงค์รับของ',
         tradeServerLink: selectedProduct.tradeServerLink || '',
         claimCodeTitle: selectedProduct.claimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
         claimCode: selectedProduct.claimCode || '',
@@ -457,7 +488,7 @@ export const AdminView: React.FC = () => {
     const existingInstructions = item.instructions || item.metadata?.instructions || '';
     const existingInstructionsTitle = item.instructionsTitle || item.metadata?.instructionsTitle || vipSettings.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า';
     const existingLink = item.tradeServerLink || item.serverLink || item.metadata?.tradeServerLink || item.metadata?.serverLink || '';
-    const existingServerLinkTitle = item.serverLinkTitle || item.metadata?.serverLinkTitle || vipSettings.defaultServerLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP';
+    const existingServerLinkTitle = item.serverLinkTitle || item.metadata?.serverLinkTitle || vipSettings.defaultServerLinkTitle || 'ลิงค์รับของ';
     const existingCode = item.claimCode || item.metadata?.claimCode || item.metadata?.code || item.metadata?.redeemCode || '';
     const existingClaimCodeTitle = item.claimCodeTitle || item.metadata?.claimCodeTitle || vipSettings.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)';
     const existingAdminNote = item.metadata?.adminNote || '';
@@ -544,7 +575,7 @@ export const AdminView: React.FC = () => {
         vipServerLink: vipSettings.vipServerLink,
         defaultInstructions: vipSettings.defaultInstructions,
         defaultInstructionsTitle: vipSettings.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
-        defaultServerLinkTitle: vipSettings.defaultServerLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP',
+        defaultServerLinkTitle: vipSettings.defaultServerLinkTitle || 'ลิงค์รับของ',
         defaultClaimCodeTitle: vipSettings.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
         claimCodePrefix: vipSettings.claimCodePrefix || 'AGS-',
         updatedAt: new Date().toISOString(),
@@ -618,7 +649,7 @@ export const AdminView: React.FC = () => {
         image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80',
         instructionsTitle: directDeliverForm.instructionsTitle || vipSettings.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
         instructions: directDeliverForm.instructions || 'แอดมินส่งมอบสินค้าเข้าคลังของคุณเรียบร้อยแล้ว',
-        serverLinkTitle: directDeliverForm.serverLinkTitle || vipSettings.defaultServerLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP',
+        serverLinkTitle: directDeliverForm.serverLinkTitle || vipSettings.defaultServerLinkTitle || 'ลิงค์รับของ',
         tradeServerLink: directDeliverForm.tradeServerLink || '',
         serverLink: directDeliverForm.tradeServerLink || '',
         claimCodeTitle: directDeliverForm.claimCodeTitle || vipSettings.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
@@ -627,7 +658,7 @@ export const AdminView: React.FC = () => {
           robloxUsername: directDeliverForm.robloxUsername || '',
           instructionsTitle: directDeliverForm.instructionsTitle || vipSettings.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
           instructions: directDeliverForm.instructions || '',
-          serverLinkTitle: directDeliverForm.serverLinkTitle || vipSettings.defaultServerLinkTitle || 'เข้าเซิร์ฟเวอร์ VIP',
+          serverLinkTitle: directDeliverForm.serverLinkTitle || vipSettings.defaultServerLinkTitle || 'ลิงค์รับของ',
           tradeServerLink: directDeliverForm.tradeServerLink || '',
           serverLink: directDeliverForm.tradeServerLink || '',
           claimCodeTitle: directDeliverForm.claimCodeTitle || vipSettings.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
@@ -662,7 +693,8 @@ export const AdminView: React.FC = () => {
         productId: '',
         productName: '',
         quantity: 1,
-        instructions: 'เข้าเซิร์ฟเวอร์ VIP ด้านล่างเพื่อรับไอเทมผ่านระบบเทรดในเกม Blox Fruits',
+        instructions: 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+        serverLinkTitle: 'ลิงค์รับของ',
         tradeServerLink: '',
         claimCode: '',
         deliveryType: 'fruit_trade',
@@ -988,7 +1020,7 @@ export const AdminView: React.FC = () => {
                 </button>
               )}
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={handleOpenAddModal}
                 className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow flex items-center gap-1.5 hover:brightness-110 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -1007,7 +1039,7 @@ export const AdminView: React.FC = () => {
                 สินค้าเริ่มต้นถูกนำออกแล้วตามที่คุณกำหนด ร้านค้าอยู่ในโหมดกรอกสินค้าเองทั้งหมด คุณสามารถกดปุ่มด้านล่างเพื่อเริ่มลงขายสินค้าชิ้นแรกได้ทันที
               </p>
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={handleOpenAddModal}
                 className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow-lg shadow-purple-600/30 inline-flex items-center gap-2 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
               >
                 <Plus className="w-4 h-4" />
@@ -1092,51 +1124,191 @@ export const AdminView: React.FC = () => {
     )}
 
     {/* Tab 3: Deposits Management */}
-      {activeTab === 'deposits' && (
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-bold text-white">รายการสลิปการเติมเงิน PromptPay (SlipOK)</h3>
-            <p className="text-xs text-zinc-400">ประวัติการตรวจสอบสลิปอัตโนมัติทั้งหมดในระบบ</p>
-          </div>
+      {activeTab === 'deposits' && (() => {
+        const truemoneyDeposits = deposits.filter((d) => d.method === 'truemoney_angpao');
+        const promptpayDeposits = deposits.filter((d) => d.method !== 'truemoney_angpao');
+        const truemoneyTotal = truemoneyDeposits.reduce((acc, d) => acc + (d.amount || 0), 0);
+        const promptpayTotal = promptpayDeposits.reduce((acc, d) => acc + (d.amount || 0), 0);
+        const allTotal = deposits.reduce((acc, d) => acc + (d.amount || 0), 0);
 
-          <div className="overflow-x-auto rounded-2xl border border-[#212133] bg-[#11111A]">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#0B0B12] text-zinc-400 border-b border-[#212133]">
-                <tr>
-                  <th className="p-4">รหัสธุรกรรม</th>
-                  <th className="p-4">UID ผู้ใช้</th>
-                  <th className="p-4">จำนวนเงิน</th>
-                  <th className="p-4">เลขอ้างอิงสลิป (transRef)</th>
-                  <th className="p-4">สถานะ</th>
-                  <th className="p-4">วันที่ / เวลา</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1D1D2C]">
-                {deposits.map((dep) => (
-                  <tr key={dep.depositId} className="hover:bg-[#161624] transition-colors">
-                    <td className="p-4 font-mono text-zinc-400">{dep.depositId}</td>
-                    <td className="p-4 font-mono text-zinc-400 text-[11px]">{dep.uid?.substring(0, 10)}...</td>
-                    <td className="p-4 font-bold text-emerald-400">฿{dep.amount?.toLocaleString()}</td>
-                    <td className="p-4 font-mono text-zinc-300">{dep.transRef || '-'}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        dep.status === 'completed'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-rose-500/20 text-rose-400'
-                      }`}>
-                        {dep.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-zinc-400">
-                      {new Date(dep.createdAt).toLocaleString('th-TH', { hour12: false })}
-                    </td>
+        const displayedDeposits = deposits.filter((d) => {
+          if (depositFilter === 'truemoney') return d.method === 'truemoney_angpao';
+          if (depositFilter === 'promptpay') return d.method !== 'truemoney_angpao';
+          return true;
+        });
+
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-emerald-400" />
+                  <span>รายการประวัติการเติมเงิน (Deposits)</span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  ตรวจสอบรายการเติมเงินทั้งหมด ทั้งซองของขวัญ TrueMoney Wallet และพร้อมเพย์ SlipOK
+                </p>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-2 bg-[#0B0B12] p-1.5 rounded-2xl border border-[#212133] self-start sm:self-auto">
+                <button
+                  onClick={() => setDepositFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    depositFilter === 'all'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  ทั้งหมด ({deposits.length})
+                </button>
+                <button
+                  onClick={() => setDepositFilter('truemoney')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    depositFilter === 'truemoney'
+                      ? 'bg-gradient-to-r from-[#FF5B00] to-[#E64A19] text-white shadow-md shadow-[#FF5B00]/20'
+                      : 'text-[#FF8A00] hover:text-[#FFA040]'
+                  }`}
+                >
+                  <Gift className="w-3.5 h-3.5" />
+                  <span>TrueMoney ({truemoneyDeposits.length})</span>
+                </button>
+                <button
+                  onClick={() => setDepositFilter('promptpay')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    depositFilter === 'promptpay'
+                      ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/20'
+                      : 'text-purple-400 hover:text-purple-300'
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>PromptPay ({promptpayDeposits.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Deposit Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#11111A] border border-[#212133] space-y-1">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>ยอดเติมเงินทั้งหมด</span>
+                  <Receipt className="w-4 h-4 text-zinc-400" />
+                </div>
+                <div className="text-2xl font-black text-white">
+                  ฿{allTotal.toLocaleString()}
+                </div>
+                <p className="text-[11px] text-zinc-500">{deposits.length} รายการที่สำเร็จ</p>
+              </div>
+
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#1F130B] to-[#120B07] border border-[#FF6A00]/30 space-y-1">
+                <div className="flex items-center justify-between text-xs text-[#FF8A00]">
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <Gift className="w-3.5 h-3.5" /> ซองของขวัญ TrueMoney
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF5B00]/20 text-[#FF8A00]">
+                    ออโต้
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-[#FF8A00]">
+                  ฿{truemoneyTotal.toLocaleString()}
+                </div>
+                <p className="text-[11px] text-zinc-400">{truemoneyDeposits.length} รายการซองอั่งเปา</p>
+              </div>
+
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#161224] to-[#0E0C18] border border-purple-500/30 space-y-1">
+                <div className="flex items-center justify-between text-xs text-purple-300">
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <QrCode className="w-3.5 h-3.5" /> พร้อมเพย์ PromptPay
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                    SlipOK
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-purple-300">
+                  ฿{promptpayTotal.toLocaleString()}
+                </div>
+                <p className="text-[11px] text-zinc-400">{promptpayDeposits.length} รายการสแกนสลิป</p>
+              </div>
+            </div>
+
+            {/* Deposits Table */}
+            <div className="overflow-x-auto rounded-2xl border border-[#212133] bg-[#11111A]">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#0B0B12] text-zinc-400 border-b border-[#212133]">
+                  <tr>
+                    <th className="p-4">ช่องทาง</th>
+                    <th className="p-4">รหัสธุรกรรม</th>
+                    <th className="p-4">UID ผู้ใช้</th>
+                    <th className="p-4">จำนวนเงิน</th>
+                    <th className="p-4">ข้อมูลอ้างอิง / รหัสซอง</th>
+                    <th className="p-4">สถานะ</th>
+                    <th className="p-4">วันที่ / เวลา</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#1D1D2C]">
+                  {displayedDeposits.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-zinc-500 text-xs">
+                        ไม่พบรายการเติมเงินในหมวดหมู่นี้
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedDeposits.map((dep) => (
+                      <tr key={dep.depositId} className="hover:bg-[#161624] transition-colors">
+                        <td className="p-4">
+                          {dep.method === 'truemoney_angpao' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#FF5B00]/15 text-[#FF8A00] border border-[#FF5B00]/30 font-bold text-[11px]">
+                              <Gift className="w-3.5 h-3.5" />
+                              <span>TrueMoney</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/15 text-purple-300 border border-purple-500/30 font-bold text-[11px]">
+                              <QrCode className="w-3.5 h-3.5" />
+                              <span>PromptPay</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 font-mono text-zinc-400">{dep.depositId}</td>
+                        <td className="p-4 font-mono text-zinc-400 text-[11px]">{dep.uid?.substring(0, 10)}...</td>
+                        <td className="p-4 font-bold text-emerald-400">฿{dep.amount?.toLocaleString()}</td>
+                        <td className="p-4">
+                          {dep.method === 'truemoney_angpao' ? (
+                            <div className="space-y-0.5">
+                              <div className="font-mono text-white text-[11px]">
+                                ซอง: {dep.voucherHash ? `${dep.voucherHash.substring(0, 16)}...` : '-'}
+                              </div>
+                              {dep.senderName && (
+                                <div className="text-zinc-400 text-[10px]">ผู้ส่ง: {dep.senderName}</div>
+                              )}
+                              {dep.recipientPhone && (
+                                <div className="text-zinc-500 text-[10px] font-mono">เบอร์รับ: {dep.recipientPhone}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="font-mono text-zinc-300">{dep.transRef || '-'}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            dep.status === 'completed'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-rose-500/20 text-rose-400'
+                          }`}>
+                            {dep.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-zinc-400">
+                          {new Date(dep.createdAt).toLocaleString('th-TH', { hour12: false })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Tab 4: Orders Management */}
       {activeTab === 'orders' && (
@@ -1803,7 +1975,7 @@ export const AdminView: React.FC = () => {
                           setNewProduct((prev) => ({
                             ...prev,
                             image: preset.url,
-                            name: prev.name ? prev.name : preset.th,
+                            name: preset.th,
                             rarity: preset.rarity || prev.rarity,
                             category: (preset.category as any) || prev.category,
                           }));
@@ -1876,7 +2048,7 @@ export const AdminView: React.FC = () => {
                   />
                   <textarea
                     rows={2}
-                    placeholder="ข้อความส่งมอบ เช่น เข้าเซิร์ฟเวอร์ VIP ด้านล่างเพื่อรับผลปีศาจ หรือ ติดต่อแอดมินพร้อมแจ้งเลขออเดอร์..."
+                    placeholder="ข้อความส่งมอบ เช่น เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits หรือ ติดต่อแอดมินพร้อมแจ้งเลขออเดอร์..."
                     value={newProduct.deliveryInstructions || ''}
                     onChange={(e) => setNewProduct({ ...newProduct, deliveryInstructions: e.target.value })}
                     className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2.5 text-white placeholder:text-zinc-600 text-xs focus:outline-none"
@@ -1892,11 +2064,11 @@ export const AdminView: React.FC = () => {
                         <Server className="w-3 h-3 text-indigo-400" />
                         <span>ชื่อหัวข้อ / ปุ่มลิงก์</span>
                       </label>
-                      <span className="text-[10px] text-zinc-500">เริ่มต้น: เข้าเซิร์ฟเวอร์ VIP</span>
+                      <span className="text-[10px] text-zinc-500">เริ่มต้น: ลิงค์รับของ</span>
                     </div>
                     <input
                       type="text"
-                      placeholder="เช่น เข้าเซิร์ฟเวอร์ VIP, ลิงก์รับของ"
+                      placeholder="เช่น ลิงค์รับของ, เข้าเซิร์ฟเวอร์ VIP"
                       value={newProduct.serverLinkTitle || ''}
                       onChange={(e) => setNewProduct({ ...newProduct, serverLinkTitle: e.target.value })}
                       className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2 text-white text-xs placeholder:text-zinc-600 focus:outline-none"
@@ -2128,6 +2300,7 @@ export const AdminView: React.FC = () => {
                           setSelectedProduct({
                             ...selectedProduct,
                             image: preset.url,
+                            name: preset.th,
                             category: (preset.category as any) || selectedProduct.category,
                             rarity: preset.rarity || selectedProduct.rarity,
                           });
@@ -2296,7 +2469,7 @@ export const AdminView: React.FC = () => {
                   />
                   <textarea
                     rows={2}
-                    placeholder="เช่น เข้าเซิร์ฟเวอร์ VIP ด้านล่างเพื่อรับผลปีศาจ..."
+                    placeholder="เช่น เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits..."
                     value={selectedProduct.deliveryInstructions || ''}
                     onChange={(e) => setSelectedProduct({ ...selectedProduct, deliveryInstructions: e.target.value })}
                     className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2.5 text-white placeholder:text-zinc-600 text-xs focus:outline-none"
@@ -2312,7 +2485,7 @@ export const AdminView: React.FC = () => {
                     </label>
                     <input
                       type="text"
-                      placeholder="ชื่อปุ่ม เช่น เข้าเซิร์ฟเวอร์ VIP"
+                      placeholder="ชื่อปุ่ม เช่น ลิงค์รับของ"
                       value={selectedProduct.serverLinkTitle || ''}
                       onChange={(e) => setSelectedProduct({ ...selectedProduct, serverLinkTitle: e.target.value })}
                       className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2 text-white text-xs placeholder:text-zinc-600 focus:outline-none"
@@ -2688,11 +2861,11 @@ export const AdminView: React.FC = () => {
                     <Server className="w-3.5 h-3.5 text-indigo-400" />
                     <span>ชื่อหัวข้อ / ข้อความบนปุ่มลิงก์</span>
                   </label>
-                  <span className="text-[10px] text-zinc-500">ค่าเริ่มต้น: เข้าเซิร์ฟเวอร์ VIP</span>
+                  <span className="text-[10px] text-zinc-500">ค่าเริ่มต้น: ลิงค์รับของ</span>
                 </div>
                 <input
                   type="text"
-                  placeholder="เช่น เข้าเซิร์ฟเวอร์ VIP, ลิงก์รับของ, ลิงก์ดาวน์โหลด"
+                  placeholder="เช่น ลิงค์รับของ, ลิงก์ดาวน์โหลด"
                   value={deliveryForm.serverLinkTitle}
                   onChange={(e) => setDeliveryForm({ ...deliveryForm, serverLinkTitle: e.target.value })}
                   className="w-full bg-[#0A0A10] border border-[#29293E] focus:border-purple-500 rounded-xl p-2.5 text-white placeholder:text-zinc-600 text-xs focus:outline-none"
@@ -2993,7 +3166,7 @@ export const AdminView: React.FC = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="เช่น เข้าเซิร์ฟเวอร์ VIP, ลิงก์รับของ"
+                    placeholder="เช่น ลิงค์รับของ, ลิงก์ดาวน์โหลด"
                     value={directDeliverForm.serverLinkTitle}
                     onChange={(e) => setDirectDeliverForm({ ...directDeliverForm, serverLinkTitle: e.target.value })}
                     className="w-full bg-[#0A0A10] border border-[#29293E] focus:border-purple-500 rounded-xl p-2 text-white placeholder:text-zinc-600 text-xs focus:outline-none"
@@ -3109,11 +3282,11 @@ export const AdminView: React.FC = () => {
                     <Server className="w-3.5 h-3.5 text-purple-400" />
                     <span>ชื่อหัวข้อ / ข้อความบนปุ่มลิงก์เริ่มต้น</span>
                   </label>
-                  <span className="text-[10px] text-zinc-500">ค่าเริ่มต้น: เข้าเซิร์ฟเวอร์ VIP</span>
+                  <span className="text-[10px] text-zinc-500">ค่าเริ่มต้น: ลิงค์รับของ</span>
                 </div>
                 <input
                   type="text"
-                  placeholder="เช่น เข้าเซิร์ฟเวอร์ VIP, ลิงก์รับสินค้า"
+                  placeholder="เช่น ลิงค์รับของ, เข้าเซิร์ฟเวอร์ VIP"
                   value={vipSettings.defaultServerLinkTitle || ''}
                   onChange={(e) => setVipSettings({ ...vipSettings, defaultServerLinkTitle: e.target.value })}
                   className="w-full bg-[#0A0A10] border border-[#29293E] focus:border-purple-500 rounded-xl p-2 text-white placeholder:text-zinc-600 text-xs focus:outline-none"

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, ArrowUpDown, X, Sparkles, Flame, Check } from 'lucide-react';
 import { Product, ProductCategory } from '../types';
 import { ProductCard } from '../components/ProductCard';
@@ -23,6 +23,11 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc' | 'bestseller'>('newest');
   const [maxPrice, setMaxPrice] = useState<number>(2000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
+
+  useEffect(() => {
+    setSelectedCategory(initialCategory || 'ทั้งหมด');
+    setSearchTerm(initialSearch || '');
+  }, [initialCategory, initialSearch]);
 
   const categories: (string | ProductCategory)[] = [
     'ทั้งหมด',

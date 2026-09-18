@@ -78,7 +78,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const faqs = [
     { 
       q: 'ได้รับผลปีศาจได้อย่างไร?', 
-      a: 'หลังจากทำการสั่งซื้อสำเร็จ ให้ไปที่เมนู "คลังสินค้า" จะมีปุ่ม "เข้าเซิร์ฟเวอร์ VIP" เพื่อเปิดเกม Blox Fruits และทำการ Trade ผลปีศาจกับบอทหรือทีมงานของร้านได้ทันที' 
+      a: 'หลังจากทำการสั่งซื้อสำเร็จ ให้ไปที่เมนู "คลังสินค้า" จะมีปุ่ม "ลิงค์รับของ" เพื่อเปิดเกม Blox Fruits และทำการ Trade ผลปีศาจกับบอทหรือทีมงานของร้านได้ทันที' 
     },
     { 
       q: 'ระบบเติมเงิน PromptPay ตรวจสอบสลิปอย่างไร?', 
@@ -152,7 +152,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {homeConfig.trendingItems.map((fruit) => (
                 <div
                   key={fruit.id || fruit.name}
-                  onClick={() => onNavigate('shop', fruit.th || fruit.name)}
+                  onClick={() => onNavigate('shop', 'ผลปีศาจ')}
                   className="group p-2 rounded-xl bg-[#141422] hover:bg-purple-900/30 border border-white/5 hover:border-purple-500/60 transition-all duration-200 cursor-pointer text-center flex flex-col items-center"
                 >
                   <div className="relative w-12 h-12 sm:w-14 sm:h-14 mb-1">
@@ -358,7 +358,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 
                 {/* Visual Fruit Card 1 */}
                 <div 
-                  onClick={() => onNavigate('shop', homeConfig.promoCard1?.keyword || homeConfig.promoCard1?.name || 'คิตสึเนะ')}
+                  onClick={() => onNavigate('shop', 'ผลปีศาจ')}
                   className="p-3 rounded-xl bg-gradient-to-b from-purple-950/60 to-black/60 border border-purple-500/30 flex flex-col items-center text-center cursor-pointer hover:border-purple-400 transition-all group"
                 >
                   <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-1">
@@ -379,7 +379,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                 {/* Visual Fruit Card 2 */}
                 <div 
-                  onClick={() => onNavigate('shop', homeConfig.promoCard2?.keyword || homeConfig.promoCard2?.name || 'มังกร')}
+                  onClick={() => onNavigate('shop', 'ผลปีศาจ')}
                   className="p-3 rounded-xl bg-gradient-to-b from-purple-950/60 to-black/60 border border-purple-500/30 flex flex-col items-center text-center cursor-pointer hover:border-purple-400 transition-all group"
                 >
                   <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-1">

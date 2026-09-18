@@ -549,7 +549,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       let globalInstructions = '';
       let globalPrefix = 'AGS-';
       let globalInstructionsTitle = 'คำแนะนำ / รายละเอียดการรับสินค้า';
-      let globalServerLinkTitle = 'เข้าเซิร์ฟเวอร์ VIP';
+      let globalServerLinkTitle = 'ลิงค์รับของ';
       let globalClaimCodeTitle = 'รหัสรับสินค้า (Claim Code)';
 
       if (deliverySettingsDoc.exists()) {
