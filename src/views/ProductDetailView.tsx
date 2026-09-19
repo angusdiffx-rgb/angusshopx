@@ -124,7 +124,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 ลดพิเศษ -{discountPercent}%
               </div>
             )}
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-white font-semibold text-[11px] sm:text-xs">
+            <div className={`absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 rounded-xl backdrop-blur-md font-semibold text-[11px] sm:text-xs border ${
+              product.category === 'สกินผล'
+                ? 'bg-gradient-to-r from-fuchsia-600/90 to-purple-600/90 border-fuchsia-400/40 text-fuchsia-100 shadow-md shadow-fuchsia-500/25'
+                : 'bg-black/70 border-white/10 text-white'
+            }`}>
               {product.category}
             </div>
           </div>

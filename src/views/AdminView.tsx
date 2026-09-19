@@ -40,7 +40,21 @@ import {
   X,
   Gift,
   QrCode,
-  Wallet
+  Wallet,
+  Flame,
+  Palette,
+  Zap,
+  Sword,
+  Wrench,
+  Layers,
+  FolderKanban,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Filter,
+  SlidersHorizontal,
+  Grid,
+  List
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -75,6 +89,29 @@ export const AdminView: React.FC = () => {
   
   // Data states
   const [products, setProducts] = useState<Product[]>([]);
+  
+  // Category management & view controls for Products
+  const [productCategoryFilter, setProductCategoryFilter] = useState<string>('all');
+  const [productSearch, setProductSearch] = useState<string>('');
+  const [productStockFilter, setProductStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  const [productViewMode, setProductViewMode] = useState<'grouped' | 'list'>('grouped');
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+
+  const toggleCategoryCollapse = (cat: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
+  const expandAllCategories = (categoriesList: string[]) => {
+    const next: Record<string, boolean> = {};
+    categoriesList.forEach(c => { next[c] = false; });
+    setCollapsedCategories(next);
+  };
+
+  const collapseAllCategories = (categoriesList: string[]) => {
+    const next: Record<string, boolean> = {};
+    categoriesList.forEach(c => { next[c] = true; });
+    setCollapsedCategories(next);
+  };
   const [orders, setOrders] = useState<Order[]>([]);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [depositFilter, setDepositFilter] = useState<'all' | 'truemoney' | 'promptpay'>('all');
@@ -299,25 +336,33 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = (defaultCategory?: ProductCategory | string) => {
+    const chosenCat = (defaultCategory && defaultCategory !== 'all')
+      ? (defaultCategory as ProductCategory)
+      : (productCategoryFilter !== 'all' ? (productCategoryFilter as ProductCategory) : 'ผลปีศาจ');
+
     setNewProduct({
       name: '',
       slug: '',
-      category: 'ผลปีศาจ',
+      category: chosenCat || 'ผลปีศาจ',
       price: 150,
       oldPrice: 199,
       stock: 5,
-      image: 'https://static.wikia.nocookie.net/roblox-blox-piece/images/6/65/Kitsune_Fruit.png/revision/latest',
+      image: chosenCat === 'สกินผล' 
+        ? '/images/blox/skin_yellow_lightning.png'
+        : 'https://static.wikia.nocookie.net/roblox-blox-piece/images/6/65/Kitsune_Fruit.png/revision/latest',
       description: '',
       shortDescription: '',
-      deliveryType: 'fruit_trade',
+      deliveryType: chosenCat === 'Gamepass' ? 'gamepass_gift' : (chosenCat === 'บริการ' ? 'manual_service' : 'fruit_trade'),
       instructionsTitle: 'คำแนะนำการรับสินค้า',
-      deliveryInstructions: 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+      deliveryInstructions: chosenCat === 'Gamepass'
+        ? 'แอดมินจะส่งของขวัญ Gamepass ให้คุณผ่านระบบ Gift ในเกม'
+        : (chosenCat === 'บริการ' ? 'ติดต่อทีมงานเพื่อเริ่มคิวรับบริการ' : 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits'),
       serverLinkTitle: 'ลิงค์รับของ',
       tradeServerLink: '',
       claimCodeTitle: 'รหัสรับสินค้า (Claim Code)',
       claimCode: '',
-      rarity: 'Mythical',
+      rarity: chosenCat === 'สกินผล' ? 'Legendary' : 'Mythical',
       fruitType: 'Permanent',
       isFeatured: true,
       isBestSeller: false,
@@ -395,32 +440,79 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  // Handle local image file upload and convert to base64 Data URL
-  const handleImageFileChange = (file: File | null | undefined, isEdit: boolean) => {
+  // Helper: Compress and resize image using HTML5 Canvas to keep size under 100KB (well below Firestore 1MB limit)
+  const compressImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (readerEvent) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 640;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(readerEvent.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Try exporting as WebP (super high quality and tiny file size)
+          try {
+            const webpData = canvas.toDataURL('image/webp', 0.82);
+            if (webpData && webpData.startsWith('data:image/webp')) {
+              resolve(webpData);
+              return;
+            }
+          } catch {}
+
+          // Fallback to JPEG
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = () => reject(new Error('ไม่สามารถโหลดรูปภาพเพื่อย่อขนาดได้'));
+        img.src = readerEvent.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle local image file upload, compress, and convert to safe base64 Data URL
+  const handleImageFileChange = async (file: File | null | undefined, isEdit: boolean) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       toastError('รูปแบบไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, WEBP, GIF)');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toastError('ไฟล์ใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 2MB');
+    if (file.size > 10 * 1024 * 1024) {
+      toastError('ไฟล์ใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 10MB');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
+    try {
+      const compressedBase64 = await compressImageFile(file);
       if (isEdit) {
-        setSelectedProduct((prev) => prev ? { ...prev, image: base64 } : prev);
+        setSelectedProduct((prev) => prev ? { ...prev, image: compressedBase64 } : prev);
       } else {
-        setNewProduct((prev) => ({ ...prev, image: base64 }));
+        setNewProduct((prev) => ({ ...prev, image: compressedBase64 }));
       }
-      success('อัปโหลดรูปภาพสำเร็จ', 'นำเข้ารูปภาพเข้าสู่แบบฟอร์มเรียบร้อย');
-    };
-    reader.onerror = () => {
-      toastError('ไม่สามารถอ่านไฟล์ได้', 'เกิดข้อผิดพลาดในการโหลดรูปภาพ');
-    };
-    reader.readAsDataURL(file);
+      success('อัปโหลดรูปภาพสำเร็จ', 'ระบบปรับขนาดและบีบอัดรูปภาพให้เหมาะสมกับฐานข้อมูลเรียบร้อย');
+    } catch (err: any) {
+      console.error('Image compression error:', err);
+      toastError('เกิดข้อผิดพลาด', err?.message || 'ไม่สามารถประมวลผลรูปภาพได้');
+    }
   };
 
   // Update Product (Full data + image support with server API fallback)
@@ -1008,128 +1100,610 @@ export const AdminView: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 2: Products Management */}
-      {activeTab === 'products' && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-white">รายการสินค้า Blox Fruits</h3>
-              <p className="text-xs text-zinc-400">จัดการสินค้าในร้านค้า (โหมดกรอกเองเท่านั้น)</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {products.length > 0 && (
-                <button
-                  onClick={() => setIsConfirmClearModalOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="ล้างสินค้าทั้งหมดเพื่อเริ่มต้นใหม่"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>ล้างสินค้าทั้งหมด ({products.length})</span>
-                </button>
-              )}
-              <button
-                onClick={handleOpenAddModal}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow flex items-center gap-1.5 hover:brightness-110 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>เพิ่มสินค้าใหม่</span>
-              </button>
-            </div>
-          </div>
+      {/* Tab 2: Products Management (แยกหมวดหมู่สินค้าอย่างสมบูรณ์แบบ) */}
+      {activeTab === 'products' && (() => {
+        // รายการหมวดหมู่มาตรฐาน
+        const standardOrder: string[] = ['ผลปีศาจ', 'สกินผล', 'Gamepass', 'ไอเทม', 'บริการ', 'อื่นๆ'];
+        
+        // หมวดหมู่ทั้งหมดที่มีสินค้าอยู่ในระบบจริง
+        const allPresentCategories: string[] = Array.from(new Set(products.map(p => (p.category as string) || 'อื่นๆ')));
+        const sortedCategories: string[] = [
+          ...standardOrder.filter(c => allPresentCategories.includes(c) || products.some(p => p.category === c)),
+          ...allPresentCategories.filter(c => !standardOrder.includes(c))
+        ];
 
-          {products.length === 0 ? (
-            <div className="py-16 px-6 text-center rounded-2xl border border-[#212133] bg-[#11111A]">
-              <div className="w-16 h-16 rounded-2xl bg-[#181826] border border-purple-500/20 flex items-center justify-center text-purple-400 mx-auto mb-4 shadow-lg shadow-purple-950/40">
-                <ShoppingBag className="w-8 h-8" />
+        // ฟังก์ชันกำหนดรูปแบบสีและไอคอนประจำหมวดหมู่
+        const getCategoryConfig = (cat: string) => {
+          switch (cat) {
+            case 'ผลปีศาจ':
+              return {
+                label: 'ผลปีศาจ (Devil Fruits)',
+                shortLabel: 'ผลปีศาจ',
+                icon: Flame,
+                color: 'text-purple-400',
+                bg: 'bg-purple-500/10',
+                border: 'border-purple-500/30',
+                activeBg: 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-900/30',
+                badge: 'bg-purple-500/15 text-purple-300 border border-purple-500/30',
+                glow: 'group-hover:border-purple-500/50'
+              };
+            case 'สกินผล':
+              return {
+                label: 'สกินผล (Fruit Skins)',
+                shortLabel: 'สกินผล',
+                icon: Palette,
+                color: 'text-pink-400',
+                bg: 'bg-pink-500/10',
+                border: 'border-pink-500/30',
+                activeBg: 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-lg shadow-pink-900/30',
+                badge: 'bg-pink-500/15 text-pink-300 border border-pink-500/30',
+                glow: 'group-hover:border-pink-500/50'
+              };
+            case 'Gamepass':
+              return {
+                label: 'Gamepass',
+                shortLabel: 'Gamepass',
+                icon: Zap,
+                color: 'text-amber-400',
+                bg: 'bg-amber-500/10',
+                border: 'border-amber-500/30',
+                activeBg: 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-900/30',
+                badge: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+                glow: 'group-hover:border-amber-500/50'
+              };
+            case 'ไอเทม':
+              return {
+                label: 'ไอเทม (Items / Weapons)',
+                shortLabel: 'ไอเทม',
+                icon: Sword,
+                color: 'text-cyan-400',
+                bg: 'bg-cyan-500/10',
+                border: 'border-cyan-500/30',
+                activeBg: 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/30',
+                badge: 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30',
+                glow: 'group-hover:border-cyan-500/50'
+              };
+            case 'บริการ':
+              return {
+                label: 'บริการ (Services / Raids)',
+                shortLabel: 'บริการ',
+                icon: Wrench,
+                color: 'text-emerald-400',
+                bg: 'bg-emerald-500/10',
+                border: 'border-emerald-500/30',
+                activeBg: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/30',
+                badge: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
+                glow: 'group-hover:border-emerald-500/50'
+              };
+            default:
+              return {
+                label: cat || 'อื่นๆ (Others)',
+                shortLabel: cat || 'อื่นๆ',
+                icon: Package,
+                color: 'text-blue-400',
+                bg: 'bg-blue-500/10',
+                border: 'border-blue-500/30',
+                activeBg: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/30',
+                badge: 'bg-blue-500/15 text-blue-300 border border-blue-500/30',
+                glow: 'group-hover:border-blue-500/50'
+              };
+          }
+        };
+
+        // สรุปสถิติรายหมวดหมู่
+        const statsByCategory: Record<string, { total: number; inStock: number; outOfStock: number; totalStock: number; totalValue: number }> = {};
+        products.forEach(p => {
+          const cat = p.category || 'อื่นๆ';
+          if (!statsByCategory[cat]) {
+            statsByCategory[cat] = { total: 0, inStock: 0, outOfStock: 0, totalStock: 0, totalValue: 0 };
+          }
+          statsByCategory[cat].total += 1;
+          statsByCategory[cat].totalStock += (p.stock || 0);
+          statsByCategory[cat].totalValue += (p.price || 0) * (p.stock || 0);
+          if ((p.stock || 0) > 0) {
+            statsByCategory[cat].inStock += 1;
+          } else {
+            statsByCategory[cat].outOfStock += 1;
+          }
+        });
+
+        // คัดกรองสินค้าตาม Search, Stock Filter และ Category Filter
+        const filteredProducts = products.filter(p => {
+          if (productCategoryFilter !== 'all' && p.category !== productCategoryFilter) {
+            return false;
+          }
+          if (productStockFilter === 'in_stock' && (p.stock || 0) <= 0) return false;
+          if (productStockFilter === 'out_of_stock' && (p.stock || 0) > 0) return false;
+          if (productSearch.trim()) {
+            const q = productSearch.toLowerCase();
+            const matchesName = (p.name || '').toLowerCase().includes(q);
+            const matchesId = (p.productId || '').toLowerCase().includes(q);
+            const matchesDesc = (p.description || '').toLowerCase().includes(q);
+            const matchesCat = (p.category || '').toLowerCase().includes(q);
+            return matchesName || matchesId || matchesDesc || matchesCat;
+          }
+          return true;
+        });
+
+        // จัดกลุ่มสินค้าตามหมวดหมู่
+        const categoriesToDisplay = productCategoryFilter === 'all'
+          ? sortedCategories
+          : sortedCategories.filter(c => c === productCategoryFilter);
+
+        // ฟังก์ชันเรนเดอร์ตารางสินค้า
+        const renderProductTable = (items: Product[], catName?: string) => {
+          if (items.length === 0) {
+            return (
+              <div className="py-8 px-4 text-center rounded-xl bg-[#0B0B12] border border-[#1A1A28]">
+                <p className="text-xs text-zinc-400 mb-2">ไม่พบสินค้าในหมวดหมู่นี้</p>
+                <button
+                  onClick={() => handleOpenAddModal(catName)}
+                  className="px-3.5 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ เพิ่มสินค้าในหมวดหมู่นี้</span>
+                </button>
               </div>
-              <h4 className="text-base font-bold text-white mb-1.5">ยังไม่มีสินค้าในร้านค้า</h4>
-              <p className="text-xs text-zinc-400 max-w-md mx-auto mb-6 leading-relaxed">
-                สินค้าเริ่มต้นถูกนำออกแล้วตามที่คุณกำหนด ร้านค้าอยู่ในโหมดกรอกสินค้าเองทั้งหมด คุณสามารถกดปุ่มด้านล่างเพื่อเริ่มลงขายสินค้าชิ้นแรกได้ทันที
-              </p>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow-lg shadow-purple-600/30 inline-flex items-center gap-2 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ เพิ่มสินค้าใหม่ชิ้นแรก</span>
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[#212133] bg-[#11111A]">
+            );
+          }
+
+          return (
+            <div className="overflow-x-auto rounded-2xl border border-[#212133] bg-[#0E0E17]">
               <table className="w-full text-left text-xs">
-              <thead className="bg-[#0B0B12] text-zinc-400 border-b border-[#212133]">
-                <tr>
-                  <th className="p-4">สินค้า</th>
-                  <th className="p-4">หมวดหมู่</th>
-                  <th className="p-4">ราคา (฿)</th>
-                  <th className="p-4">สต็อก</th>
-                  <th className="p-4">สถานะ</th>
-                  <th className="p-4 text-right">การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1D1D2C]">
-                {products.map((p) => (
-                  <tr key={p.productId} className="hover:bg-[#161624] transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-black/40 p-1 border border-purple-500/20 flex items-center justify-center shrink-0">
-                          <BloxImage 
-                            src={p.image} 
-                            alt={p.name} 
-                            productName={p.name}
-                            className="w-full h-full object-contain" 
-                          />
-                        </div>
-                        <div>
-                          <div className="font-bold text-white">{p.name}</div>
-                          <div className="text-[10px] text-zinc-500 font-mono">{p.productId}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-zinc-300">{p.category}</td>
-                    <td className="p-4 font-bold text-purple-300">฿{p.price.toLocaleString()}</td>
-                    <td className="p-4 font-bold text-white">{p.stock}</td>
-                    <td className="p-4">
-                      {p.stock > 0 ? (
-                        <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px] font-semibold">
-                          พร้อมขาย
-                        </span>
-                      ) : (
-                        <span className="text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[10px] font-semibold">
-                          หมด
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-lg bg-[#1D1D2E] hover:bg-[#2A2A40] text-zinc-300 hover:text-white"
-                          title="แก้ไข"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          id={`delete-product-${p.productId}`}
-                          onClick={() => handleRequestDeleteProduct(p)}
-                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-                          title="ลบสินค้า"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
+                <thead className="bg-[#090910] text-zinc-400 border-b border-[#1E1E2E]">
+                  <tr>
+                    <th className="p-3.5 sm:p-4">สินค้า</th>
+                    <th className="p-3.5 sm:p-4">หมวดหมู่</th>
+                    <th className="p-3.5 sm:p-4">ประเภทส่งมอบ</th>
+                    <th className="p-3.5 sm:p-4">ราคา (฿)</th>
+                    <th className="p-3.5 sm:p-4">สต็อก</th>
+                    <th className="p-3.5 sm:p-4">สถานะ</th>
+                    <th className="p-3.5 sm:p-4 text-right">การจัดการ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#181827]">
+                  {items.map((p) => {
+                    const catCfg = getCategoryConfig(p.category);
+                    const CatIcon = catCfg.icon;
+                    return (
+                      <tr key={p.productId} className="hover:bg-[#141422] transition-colors">
+                        <td className="p-3.5 sm:p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-xl bg-black/50 p-1.5 border border-purple-500/20 flex items-center justify-center shrink-0 shadow-inner">
+                              <BloxImage 
+                                src={p.image} 
+                                alt={p.name} 
+                                productName={p.name}
+                                className="w-full h-full object-contain" 
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-white truncate max-w-[220px] sm:max-w-xs">{p.name}</div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-[10px] text-zinc-500 font-mono">{p.productId}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(p.productId);
+                                    success('คัดลอกรหัสสินค้าแล้ว');
+                                  }}
+                                  className="text-zinc-600 hover:text-zinc-300 p-0.5 transition-colors cursor-pointer"
+                                  title="คัดลอกรหัสสินค้า"
+                                >
+                                  <Copy className="w-2.5 h-2.5" />
+                                </button>
+                                {p.rarity && (
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-semibold">
+                                    {p.rarity}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3.5 sm:p-4">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${catCfg.badge}`}>
+                            <CatIcon className="w-3 h-3" />
+                            <span>{p.category}</span>
+                          </span>
+                        </td>
+                        <td className="p-3.5 sm:p-4 text-zinc-400 text-[11px]">
+                          {p.deliveryType === 'fruit_trade' && <span className="text-purple-300">ผลเทรดในเกม</span>}
+                          {p.deliveryType === 'gamepass_gift' && <span className="text-amber-300">Gift Gamepass</span>}
+                          {p.deliveryType === 'manual_service' && <span className="text-emerald-300">บริการโดยทีมงาน</span>}
+                          {!['fruit_trade', 'gamepass_gift', 'manual_service'].includes(p.deliveryType) && (
+                            <span>{p.deliveryType}</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 sm:p-4">
+                          <div className="font-bold text-purple-300">฿{p.price.toLocaleString()}</div>
+                          {p.oldPrice && p.oldPrice > p.price && (
+                            <div className="text-[10px] text-zinc-500 line-through">฿{p.oldPrice.toLocaleString()}</div>
+                          )}
+                        </td>
+                        <td className="p-3.5 sm:p-4">
+                          <span className="font-bold text-white text-sm">{p.stock}</span>
+                          <span className="text-[10px] text-zinc-500 ml-1">ชิ้น</span>
+                        </td>
+                        <td className="p-3.5 sm:p-4">
+                          {p.stock > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-emerald-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                              พร้อมขาย
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-rose-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                              สินค้าหมด
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3.5 sm:p-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSelectedProduct(p);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg bg-[#1E1E30] hover:bg-[#2B2B44] text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                              title="แก้ไขสินค้า"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              id={`delete-product-${p.productId}`}
+                              onClick={() => handleRequestDeleteProduct(p)}
+                              className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                              title="ลบสินค้า"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        };
+
+        return (
+          <div className="space-y-6">
+            {/* Header และปุ่ม Action ด้านบน */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FolderKanban className="w-5 h-5 text-purple-400" />
+                  <span>จัดการสินค้า Blox Fruits (แยกตามหมวดหมู่)</span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  จัดการสินค้าแยกหมวดหมู่อย่างเป็นระบบ ({products.length} รายการทั้งหมดในระบบ)
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {products.length > 0 && (
+                  <button
+                    onClick={() => setIsConfirmClearModalOpen(true)}
+                    className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="ล้างสินค้าทั้งหมดเพื่อเริ่มต้นใหม่"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">ล้างสินค้าทั้งหมด</span>
+                    <span>({products.length})</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => handleOpenAddModal()}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow-lg shadow-purple-900/30 flex items-center gap-1.5 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>เพิ่มสินค้าใหม่</span>
+                </button>
+              </div>
+            </div>
+
+            {/* กล่องสรุปสถิติตามหมวดหมู่ (Category Metric Cards) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {sortedCategories.map((cat) => {
+                const cfg = getCategoryConfig(cat);
+                const CatIcon = cfg.icon;
+                const stat = statsByCategory[cat] || { total: 0, inStock: 0, totalStock: 0, totalValue: 0 };
+                const isSelected = productCategoryFilter === cat;
+
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setProductCategoryFilter(isSelected ? 'all' : cat)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                      isSelected
+                        ? 'bg-[#191928] border-purple-500 ring-2 ring-purple-500/30 shadow-lg shadow-purple-950/50'
+                        : 'bg-[#11111A] border-[#212133] hover:border-zinc-700 hover:bg-[#141422]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`w-8 h-8 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center ${cfg.color}`}>
+                        <CatIcon className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs font-black ${isSelected ? 'text-purple-400' : 'text-white'}`}>
+                        {stat.total}
+                      </span>
+                    </div>
+                    <div className="text-xs font-bold text-white truncate">{cfg.shortLabel}</div>
+                    <div className="text-[10px] text-zinc-400 mt-0.5 flex items-center justify-between">
+                      <span>สต็อก {stat.totalStock}</span>
+                      <span className="text-emerald-400 font-semibold">{stat.inStock} พร้อมขาย</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* แถบตัวกรองและควบคุมมุมมอง (Category Tabs & Filter Bar) */}
+            <div className="p-4 rounded-2xl bg-[#11111A] border border-[#212133] space-y-3">
+              {/* แถบแท็บหมวดหมู่ (Tabs) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                <button
+                  onClick={() => setProductCategoryFilter('all')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                    productCategoryFilter === 'all'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/30'
+                      : 'bg-[#181826] text-zinc-400 hover:text-white hover:bg-[#202033]'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>ทั้งหมด ({products.length})</span>
+                </button>
+
+                {sortedCategories.map((cat) => {
+                  const cfg = getCategoryConfig(cat);
+                  const CatIcon = cfg.icon;
+                  const count = (statsByCategory[cat] || {}).total || 0;
+                  const isSelected = productCategoryFilter === cat;
+
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setProductCategoryFilter(cat)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isSelected
+                          ? cfg.activeBg
+                          : 'bg-[#181826] text-zinc-400 hover:text-white hover:bg-[#202033]'
+                      }`}
+                    >
+                      <CatIcon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : cfg.color}`} />
+                      <span>{cfg.shortLabel}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-black/30 text-zinc-400'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ค้นหา, กรองสถานะสต็อก, และสลับโหมดมุมมอง */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-[#1D1D2C]">
+                <div className="flex flex-1 items-center gap-2">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="ค้นหาชื่อสินค้า, รหัสสินค้า, รายละเอียด..."
+                      className="w-full bg-[#0A0A10] border border-[#212133] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
+                    {productSearch && (
+                      <button
+                        onClick={() => setProductSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* กรองสถานะสต็อก */}
+                  <select
+                    value={productStockFilter}
+                    onChange={(e) => setProductStockFilter(e.target.value as any)}
+                    className="bg-[#0A0A10] border border-[#212133] rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="all">สถานะ: ทั้งหมด</option>
+                    <option value="in_stock">เฉพาะพร้อมขาย (สต็อก &gt; 0)</option>
+                    <option value="out_of_stock">เฉพาะสินค้าหมด (สต็อก = 0)</option>
+                  </select>
+                </div>
+
+                {/* สลับโหมดมุมมอง (แยกกลุ่มตามหมวดหมู่ VS ตารางรวม) */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {productViewMode === 'grouped' && (
+                    <div className="flex items-center gap-1 mr-2 text-[11px] text-zinc-400">
+                      <button
+                        onClick={() => expandAllCategories(sortedCategories)}
+                        className="px-2 py-1 rounded-lg hover:bg-[#1C1C2C] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                      >
+                        ขยายทั้งหมด
+                      </button>
+                      <span>•</span>
+                      <button
+                        onClick={() => collapseAllCategories(sortedCategories)}
+                        className="px-2 py-1 rounded-lg hover:bg-[#1C1C2C] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                      >
+                        ย่อทั้งหมด
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center rounded-xl bg-[#090910] p-1 border border-[#212133]">
+                    <button
+                      onClick={() => setProductViewMode('grouped')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        productViewMode === 'grouped'
+                          ? 'bg-purple-600 text-white shadow'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title="แยกแสดงเป็นส่วนๆ ตามแต่ละหมวดหมู่"
+                    >
+                      <FolderKanban className="w-3.5 h-3.5" />
+                      <span>แยกหมวดหมู่</span>
+                    </button>
+                    <button
+                      onClick={() => setProductViewMode('list')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        productViewMode === 'list'
+                          ? 'bg-purple-600 text-white shadow'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title="แสดงในตารางรวมรายการเดียว"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span>ตารางรวม</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* แสดงผลรายการสินค้า */}
+            {products.length === 0 ? (
+              <div className="py-16 px-6 text-center rounded-2xl border border-[#212133] bg-[#11111A]">
+                <div className="w-16 h-16 rounded-2xl bg-[#181826] border border-purple-500/20 flex items-center justify-center text-purple-400 mx-auto mb-4 shadow-lg shadow-purple-950/40">
+                  <ShoppingBag className="w-8 h-8" />
+                </div>
+                <h4 className="text-base font-bold text-white mb-1.5">ยังไม่มีสินค้าในร้านค้า</h4>
+                <p className="text-xs text-zinc-400 max-w-md mx-auto mb-6 leading-relaxed">
+                  ขณะนี้ยังไม่มีสินค้าอยู่ในระบบ คุณสามารถกดปุ่มด้านล่างเพื่อเริ่มลงขายสินค้าชิ้นแรกได้ทันที
+                </p>
+                <button
+                  onClick={() => handleOpenAddModal()}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow-lg shadow-purple-600/30 inline-flex items-center gap-2 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ เพิ่มสินค้าใหม่ชิ้นแรก</span>
+                </button>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="py-14 px-6 text-center rounded-2xl border border-[#212133] bg-[#11111A]">
+                <div className="w-12 h-12 rounded-xl bg-[#181826] text-zinc-400 flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-bold text-white mb-1">ไม่พบสินค้าตามเงื่อนไขที่ค้นหา</h4>
+                <p className="text-xs text-zinc-400 mb-4">ลองเปลี่ยนคำค้นหา หรือรีเซ็ตตัวกรองหมวดหมู่</p>
+                <button
+                  onClick={() => {
+                    setProductSearch('');
+                    setProductCategoryFilter('all');
+                    setProductStockFilter('all');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#1E1E2E] hover:bg-[#2A2A3E] text-purple-300 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  ล้างตัวกรองทั้งหมด
+                </button>
+              </div>
+            ) : productViewMode === 'grouped' ? (
+              /* โหมด 1: แยกเป็นกล่องส่วนๆ แต่ละหมวดหมู่ (Grouped View) */
+              <div className="space-y-6">
+                {categoriesToDisplay.map((cat) => {
+                  const cfg = getCategoryConfig(cat);
+                  const CatIcon = cfg.icon;
+                  const catItems = filteredProducts.filter(p => (p.category || 'อื่นๆ') === cat);
+                  const isCollapsed = collapsedCategories[cat];
+                  const stat = statsByCategory[cat] || { total: 0, inStock: 0, totalStock: 0, totalValue: 0 };
+
+                  // ถ้าไม่มีสินค้าในหมวดนี้เมื่อใช้คำค้นหา ให้ซ่อนหมวดนี้ไป
+                  if (catItems.length === 0 && (productSearch.trim() || productStockFilter !== 'all')) {
+                    return null;
+                  }
+
+                  return (
+                    <div key={cat} className="rounded-2xl border border-[#212133] bg-[#11111A] overflow-hidden shadow-sm">
+                      {/* แถบหัวหมวดหมู่ (Category Header) */}
+                      <div className="p-4 sm:p-5 flex items-center justify-between gap-3 bg-[#13131F] border-b border-[#1E1E2E]">
+                        <div 
+                          onClick={() => toggleCategoryCollapse(cat)}
+                          className="flex items-center gap-3 cursor-pointer select-none group flex-1"
+                        >
+                          <div className={`w-9 h-9 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center ${cfg.color} shrink-0`}>
+                            <CatIcon className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-purple-300 transition-colors">
+                                {cfg.label}
+                              </h4>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                                {catItems.length} รายการ
+                              </span>
+                              {catItems.length !== stat.total && (
+                                <span className="text-[11px] text-zinc-500">
+                                  (จากทั้งหมด {stat.total})
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-3">
+                              <span>สต็อกรวม: <strong className="text-white">{stat.totalStock}</strong> ชิ้น</span>
+                              <span>•</span>
+                              <span>พร้อมขาย: <strong className="text-emerald-400">{stat.inStock}</strong> รายการ</span>
+                              <span>•</span>
+                              <span>มูลค่ารวม: <strong className="text-purple-300">฿{stat.totalValue.toLocaleString()}</strong></span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ปุ่มควบคุมประจำหมวดหมู่ */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleOpenAddModal(cat)}
+                            className="px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title={`เพิ่มสินค้าในหมวดหมู่ ${cat}`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">เพิ่มในหมวดนี้</span>
+                          </button>
+                          <button
+                            onClick={() => toggleCategoryCollapse(cat)}
+                            className="p-2 rounded-xl bg-[#1A1A2A] hover:bg-[#25253A] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                            title={isCollapsed ? 'ขยาย' : 'ย่อ'}
+                          >
+                            {isCollapsed ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronUp className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* เนื้อหาสินค้าในหมวดหมู่ */}
+                      {!isCollapsed && (
+                        <div className="p-3 sm:p-4">
+                          {renderProductTable(catItems, cat)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* โหมด 2: ตารางรวมทั้งหมด (Single Table View) */
+              <div className="space-y-3">
+                <div className="text-xs text-zinc-400 flex items-center justify-between">
+                  <span>แสดงผลทั้งหมด <strong>{filteredProducts.length}</strong> รายการ</span>
+                  {productCategoryFilter !== 'all' && (
+                    <span className="text-purple-300 font-semibold">
+                      หมวดหมู่: {productCategoryFilter}
+                    </span>
+                  )}
+                </div>
+                {renderProductTable(filteredProducts, productCategoryFilter !== 'all' ? productCategoryFilter : undefined)}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    )}
+        );
+      })()}
 
     {/* Tab 3: Deposits Management */}
       {activeTab === 'deposits' && (() => {
@@ -1985,6 +2559,7 @@ export const AdminView: React.FC = () => {
                     className="w-full bg-[#0A0A10] border border-[#262638] rounded-xl p-2.5 text-white"
                   >
                     <option value="ผลปีศาจ">ผลปีศาจ</option>
+                    <option value="สกินผล">สกินผล</option>
                     <option value="Gamepass">Gamepass</option>
                     <option value="ไอเทม">ไอเทม</option>
                     <option value="บริการ">บริการ</option>
@@ -2503,6 +3078,7 @@ export const AdminView: React.FC = () => {
                       className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2.5 text-white focus:outline-none cursor-pointer"
                     >
                       <option value="ผลปีศาจ">ผลปีศาจ</option>
+                      <option value="สกินผล">สกินผล</option>
                       <option value="Gamepass">Gamepass</option>
                       <option value="ไอเทม">ไอเทม</option>
                       <option value="บริการ">บริการ</option>

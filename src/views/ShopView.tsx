@@ -32,6 +32,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const categories: (string | ProductCategory)[] = [
     'ทั้งหมด',
     'ผลปีศาจ',
+    'สกินผล',
     'Gamepass',
     'ไอเทม',
     'บริการ',

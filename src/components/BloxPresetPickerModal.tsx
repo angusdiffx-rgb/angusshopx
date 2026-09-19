@@ -17,7 +17,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
   selectedUrl
 }) => {
   const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState<'all' | 'fruit' | 'gamepass' | 'sword' | 'style'>('all');
+  const [filterCategory, setFilterCategory] = useState<'all' | 'fruit' | 'skin' | 'gamepass' | 'sword' | 'style'>('all');
 
   if (!isOpen) return null;
 
@@ -27,6 +27,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
     if (!matchSearch) return false;
 
     if (filterCategory === 'fruit') return p.category === 'ผลปีศาจ';
+    if (filterCategory === 'skin') return p.category === 'สกินผล' || p.name.toLowerCase().includes('skin') || p.th.includes('สกิน');
     if (filterCategory === 'gamepass') return p.category === 'Gamepass';
     if (filterCategory === 'sword') return p.subType === 'Sword' || p.subType === 'Gun' || p.category === 'ไอเทม';
     if (filterCategory === 'style') return p.subType === 'FightingStyle' || p.category === 'บริการ';
@@ -79,6 +80,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
             {[
               { id: 'all', label: `ทั้งหมด (${BLOX_FRUITS_PRESETS.length})` },
               { id: 'fruit', label: 'ผลปีศาจทั้งหมด' },
+              { id: 'skin', label: 'สกินผล (ล่าสุด)' },
               { id: 'gamepass', label: 'Gamepasses' },
               { id: 'sword', label: 'ดาบ & อาวุธ' },
               { id: 'style', label: 'หมัด & เผ่า V4' },

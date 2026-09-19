@@ -13,7 +13,7 @@ export interface UserProfile {
   lastLoginAt: string;
 }
 
-export type ProductCategory = 'ผลปีศาจ' | 'Gamepass' | 'ไอเทม' | 'บริการ' | 'อื่นๆ';
+export type ProductCategory = 'ผลปีศาจ' | 'Gamepass' | 'ไอเทม' | 'บริการ' | 'สกินผล' | 'อื่นๆ';
 export type DeliveryType = 'fruit' | 'item' | 'gamepass' | 'service' | 'fruit_trade' | 'gamepass_gift' | 'account_code' | 'manual_service';
 
 export interface Product {

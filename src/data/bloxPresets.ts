@@ -3,7 +3,7 @@ import { HomeConfig } from '../types';
 export interface BloxPreset {
   name: string;
   th: string;
-  category: 'ผลปีศาจ' | 'Gamepass' | 'ไอเทม' | 'บริการ' | 'อื่นๆ';
+  category: 'ผลปีศาจ' | 'Gamepass' | 'ไอเทม' | 'บริการ' | 'สกินผล' | 'อื่นๆ';
   rarity?: 'Mythical' | 'Legendary' | 'Rare' | 'Uncommon' | 'Common';
   subType?: 'Fruit' | 'Gamepass' | 'Sword' | 'Gun' | 'FightingStyle' | 'Material' | 'Accessory';
   url: string;
@@ -733,6 +733,189 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/cursed_dual_katana.png',
   },
+
+  // --------------------------------------------------------------------------
+  // สกินผลปีศาจล่าสุด (Fruit Skins / Chromatic Fruit Skins)
+  // --------------------------------------------------------------------------
+  // ==========================
+  // สกินผลปีศาจ (Fruit Skins - Chromatic / Special Events)
+  // ==========================
+  {
+    name: 'Yellow Lightning Rumble Skin',
+    th: 'สกินสายฟ้าสีเหลือง (Yellow Lightning Rumble Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_yellow_lightning.png',
+  },
+  {
+    name: 'Green Lightning Rumble Skin',
+    th: 'สกินสายฟ้าสีเขียว (Green Lightning Rumble Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_green_lightning.png',
+  },
+  {
+    name: 'Purple Lightning Rumble Skin',
+    th: 'สกินสายฟ้าสีม่วง (Purple Lightning Rumble Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_purple_lightning.png',
+  },
+  {
+    name: 'Red Lightning Rumble Skin',
+    th: 'สกินสายฟ้าสีแดง (Red Lightning Rumble Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_red_lightning.png',
+  },
+  {
+    name: 'Dragon Eclipse Skin',
+    th: 'สกินมังกรสุริยุปราคา (Dragon Eclipse Skin)',
+    category: 'สกินผล',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/skin_dragon_eclipse.png',
+  },
+  {
+    name: 'Ember Dragon Skin',
+    th: 'สกินมังกรเพลิง Ember (Ember Dragon Skin)',
+    category: 'สกินผล',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/skin_ember_dragon.png',
+  },
+  {
+    name: 'Galaxy Imperium Kitsune Skin',
+    th: 'สกินคิตสึเนะดาราจักร (Galaxy Imperium Kitsune Skin)',
+    category: 'สกินผล',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/skin_galaxy_kitsune.png',
+  },
+  {
+    name: 'Crimson Kitsune Skin',
+    th: 'สกินคิตสึเนะเพลิงโลหิต (Crimson Kitsune Skin)',
+    category: 'สกินผล',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/skin_crimson_kitsune.png',
+  },
+  {
+    name: 'Divine Portal Skin',
+    th: 'สกินประตูมิติเทวะ (Divine Portal Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_divine_portal.png',
+  },
+  {
+    name: 'Celestial Pain Skin',
+    th: 'สกินเพนสวรรค์ (Celestial Pain Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_celestial_pain.png',
+  },
+  {
+    name: 'Glacier Eagle Skin',
+    th: 'สกินอินทรีเหมันต์น้ำแข็ง (Glacier Eagle Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_glacier_eagle.png',
+  },
+  {
+    name: 'Matrix Eagle Skin',
+    th: 'สกินอินทรีเมทริกซ์ (Matrix Eagle Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_matrix_eagle.png',
+  },
+  {
+    name: 'Nuclear Bomb Skin',
+    th: 'สกินระเบิดนิวเคลียร์ (Nuclear Bomb Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_nuclear_bomb.png',
+  },
+  {
+    name: 'Celebration Bomb Skin',
+    th: 'สกินระเบิดเฉลิมฉลอง (Celebration Bomb Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_celebration_bomb.png',
+  },
+  {
+    name: 'Emerald Diamond Skin',
+    th: 'สกินเพชรมรกต (Emerald Diamond Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_emerald_diamond.png',
+  },
+  {
+    name: 'Ruby Diamond Skin',
+    th: 'สกินเพชรทับทิม (Ruby Diamond Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_ruby_diamond.png',
+  },
+  {
+    name: 'Topaz Diamond Skin',
+    th: 'สกินเพชรบุษราคัม (Topaz Diamond Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_topaz_diamond.png',
+  },
+  {
+    name: 'Arcsteel Magnet Skin',
+    th: 'สกินแม่เหล็กสตีล (Arcsteel Magnet Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_arcsteel_magnet.png',
+  },
+  {
+    name: 'Starlight Gravity Skin',
+    th: 'สกินแรงโน้มถ่วงประกายดาว (Starlight Gravity Skin)',
+    category: 'สกินผล',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/skin_starlight_gravity.png',
+  },
+  {
+    name: 'Scarlet Ghost Skin',
+    th: 'สกินวิญญาณสีชาด (Scarlet Ghost Skin)',
+    category: 'สกินผล',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/skin_scarlet_ghost.png',
+  },
+  {
+    name: 'Lime Blade Skin',
+    th: 'สกินดาบมะนาวเรืองแสง (Lime Blade Skin)',
+    category: 'สกินผล',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/skin_lime_blade.png',
+  },
+  {
+    name: 'Runic Fiend Skin',
+    th: 'สกินอสูรรูนิก (Runic Fiend Skin)',
+    category: 'สกินผล',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/skin_runic_fiend.png',
+  },
 ];
 
 /**
@@ -761,6 +944,39 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
 
   // 4. ค้นหารูปตามชื่อสินค้า (ใช้เฉพาะชื่อสินค้า ห้ามนำ base64 หรือ url มาปนเพื่อป้องกันคำซ้ำ)
   const target = (name || '').toLowerCase();
+
+  // Fruit Skins (ตรวจสอบก่อนผลปกติเพื่อให้ได้สกินที่ถูกต้องตรงเป๊ะ)
+  // สายฟ้า 4 สี (Yellow, Green, Purple, Red)
+  if (target.includes('yellow') && (target.includes('lightning') || target.includes('rumble') || target.includes('สายฟ้า'))) return '/images/blox/skin_yellow_lightning.png';
+  if (target.includes('สายฟ้าสีเหลือง') || target.includes('สายฟ้าเหลือง')) return '/images/blox/skin_yellow_lightning.png';
+  if (target.includes('green') && (target.includes('lightning') || target.includes('rumble') || target.includes('สายฟ้า'))) return '/images/blox/skin_green_lightning.png';
+  if (target.includes('สายฟ้าสีเขียว') || target.includes('สายฟ้าเขียว')) return '/images/blox/skin_green_lightning.png';
+  if (target.includes('purple') && (target.includes('lightning') || target.includes('rumble') || target.includes('สายฟ้า'))) return '/images/blox/skin_purple_lightning.png';
+  if (target.includes('สายฟ้าสีม่วง') || target.includes('สายฟ้าม่วง')) return '/images/blox/skin_purple_lightning.png';
+  if (target.includes('red') && (target.includes('lightning') || target.includes('rumble') || target.includes('สายฟ้า'))) return '/images/blox/skin_red_lightning.png';
+  if (target.includes('สายฟ้าสีแดง') || target.includes('สายฟ้าแดง')) return '/images/blox/skin_red_lightning.png';
+
+  // มังกร & คิตสึเนะสกิน
+  if (target.includes('eclipse') || target.includes('สุริยุปราคา')) return '/images/blox/skin_dragon_eclipse.png';
+  if (target.includes('ember') || target.includes('มังกรเพลิง') || (target.includes('มังกร') && target.includes('ember'))) return '/images/blox/skin_ember_dragon.png';
+  if (target.includes('galaxy') || target.includes('ดาราจักร')) return '/images/blox/skin_galaxy_kitsune.png';
+  if (target.includes('crimson') || target.includes('เพลิงโลหิต')) return '/images/blox/skin_crimson_kitsune.png';
+
+  // สกินผลพิเศษอื่นๆ
+  if (target.includes('divine') || target.includes('เทวะ') || (target.includes('สกิน') && target.includes('portal'))) return '/images/blox/skin_divine_portal.png';
+  if (target.includes('celestial') || target.includes('เพนสวรรค์')) return '/images/blox/skin_celestial_pain.png';
+  if (target.includes('glacier') || target.includes('เหมันต์') || (target.includes('สกิน') && target.includes('glacier'))) return '/images/blox/skin_glacier_eagle.png';
+  if (target.includes('matrix') || target.includes('เมทริกซ์') || (target.includes('สกิน') && target.includes('matrix'))) return '/images/blox/skin_matrix_eagle.png';
+  if (target.includes('celebration') || target.includes('เฉลิมฉลอง')) return '/images/blox/skin_celebration_bomb.png';
+  if (target.includes('nuclear') || target.includes('นิวเคลียร์')) return '/images/blox/skin_nuclear_bomb.png';
+  if (target.includes('emerald') || target.includes('มรกต')) return '/images/blox/skin_emerald_diamond.png';
+  if (target.includes('ruby') || target.includes('ทับทิม')) return '/images/blox/skin_ruby_diamond.png';
+  if (target.includes('topaz') || target.includes('บุษราคัม')) return '/images/blox/skin_topaz_diamond.png';
+  if (target.includes('arcsteel') || target.includes('อาร์คสตีล') || (target.includes('สกิน') && target.includes('magnet'))) return '/images/blox/skin_arcsteel_magnet.png';
+  if (target.includes('starlight') || target.includes('ประกายดาว') || (target.includes('สกิน') && target.includes('gravity'))) return '/images/blox/skin_starlight_gravity.png';
+  if (target.includes('scarlet') || target.includes('สีชาด') || (target.includes('สกิน') && target.includes('ghost'))) return '/images/blox/skin_scarlet_ghost.png';
+  if (target.includes('lime') || target.includes('มะนาว') || (target.includes('สกิน') && target.includes('blade'))) return '/images/blox/skin_lime_blade.png';
+  if (target.includes('runic') || target.includes('รูนิก') || target.includes('fiend') || target.includes('อสูรรูนิก')) return '/images/blox/skin_runic_fiend.png';
 
   // Mythical
   if (target.includes('kitsune') || target.includes('คิตสึเนะ') || target.includes('คิตสิเนะ')) return '/images/blox/kitsune.png';
@@ -804,7 +1020,7 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('sand') || target.includes('ทราย')) return '/images/blox/sand.png';
   if (target.includes('ice') || target.includes('น้ำแข็ง')) return '/images/blox/ice.png';
   if (target.includes('flame') || target.includes('ไฟ')) return '/images/blox/flame.png';
-  if (target.includes('falcon') || target.includes('เหยี่ยว')) return '/images/blox/falcon.png';
+  if (target.includes('falcon') || target.includes('เหยี่ยว') || target.includes('eagle') || target.includes('อินทรี')) return '/images/blox/falcon.png';
   if (target.includes('smoke') || target.includes('ควัน')) return '/images/blox/smoke.png';
   if (target.includes('spin') || target.includes('หมุน')) return '/images/blox/spin.png';
   if (target.includes('rocket') || target.includes('จรวด')) return '/images/blox/rocket.png';

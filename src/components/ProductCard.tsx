@@ -71,7 +71,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
 
         {/* Category Badge Right */}
         <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10">
-          <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-zinc-300 text-[9px] sm:text-[10px] font-semibold">
+          <span className={`px-1.5 sm:px-2 py-0.5 rounded-md backdrop-blur-md text-[9px] sm:text-[10px] font-semibold border ${
+            product.category === 'สกินผล'
+              ? 'bg-gradient-to-r from-fuchsia-600/80 to-purple-600/80 border-fuchsia-400/40 text-fuchsia-100 shadow-sm shadow-fuchsia-500/20'
+              : 'bg-black/70 border-white/10 text-zinc-300'
+          }`}>
             {product.category}
           </span>
         </div>
@@ -120,6 +124,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
                 ? 'บริการฟาร์มในเกม'
                 : product.category === 'Gamepass'
                 ? 'ของขวัญ Gamepass'
+                : product.category === 'สกินผล'
+                ? 'สกินผล Chromatic เทรดในเกม'
                 : 'ส่งมอบผ่านเซิร์ฟ VIP'}
             </span>
           </div>
