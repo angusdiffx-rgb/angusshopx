@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
 import { AuthModal } from './components/AuthModal';
+import { PurpleSnowEffect } from './components/PurpleSnowEffect';
 import { HomeView } from './views/HomeView';
 import { ShopView } from './views/ShopView';
 import { ProductDetailView } from './views/ProductDetailView';
@@ -172,6 +173,9 @@ function MainShop() {
 
       {/* Auth Modal (Login / Register) */}
       <AuthModal />
+
+      {/* Interactive Purple Snow Effect */}
+      <PurpleSnowEffect />
 
       {/* Footer */}
       <Footer onNavigate={handleNavigate} />
