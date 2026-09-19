@@ -118,13 +118,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                           <Minus className="w-3 h-3" />
                         </button>
                         <span className="text-xs font-bold text-white px-2">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          disabled={item.quantity >= item.stock}
-                          className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#1C1C2C] disabled:opacity-30 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
+                        {(() => {
+                          const isMastery = item.productId === 'prod_farm_mastery_100' || item.name.includes('มาสเตอร์') || item.name.includes('มาส') || item.name.includes('Mastery');
+                          const itemMax = isMastery ? Math.min(item.stock, 6) : item.stock;
+                          return (
+                            <button
+                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                              disabled={item.quantity >= itemMax}
+                              className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#1C1C2C] disabled:opacity-30 cursor-pointer"
+                              title={item.quantity >= itemMax && isMastery ? 'ตันสูงสุดที่ 600 มาส (6 ชุด)' : undefined}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          );
+                        })()}
                       </div>
 
                       <button

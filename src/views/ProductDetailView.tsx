@@ -54,6 +54,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     product.name.includes('Mastery') ||
     (product.category === 'บริการ' && (product.name.includes('มาส') || product.name.includes('มาสเตอร์')));
 
+  // Maximum allowed quantity: Mastery max is 600 (6 packs of 100)
+  const maxAllowedQty = isMasteryService ? Math.min(product.stock, 6) : product.stock;
+
   const is2xOption = 
     product.name.includes('คูณ 2') || 
     product.name.includes('2x') || 
@@ -90,14 +93,16 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   const handleAddToCart = () => {
     if (product.stock <= 0) return;
-    addToCart(product, quantity);
-    success('เพิ่มลงตะกร้าแล้ว', `เพิ่ม ${product.name} จำนวน ${quantity} ชิ้นเรียบร้อย`);
+    const finalQty = Math.min(quantity, maxAllowedQty);
+    addToCart(product, finalQty);
+    success('เพิ่มลงตะกร้าแล้ว', `เพิ่ม ${product.name} จำนวน ${finalQty} ชิ้นเรียบร้อย`);
   };
 
   const handleDirectBuy = () => {
     if (product.stock <= 0) return;
-    addToCart(product, quantity);
-    onBuyNow(product, quantity);
+    const finalQty = Math.min(quantity, maxAllowedQty);
+    addToCart(product, finalQty);
+    onBuyNow(product, finalQty);
   };
 
   const discountPercent = product.oldPrice && product.oldPrice > product.price
@@ -470,31 +475,35 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
               )}
 
-              {/* Quick Mastery Preset Buttons for Mastery Farm (100 มาส = 10 THB) */}
+              {/* Quick Mastery Preset Buttons for Mastery Farm (100 มาส = 10 THB - ตันที่ 600 มาส) */}
               {isMasteryService && (
-                <div className="flex flex-wrap items-center gap-1.5 pb-1">
-                  {[
-                    { qty: 1, label: '100 มาส (10฿)' },
-                    { qty: 2, label: '200 มาส (20฿)' },
-                    { qty: 3, label: '300 มาส (30฿)' },
-                    { qty: 4, label: '400 มาส (40฿)' },
-                    { qty: 5, label: '500 มาส (50฿)' },
-                    { qty: 6, label: '600 มาส ตัน (60฿)' },
-                    { qty: 10, label: '1,000 มาส (100฿)' },
-                  ].map((preset) => (
-                    <button
-                      key={preset.qty}
-                      type="button"
-                      onClick={() => setQuantity(preset.qty)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        quantity === preset.qty
-                          ? 'bg-amber-500 text-zinc-950 font-black shadow-md shadow-amber-500/30'
-                          : 'bg-[#141420] hover:bg-[#1C1C2C] border border-[#262638] text-zinc-300 hover:text-white'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
+                <div className="space-y-1 pb-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { qty: 1, label: '100 มาส (10฿)' },
+                      { qty: 2, label: '200 มาส (20฿)' },
+                      { qty: 3, label: '300 มาส (30฿)' },
+                      { qty: 4, label: '400 มาส (40฿)' },
+                      { qty: 5, label: '500 มาส (50฿)' },
+                      { qty: 6, label: '600 มาส ตัน (60฿)' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.qty}
+                        type="button"
+                        onClick={() => setQuantity(preset.qty)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          quantity === preset.qty
+                            ? 'bg-amber-500 text-zinc-950 font-black shadow-md shadow-amber-500/30'
+                            : 'bg-[#141420] hover:bg-[#1C1C2C] border border-[#262638] text-zinc-300 hover:text-white'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-amber-400/80 font-medium">
+                    * จำกัดบริการสูงสุดตันที่ 600 มาสเตอร์รี่ (60 บาท)
+                  </div>
                 </div>
               )}
 
@@ -510,8 +519,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     {quantity} {isBeliService ? 'M' : isLevelService ? 'ชุด' : isMasteryService ? 'ชุด' : ''}
                   </span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    disabled={quantity >= product.stock}
+                    onClick={() => setQuantity(Math.min(maxAllowedQty, quantity + 1))}
+                    disabled={quantity >= maxAllowedQty}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#1E1E2E] transition-colors disabled:opacity-30 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
@@ -580,7 +589,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
                 {isMasteryService ? (
                   <>
-                    <li>เลือกจำนวนมาสเตอร์รี่ที่ต้องการคำนวณ (1 ชุด = 100 มาส = 10 บาท เช่น 200 มาส = 20 บาท, 600 มาส ตัน = 60 บาท)</li>
+                    <li>เลือกจำนวนมาสเตอร์รี่ที่ต้องการคำนวณ (1 ชุด = 100 มาส = 10 บาท, 200 มาส = 20 บาท ... สูงสุดตันที่ 600 มาส = 60 บาท)</li>
                     <li>กรอกข้อมูลไอดี-รหัสผ่าน Roblox และระบุผล/ดาบ/หมัดที่ต้องการให้ฟาร์มในขั้นตอนชำระเงิน</li>
                     <li>หลังจากชำระเงิน ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong> เพื่อตรวจสอบสถานะการฟาร์ม</li>
                     <li>ทีมงาน AngusShop จะเข้าดำเนินการฟาร์มมาสเตอร์รี่ให้ครบตามจำนวน {(quantity * 100).toLocaleString()} มาสที่สั่งซื้อ</li>

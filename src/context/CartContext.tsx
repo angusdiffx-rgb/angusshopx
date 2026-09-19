@@ -40,19 +40,37 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items]);
 
+  const isMasteryItem = (name: string, productId?: string) => {
+    return (
+      productId === 'prod_farm_mastery_100' ||
+      name.includes('ฟาร์มมาสเตอร์รี่') ||
+      name.includes('มาสเตอร์รี่') ||
+      name.includes('Mastery') ||
+      name.includes('มาส')
+    );
+  };
+
+  const getItemMaxQty = (stock: number, name: string, productId?: string) => {
+    if (isMasteryItem(name, productId)) {
+      return Math.min(stock, 6); // Max 600 mastery (6 x 100)
+    }
+    return stock;
+  };
+
   const addToCart = (product: Product, quantity = 1) => {
     setItems((prev) => {
+      const maxLimit = getItemMaxQty(product.stock, product.name, product.productId);
       const existingIndex = prev.findIndex((item) => item.productId === product.productId);
       if (existingIndex > -1) {
         const updated = [...prev];
-        const newQty = Math.min(product.stock, updated[existingIndex].quantity + quantity);
+        const newQty = Math.min(maxLimit, updated[existingIndex].quantity + quantity);
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: newQty,
         };
         return updated;
       } else {
-        const initialQty = Math.min(product.stock, Math.max(1, quantity));
+        const initialQty = Math.min(maxLimit, Math.max(1, quantity));
         return [
           ...prev,
           {
@@ -83,7 +101,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems((prev) =>
       prev.map((item) => {
         if (item.productId === productId) {
-          return { ...item, quantity: Math.min(item.stock, quantity) };
+          const maxLimit = getItemMaxQty(item.stock, item.name, item.productId);
+          return { ...item, quantity: Math.min(maxLimit, quantity) };
         }
         return item;
       })
