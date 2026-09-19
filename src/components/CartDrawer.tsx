@@ -103,6 +103,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         <span className="text-[10px] text-emerald-400 font-bold">({item.quantity}M)</span>
                       ) : item.name.includes('เลเวล') || item.name.includes('Level') ? (
                         <span className="text-[10px] text-cyan-400 font-bold">({item.quantity * 100} เลเวล)</span>
+                      ) : item.name.includes('มาสเตอร์') || item.name.includes('มาส') || item.name.includes('Mastery') ? (
+                        <span className="text-[10px] text-amber-400 font-bold">({item.quantity * 100} มาส)</span>
                       ) : null}
                     </div>
 

@@ -9,7 +9,8 @@ import {
   Minus, 
   Sparkles,
   Server,
-  Lock
+  Lock,
+  Calculator
 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -45,6 +46,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     product.name.includes('ฟาร์มเลเวล') ||
     product.name.includes('Level Farm') ||
     (product.category === 'บริการ' && (product.name.includes('เลเวล') || product.name.includes('Level')));
+
+  const isMasteryService = 
+    product.productId === 'prod_farm_mastery_100' ||
+    product.name.includes('ฟาร์มมาสเตอร์รี่') ||
+    product.name.includes('มาสเตอร์รี่') ||
+    product.name.includes('Mastery') ||
+    (product.category === 'บริการ' && (product.name.includes('มาส') || product.name.includes('มาสเตอร์')));
 
   const is2xOption = 
     product.name.includes('คูณ 2') || 
@@ -178,6 +186,16 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   ต่อ 1,000,000 Beli (1M)
                 </span>
               )}
+              {isLevelService && (
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold">
+                  ต่อ 100 เลเวล (10 บาท)
+                </span>
+              )}
+              {isMasteryService && (
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                  ต่อ 100 มาส (10 บาท)
+                </span>
+              )}
               {discountPercent > 0 && (
                 <span className="text-xs text-emerald-400 font-bold ml-auto">
                   ประหยัด ฿{Math.max(0, (product.oldPrice || product.price) - product.price).toLocaleString()}
@@ -287,6 +305,85 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
             )}
 
+            {/* Mastery Calculator (เครื่องคำนวณราคาและจำนวนมาสเตอร์รี่ Blox Fruits) */}
+            {isMasteryService && (
+              <div className="space-y-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-950/25 via-[#13121E] to-[#1C1726] border border-amber-500/35 shadow-lg shadow-amber-950/20">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                    <Calculator className="w-4 h-4 text-amber-400" />
+                    เครื่องคำนวณมาสเตอร์รี่ (Mastery Calculator)
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                    อัตรา: 100 มาส = 10 บาท
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-zinc-300 leading-snug">
+                  เลือกหรือคำนวณจำนวนมาสเตอร์รี่ที่ต้องการฟาร์ม (ชุดละ 100 มาส = 10 บาท, 200 มาส = 20 บาท):
+                </div>
+
+                {/* Preset Calculation Cards: 100=10฿, 200=20฿, 300=30฿, 400=40฿, 500=50฿, 600=60฿ */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-1">
+                  {[
+                    { qty: 1, mastery: 100, price: 10, label: 'เริ่มต้น' },
+                    { qty: 2, mastery: 200, price: 20, label: 'สกิล 2' },
+                    { qty: 3, mastery: 300, price: 30, label: 'สกิล 3' },
+                    { qty: 4, mastery: 400, price: 40, label: 'เควสดาบ' },
+                    { qty: 5, mastery: 500, price: 50, label: 'ขั้นสูง' },
+                    { qty: 6, mastery: 600, price: 60, label: 'ตัน Max' },
+                  ].map((preset) => {
+                    const active = quantity === preset.qty;
+                    return (
+                      <button
+                        key={preset.qty}
+                        type="button"
+                        onClick={() => setQuantity(preset.qty)}
+                        className={`py-2 px-1 rounded-xl text-center transition-all cursor-pointer border flex flex-col items-center justify-center gap-0.5 ${
+                          active
+                            ? 'bg-gradient-to-b from-amber-400 to-amber-500 border-amber-200 text-zinc-950 shadow-md shadow-amber-500/30 font-black ring-2 ring-amber-400/50'
+                            : 'bg-[#151522] hover:bg-[#1E1D30] border-[#2A293E] text-zinc-300 hover:text-white'
+                        }`}
+                      >
+                        <span className={`text-[10px] ${active ? 'text-zinc-950 font-bold' : 'text-zinc-400'}`}>
+                          {preset.label}
+                        </span>
+                        <span className="text-xs font-black">
+                          {preset.mastery} มาส
+                        </span>
+                        <span className={`text-[11px] font-extrabold ${active ? 'text-zinc-950 underline decoration-zinc-950/40' : 'text-amber-400'}`}>
+                          {preset.price} บาท
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Calculation summary banner */}
+                <div className="p-3 rounded-xl bg-[#0D0C16] border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-zinc-400">ผลการคำนวณมาสเตอร์รี่:</div>
+                    <div className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                      <span className="text-amber-300">{(quantity * 100).toLocaleString()} มาสเตอร์รี่</span>
+                      <span className="text-zinc-500 text-xs font-normal">({quantity} ชุด x 100 มาส)</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] text-zinc-400">ราคาสุทธิที่ต้องชำระ</div>
+                    <div className="text-base sm:text-lg font-black text-amber-400">
+                      ฿{((product.price || 10) * quantity).toLocaleString()} บาท
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scope Note */}
+                <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>รองรับการฟาร์ม: ผลปีศาจ • ดาบเดี่ยว/ดาบคู่ • หมัด/สไตล์ต่อสู้ • ปืน ทุกชนิด</span>
+                </div>
+              </div>
+            )}
+
             {/* Description */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">รายละเอียดสินค้า</h3>
@@ -303,6 +400,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     ? 'เลือกจำนวนเงินที่ต้องการ (M)' 
                     : isLevelService 
                     ? 'เลือกจำนวนเลเวลที่ต้องการ (ชุดละ 100 เลเวล)' 
+                    : isMasteryService
+                    ? 'เลือกจำนวนมาสเตอร์รี่ที่ต้องการ (ชุดละ 100 มาส)'
                     : 'เลือกจำนวน'}
                 </h3>
                 {isBeliService && (
@@ -313,6 +412,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 {isLevelService && (
                   <span className="text-[11px] font-bold text-cyan-400">
                     จะได้รับ: {(quantity * 100).toLocaleString()} เลเวล
+                  </span>
+                )}
+                {isMasteryService && (
+                  <span className="text-[11px] font-bold text-amber-400">
+                    จะได้รับ: {(quantity * 100).toLocaleString()} มาส (฿{((product.price || 10) * quantity).toLocaleString()})
                   </span>
                 )}
               </div>
@@ -366,6 +470,34 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
               )}
 
+              {/* Quick Mastery Preset Buttons for Mastery Farm (100 มาส = 10 THB) */}
+              {isMasteryService && (
+                <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                  {[
+                    { qty: 1, label: '100 มาส (10฿)' },
+                    { qty: 2, label: '200 มาส (20฿)' },
+                    { qty: 3, label: '300 มาส (30฿)' },
+                    { qty: 4, label: '400 มาส (40฿)' },
+                    { qty: 5, label: '500 มาส (50฿)' },
+                    { qty: 6, label: '600 มาส ตัน (60฿)' },
+                    { qty: 10, label: '1,000 มาส (100฿)' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.qty}
+                      type="button"
+                      onClick={() => setQuantity(preset.qty)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        quantity === preset.qty
+                          ? 'bg-amber-500 text-zinc-950 font-black shadow-md shadow-amber-500/30'
+                          : 'bg-[#141420] hover:bg-[#1C1C2C] border border-[#262638] text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <div className="inline-flex items-center bg-[#11111A] border border-[#262638] rounded-xl p-1">
                   <button
@@ -375,7 +507,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="w-16 text-center text-sm font-bold text-white">
-                    {quantity} {isBeliService ? 'M' : isLevelService ? 'ชุด' : ''}
+                    {quantity} {isBeliService ? 'M' : isLevelService ? 'ชุด' : isMasteryService ? 'ชุด' : ''}
                   </span>
                   <button
                     onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
@@ -395,6 +527,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {isLevelService && (
                     <span className="text-cyan-400 font-semibold ml-1.5">
                       ({(quantity * 100).toLocaleString()} เลเวล)
+                    </span>
+                  )}
+                  {isMasteryService && (
+                    <span className="text-amber-400 font-semibold ml-1.5">
+                      ({(quantity * 100).toLocaleString()} มาสเตอร์รี่)
                     </span>
                   )}
                 </span>
@@ -441,7 +578,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 )}
               </div>
               <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                {isLevelService ? (
+                {isMasteryService ? (
+                  <>
+                    <li>เลือกจำนวนมาสเตอร์รี่ที่ต้องการคำนวณ (1 ชุด = 100 มาส = 10 บาท เช่น 200 มาส = 20 บาท, 600 มาส ตัน = 60 บาท)</li>
+                    <li>กรอกข้อมูลไอดี-รหัสผ่าน Roblox และระบุผล/ดาบ/หมัดที่ต้องการให้ฟาร์มในขั้นตอนชำระเงิน</li>
+                    <li>หลังจากชำระเงิน ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong> เพื่อตรวจสอบสถานะการฟาร์ม</li>
+                    <li>ทีมงาน AngusShop จะเข้าดำเนินการฟาร์มมาสเตอร์รี่ให้ครบตามจำนวน {(quantity * 100).toLocaleString()} มาสที่สั่งซื้อ</li>
+                    <li>ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน การันตีความรวดเร็ว ปลอดภัย ไร้กังวล</li>
+                  </>
+                ) : isLevelService ? (
                   <>
                     <li>เลือกจำนวนชุดที่ต้องการ (1 ชุด = 100 เลเวล, 10 บาท) และกรอกข้อมูลไอดี-รหัสผ่าน Roblox ในขั้นตอนชำระเงิน</li>
                     <li>หลังจากชำระเงิน ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong> เพื่อตรวจสอบสถานะการฟาร์ม</li>
@@ -487,7 +632,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           )}
         </div>
         <p className="text-[11px] text-zinc-400 leading-relaxed">
-          {isLevelService 
+          {isMasteryService
+            ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มมาสเตอร์รี่ให้ครบ ${(quantity * 100).toLocaleString()} มาส ปลอดภัย 100%`
+            : isLevelService 
             ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเลเวลให้ครบ ${(quantity * 100).toLocaleString()} เลเวล ปลอดภัย 100%`
             : product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service'
             ? 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเงินเขียวให้ครบตามจำนวน M ที่สั่งซื้อ ปลอดภัย 100%'
@@ -499,7 +646,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       <div className="sm:hidden fixed bottom-14 left-0 right-0 z-40 bg-[#0A0A12]/95 backdrop-blur-xl border-t border-[#232336] p-3 shadow-2xl">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] text-zinc-400 block">ราคารวม ({quantity} ชิ้น)</span>
+            <span className="text-[10px] text-zinc-400 block">
+              ราคารวม ({quantity} {isMasteryService ? 'ชุด' : isLevelService ? 'ชุด' : isBeliService ? 'M' : 'ชิ้น'})
+              {isMasteryService && <span className="text-amber-400 font-bold ml-1">({(quantity * 100).toLocaleString()} มาส)</span>}
+            </span>
             <span className="text-base font-black text-purple-300">฿{((product.price || 0) * quantity).toLocaleString()}</span>
           </div>
 

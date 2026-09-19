@@ -303,7 +303,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               </label>
               <textarea
                 rows={2}
-                placeholder="เช่น ขอรับบริการช่วง 18:00 น., ผลที่เปิดไว้, หรือรายละเอียดที่ต้องการกำชับ"
+                placeholder="เช่น ระบุสิ่งที่ต้องการฟาร์มมาส (ผล Kitsune, ดาบ CDK, หมัด Godhuman), ขอรับบริการช่วง 18:00 น., หรือรายละเอียดที่ต้องการกำชับ"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
@@ -359,6 +359,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                           ? `${it.quantity}M (${(Number(it.quantity) * 1000000).toLocaleString()} Beli)`
                           : it.name.includes('เลเวล') || it.name.includes('Level')
                           ? `${(Number(it.quantity) * 100).toLocaleString()} เลเวล (${it.quantity} ชุด)`
+                          : it.name.includes('มาสเตอร์') || it.name.includes('มาส') || it.name.includes('Mastery')
+                          ? `${(Number(it.quantity) * 100).toLocaleString()} มาสเตอร์รี่ (${it.quantity} ชุด)`
                           : `x${it.quantity}`}
                       </span>
                     </div>

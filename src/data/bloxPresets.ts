@@ -718,6 +718,14 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     url: '/images/blox/level_farm.png',
   },
   {
+    name: 'Mastery Farm (100 Mastery)',
+    th: 'บริการฟาร์มมาสเตอร์รี่ 100 มาส (10 บาท)',
+    category: 'บริการ',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/gamepass_2x_mastery.png',
+  },
+  {
     name: 'Cursed Dual Katana Service (Has Swords)',
     th: 'บริการทำดาบคู่โอเด้ง CDK (มีดาบ Yama + Tushita แล้ว)',
     category: 'บริการ',
@@ -1028,8 +1036,8 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('spring') || target.includes('สปริง')) return '/images/blox/spring.png';
   if (target.includes('bomb') || target.includes('ระเบิด')) return '/images/blox/bomb.png';
 
-  // Gamepass
-  if (target.includes('2x_mastery') || target.includes('2x mastery') || target.includes('มาสเตอร์')) return '/images/blox/gamepass_2x_mastery.png';
+  // Gamepass & Services (Mastery, Money, Drops, etc.)
+  if (target.includes('2x_mastery') || target.includes('2x mastery') || target.includes('mastery') || target.includes('มาสเตอร์') || target.includes('มาส')) return '/images/blox/gamepass_2x_mastery.png';
   if (target.includes('2x_money') || target.includes('2x money') || target.includes('เงินคูณ 2') || target.includes('เงินx2')) return '/images/blox/gamepass_2x_money.png';
   if (target.includes('2x_drops') || target.includes('2x boss') || target.includes('ดรอป')) return '/images/blox/gamepass_2x_drops.png';
   if (target.includes('fast_boats') || target.includes('fast boat') || target.includes('เรือเร็ว')) return '/images/blox/gamepass_fast_boats.png';

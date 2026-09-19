@@ -166,7 +166,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
                     <div className="min-w-0 flex-1">
                       <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
                       <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 sm:mt-1">
-                        <span>x{item.quantity || 1}</span>
+                        <span>
+                          {item.name.includes('เงินเขียว') || item.name.includes('Beli')
+                            ? `${item.quantity || 1}M`
+                            : item.name.includes('เลเวล') || item.name.includes('Level')
+                            ? `${(Number(item.quantity || 1) * 100).toLocaleString()} Lv (${item.quantity || 1} ชุด)`
+                            : item.name.includes('มาสเตอร์') || item.name.includes('มาส') || item.name.includes('Mastery')
+                            ? `${(Number(item.quantity || 1) * 100).toLocaleString()} มาส (${item.quantity || 1} ชุด)`
+                            : `x${item.quantity || 1}`}
+                        </span>
                         <span className="text-purple-300 font-semibold">฿{((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
                       </div>
                     </div>
