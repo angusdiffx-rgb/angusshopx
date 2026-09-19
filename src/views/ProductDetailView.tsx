@@ -18,18 +18,42 @@ import { BloxImage } from '../components/BloxImage';
 
 interface ProductDetailViewProps {
   product: Product;
+  allProducts?: Product[];
+  onSelectProduct?: (product: Product) => void;
   onBack: () => void;
   onBuyNow: (product: Product, quantity: number) => void;
 }
 
 export const ProductDetailView: React.FC<ProductDetailViewProps> = ({ 
   product, 
+  allProducts = [],
+  onSelectProduct,
   onBack, 
   onBuyNow 
 }) => {
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
   const { success } = useToast();
+
+  const isBeliService = 
+    product.name.includes('เงินเขียว') || 
+    product.name.includes('Beli') || 
+    (product.category === 'บริการ' && product.name.includes('เงิน'));
+
+  const is2xOption = 
+    product.name.includes('คูณ 2') || 
+    product.name.includes('2x') || 
+    product.productId === 'prod_beli_2x';
+
+  // Find partner product (normal vs 2x)
+  const normalBeliProduct = allProducts.find(p => 
+    p.productId === 'prod_beli_normal' || 
+    (p.name.includes('เงินเขียว') && !p.name.includes('คูณ 2') && !p.name.includes('2x'))
+  );
+  const doubleBeliProduct = allProducts.find(p => 
+    p.productId === 'prod_beli_2x' || 
+    (p.name.includes('เงินเขียว') && (p.name.includes('คูณ 2') || p.name.includes('2x')))
+  );
 
   const handleAddToCart = () => {
     if (product.stock <= 0) return;
@@ -120,6 +144,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   ฿{(product.oldPrice || 0).toLocaleString()}
                 </span>
               )}
+              {isBeliService && (
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold">
+                  ต่อ 1,000,000 Beli (1M)
+                </span>
+              )}
               {discountPercent > 0 && (
                 <span className="text-xs text-emerald-400 font-bold ml-auto">
                   ประหยัด ฿{Math.max(0, (product.oldPrice || product.price) - product.price).toLocaleString()}
@@ -127,17 +156,98 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               )}
             </div>
 
+            {/* Beli Service Options Switcher (1M = 5฿ / มีคูณ 2 = 3฿) */}
+            {isBeliService && (
+              <div className="space-y-2 p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-emerald-950/20 via-[#11111A] to-[#151524] border border-emerald-500/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    เลือกแพ็กเกจคูณ 2 ในเกม
+                  </span>
+                  <span className="text-[11px] text-zinc-400">
+                    {is2xOption ? 'อัตรา: 1M = 3 บาท' : 'อัตรา: 1M = 5 บาท'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (is2xOption && normalBeliProduct && onSelectProduct) {
+                        onSelectProduct(normalBeliProduct);
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 border cursor-pointer ${
+                      !is2xOption
+                        ? 'bg-emerald-500/20 border-emerald-400 text-white shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/40'
+                        : 'bg-[#141420] border-[#2A2A3E] text-zinc-400 hover:text-white hover:bg-[#1A1A2A]'
+                    }`}
+                  >
+                    <span>ไม่มีคูณ 2</span>
+                    <span className="text-[10px] text-emerald-400 font-extrabold">1M = 5 บาท</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!is2xOption && doubleBeliProduct && onSelectProduct) {
+                        onSelectProduct(doubleBeliProduct);
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 border cursor-pointer ${
+                      is2xOption
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white shadow-md shadow-purple-500/30 ring-1 ring-purple-400/40'
+                        : 'bg-[#141420] border-[#2A2A3E] text-zinc-400 hover:text-white hover:bg-[#1A1A2A]'
+                    }`}
+                  >
+                    <span>มีคูณ 2 (2x Money)</span>
+                    <span className="text-[10px] text-purple-300 font-extrabold">1M = 3 บาท (สุดคุ้ม)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Description */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">รายละเอียดสินค้า</h3>
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed bg-[#0D0D14] p-3.5 sm:p-4 rounded-2xl border border-[#1E1E2E]">
+              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed bg-[#0D0D14] p-3.5 sm:p-4 rounded-2xl border border-[#1E1E2E] whitespace-pre-line">
                 {product.description}
               </p>
             </div>
 
             {/* Quantity Selector */}
             <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">เลือกจำนวน</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  {isBeliService ? 'เลือกจำนวนเงินที่ต้องการ (M)' : 'เลือกจำนวน'}
+                </h3>
+                {isBeliService && (
+                  <span className="text-[11px] font-bold text-emerald-400">
+                    จะได้รับ: {(quantity * 1000000).toLocaleString()} Beli ({quantity}M)
+                  </span>
+                )}
+              </div>
+
+              {/* Quick M Preset Buttons for Beli Farm */}
+              {isBeliService && (
+                <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                  {[1, 5, 10, 20, 50, 100].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setQuantity(m)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        quantity === m
+                          ? 'bg-emerald-500 text-zinc-950 font-black shadow-md shadow-emerald-500/30'
+                          : 'bg-[#141420] hover:bg-[#1C1C2C] border border-[#262638] text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      {m}M
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <div className="inline-flex items-center bg-[#11111A] border border-[#262638] rounded-xl p-1">
                   <button
@@ -146,7 +256,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="w-10 text-center text-sm font-bold text-white">{quantity}</span>
+                  <span className="w-12 text-center text-sm font-bold text-white">
+                    {quantity} {isBeliService ? 'M' : ''}
+                  </span>
                   <button
                     onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
                     disabled={quantity >= product.stock}
@@ -157,6 +269,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
                 <span className="text-xs text-zinc-400">
                   รวม: <strong className="text-white font-bold text-sm">฿{((product.price || 0) * quantity).toLocaleString()}</strong>
+                  {isBeliService && (
+                    <span className="text-emerald-400 font-semibold ml-1.5">
+                      ({(quantity * 1000000).toLocaleString()} Beli)
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
@@ -188,14 +305,34 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Delivery Instructions Box */}
             <div className="p-4 rounded-2xl bg-[#0D0D16] border border-[#212130] space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-zinc-300">
-                <Server className="w-4 h-4 text-purple-400" />
-                <span>ข้อมูลและวิธีการรับสินค้า</span>
+                {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service' ? (
+                  <>
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>{product.instructionsTitle || 'ขั้นตอนและวิธีการรับบริการฟาร์ม'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Server className="w-4 h-4 text-purple-400" />
+                    <span>{product.instructionsTitle || 'ข้อมูลและวิธีการรับสินค้า'}</span>
+                  </>
+                )}
               </div>
               <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                <li>หลังจากสั่งซื้อ ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong></li>
-                <li>จะมีปุ่มเข้า <strong className="text-purple-300">Private Server VIP</strong> ใน Blox Fruits ทันที</li>
-                <li>ทำการ Trade ผลปีศาจกับบอทของร้าน</li>
-                <li>ปลอดภัย 100% ไม่ต้องใช้ Password บัญชี Roblox</li>
+                {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service' ? (
+                  <>
+                    <li>เลือกจำนวน M ที่ต้องการ และกรอกชื่อตัวละคร Roblox ในขั้นตอนชำระเงิน</li>
+                    <li>หลังจากชำระเงิน ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong> เพื่อตรวจสอบสถานะ</li>
+                    <li>ทีมงาน AngusShop จะเข้าดำเนินการฟาร์มเงินเขียวให้ครบตามจำนวน M ที่สั่งซื้อ</li>
+                    <li>ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน ทีมงานมืออาชีพดูแลตลอด 24 ชม.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>หลังจากสั่งซื้อ ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong></li>
+                    <li>จะมีปุ่มเข้า <strong className="text-purple-300">Private Server VIP</strong> ใน Blox Fruits ทันที</li>
+                    <li>ทำการ Trade ผลปีศาจกับบอทของร้าน</li>
+                    <li>ปลอดภัย 100% ไม่ต้องใช้ Password บัญชี Roblox</li>
+                  </>
+                )}
               </ul>
             </div>
           </div>
@@ -207,11 +344,22 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       {/* Mobile Delivery Box (Always Visible) */}
       <div className="sm:hidden p-4 rounded-2xl bg-[#0D0D16] border border-[#212130] space-y-2">
         <div className="flex items-center gap-2 text-xs font-bold text-zinc-300">
-          <Server className="w-4 h-4 text-purple-400" />
-          <span>วิธีการรับผลปีศาจ</span>
+          {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service' ? (
+            <>
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>ขั้นตอนและวิธีการรับบริการฟาร์ม</span>
+            </>
+          ) : (
+            <>
+              <Server className="w-4 h-4 text-purple-400" />
+              <span>วิธีการรับผลปีศาจ</span>
+            </>
+          )}
         </div>
         <p className="text-[11px] text-zinc-400 leading-relaxed">
-          หลังชำระเงิน ไปที่เมนู <strong>"คลังสินค้า"</strong> เพื่อกดเข้าร่วม <strong>Private Server VIP</strong> และเทรดรับผลปีศาจได้ทันที ปลอดภัย ไม่ต้องใช้รหัสผ่าน Roblox
+          {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service'
+            ? 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเงินเขียวให้ครบตามจำนวน M ที่สั่งซื้อ ปลอดภัย 100%'
+            : 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อกดเข้าร่วม Private Server VIP และเทรดรับผลปีศาจได้ทันที ปลอดภัย ไม่ต้องใช้รหัสผ่าน Roblox'}
         </p>
       </div>
 

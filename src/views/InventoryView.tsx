@@ -251,11 +251,32 @@ export const InventoryView: React.FC = () => {
                     <div className="min-w-0 flex-1">
                       <h4 className="text-sm sm:text-base font-bold text-white truncate">{item.productName || 'สินค้า'}</h4>
                       <p className="text-xs text-purple-400 font-semibold mt-0.5">
-                        จำนวน: {item.quantity || 1} ชิ้น
+                        {item.productName?.includes('เงินเขียว') || item.productName?.includes('Beli') ? (
+                          <span className="text-emerald-400 font-bold">
+                            จำนวน: {item.quantity || 1}M ({(Number(item.quantity || 1) * 1000000).toLocaleString()} Beli)
+                          </span>
+                        ) : (
+                          <>จำนวน: {item.quantity || 1} ชิ้น</>
+                        )}
                       </p>
                       <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5">
-                        ส่งมอบ: <span className="text-zinc-200">{item.deliveryType || 'Standard'}</span>
+                        ส่งมอบ:{' '}
+                        <span className="text-zinc-200">
+                          {item.deliveryType === 'manual_service' || item.deliveryType === 'service'
+                            ? 'บริการฟาร์มในเกม'
+                            : item.deliveryType === 'fruit_trade' || item.deliveryType === 'fruit'
+                            ? 'เซิร์ฟเวอร์ VIP (Trade)'
+                            : item.deliveryType === 'gamepass_gift' || item.deliveryType === 'gamepass'
+                            ? 'Gamepass Gift'
+                            : (item.deliveryType || 'Standard')}
+                        </span>
                       </p>
+                      {item.metadata?.serviceAccountUsername && (
+                        <p className="text-[10px] sm:text-[11px] text-amber-300/90 mt-0.5 font-mono flex items-center gap-1">
+                          <span>ไอดีฟาร์ม:</span>
+                          <span className="font-bold text-white">{item.metadata.serviceAccountUsername}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
 

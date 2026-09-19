@@ -513,7 +513,14 @@ apiRouter.post('/deposit/angpao', handleRedeemAngpao);
 // 2. Server-Side Checkout with Balance Deduction, Stock check & Digital Delivery
 apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { uid, items, robloxUsername, note } = req.body;
+    const { 
+      uid, 
+      items, 
+      robloxUsername, 
+      serviceAccountUsername, 
+      serviceAccountPassword, 
+      note 
+    } = req.body;
 
     if (!uid || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({
@@ -626,7 +633,16 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         updatedAt: nowIso
       });
 
-      // 4. Create Order Record
+      // 4. Check if order contains service products
+      const hasServiceItems = verifiedItems.some(it => 
+        it.deliveryType === 'service' || 
+        it.deliveryType === 'manual_service' || 
+        it.name?.includes('ฟาร์ม') || 
+        it.name?.includes('เงินเขียว') || 
+        it.name?.includes('บริการ')
+      );
+
+      // 5. Create Order Record
       finalOrder = {
         orderId,
         uid,
@@ -641,6 +657,9 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         orderStatus: 'completed',
         status: 'completed',
         robloxUsername: robloxUsername || '',
+        serviceAccountUsername: hasServiceItems ? (serviceAccountUsername || robloxUsername || '') : '',
+        serviceAccountPassword: hasServiceItems ? (serviceAccountPassword || '') : '',
+        isServiceOrder: hasServiceItems,
         note: note || '',
         createdAt: nowIso,
         updatedAt: nowIso
@@ -649,7 +668,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       const orderRef = doc(db, 'orders', orderId);
       transaction.set(orderRef, finalOrder);
 
-      // 5. Create Wallet Transaction for purchase
+      // 6. Create Wallet Transaction for purchase
       const txRef = doc(db, 'wallet_transactions', txId);
       transaction.set(txRef, {
         transactionId: txId,
@@ -663,10 +682,17 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         createdAt: nowIso
       });
 
-      // 6. Deliver to Inventory
+      // 7. Deliver to Inventory
       for (const item of verifiedItems) {
         const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const invRef = doc(db, 'inventory', invId);
+
+        const isItemService = 
+          item.deliveryType === 'service' || 
+          item.deliveryType === 'manual_service' || 
+          item.name?.includes('ฟาร์ม') || 
+          item.name?.includes('เงินเขียว') || 
+          item.name?.includes('บริการ');
 
         const customInstructions = item.deliveryInstructions?.trim();
         const customTradeServer = item.tradeServerLink?.trim();
@@ -677,16 +703,16 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         if (!instructions) {
           if (item.deliveryType === 'gamepass') {
             instructions = 'ระบบได้ส่งของขวัญ Gamepass เข้าสู่บัญชี Roblox ของท่านเรียบร้อยแล้ว';
-          } else if (item.deliveryType === 'service') {
-            instructions = 'ทีมงานกำลังดำเนินการฟาร์ม/อเวคให้ภายใน 15-30 นาที โปรดรอการติดต่อผ่าน Discord/ระบบ';
+          } else if (isItemService) {
+            instructions = 'ทีมงานได้รับข้อมูลไอดี/รหัสผ่านแล้ว และกำลังดำเนินการฟาร์มให้ตามคิวอย่างปลอดภัย ปิดระบบยืนยัน 2 ชั้นชั่วคราวเพื่อความรวดเร็ว';
           } else {
             instructions = 'เข้าสู่เซิร์ฟเวอร์ VIP ผ่านลิงก์ด้านล่างเพื่อรับสินค้าผ่านระบบ Trade ในเกมกับบอท AngusShop';
           }
         }
         const claimCode = customClaimCode || `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        const instructionsTitle = item.instructionsTitle?.trim() || globalInstructionsTitle;
-        const serverLinkTitle = item.serverLinkTitle?.trim() || globalServerLinkTitle;
-        const claimCodeTitle = item.claimCodeTitle?.trim() || globalClaimCodeTitle;
+        const instructionsTitle = item.instructionsTitle?.trim() || (isItemService ? 'ขั้นตอนบริการฟาร์ม' : globalInstructionsTitle);
+        const serverLinkTitle = item.serverLinkTitle?.trim() || (isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
+        const claimCodeTitle = item.claimCodeTitle?.trim() || (isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
 
         transaction.set(invRef, {
           inventoryId: invId,
@@ -708,6 +734,9 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           serverLinkTitle,
           metadata: {
             robloxUsername: robloxUsername || '',
+            serviceAccountUsername: isItemService ? (serviceAccountUsername || robloxUsername || '') : '',
+            serviceAccountPassword: isItemService ? (serviceAccountPassword || '') : '',
+            isServiceOrder: isItemService,
             instructions,
             instructionsTitle,
             tradeServerLink: tradeServer,
@@ -723,7 +752,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         });
       }
 
-      // 7. Create Notification
+      // 8. Create Notification
       const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const notifRef = doc(db, 'notifications', notifId);
       transaction.set(notifRef, {

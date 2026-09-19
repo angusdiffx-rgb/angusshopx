@@ -142,6 +142,8 @@ function MainShop() {
         {currentView === 'product' && selectedProduct && (
           <ProductDetailView
             product={selectedProduct}
+            allProducts={products}
+            onSelectProduct={handleSelectProduct}
             onBack={() => handleNavigate('shop')}
             onBuyNow={handleBuyNow}
           />

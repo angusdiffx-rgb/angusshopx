@@ -78,6 +78,9 @@ export interface Order {
   orderStatus: OrderStatus;
   status?: string;
   robloxUsername?: string;
+  serviceAccountUsername?: string;
+  serviceAccountPassword?: string;
+  isServiceOrder?: boolean;
   note?: string;
   createdAt: string;
   updatedAt: string;
@@ -104,7 +107,10 @@ export interface InventoryItem {
   serverLinkTitle?: string;
   metadata?: {
     robloxUsername?: string;
+    serviceAccountUsername?: string;
+    serviceAccountPassword?: string;
     accountCredentials?: string;
+    isServiceOrder?: boolean;
     redeemCode?: string;
     code?: string;
     instructions?: string;

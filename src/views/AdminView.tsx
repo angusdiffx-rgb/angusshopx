@@ -23,6 +23,9 @@ import {
   Package,
   Server,
   Key,
+  KeyRound,
+  ShieldAlert,
+  EyeOff,
   Send,
   FileText,
   Copy,
@@ -94,6 +97,11 @@ export const AdminView: React.FC = () => {
   const [searchInventory, setSearchInventory] = useState('');
   const [inventoryFilterStatus, setInventoryFilterStatus] = useState<'all' | 'ready' | 'claimed' | 'processing'>('all');
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+
+  const togglePasswordVisibility = (id: string) => {
+    setRevealedPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Direct deliver to customer inventory modal
   const [isDirectDeliverModalOpen, setIsDirectDeliverModalOpen] = useState(false);
@@ -1323,7 +1331,7 @@ export const AdminView: React.FC = () => {
               <thead className="bg-[#0B0B12] text-zinc-400 border-b border-[#212133]">
                 <tr>
                   <th className="p-4">รหัสออเดอร์</th>
-                  <th className="p-4">Roblox Username</th>
+                  <th className="p-4">Roblox / ข้อมูลฟาร์ม</th>
                   <th className="p-4">รายการสินค้า</th>
                   <th className="p-4">ยอดรวม</th>
                   <th className="p-4">สถานะ</th>
@@ -1331,10 +1339,87 @@ export const AdminView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1D1D2C]">
-                {orders.map((o) => (
+                {orders.map((o) => {
+                  const isService = o.isServiceOrder || !!o.serviceAccountPassword || o.items?.some(it => 
+                    it.deliveryType === 'service' || 
+                    it.deliveryType === 'manual_service' || 
+                    it.name?.includes('ฟาร์ม') || 
+                    it.name?.includes('เงินเขียว') || 
+                    it.name?.includes('บริการ')
+                  );
+                  const isPasswordRevealed = revealedPasswords[o.orderId];
+
+                  return (
                   <tr key={o.orderId} className="hover:bg-[#161624] transition-colors">
-                    <td className="p-4 font-mono text-purple-300 font-bold">#{o.orderId}</td>
-                    <td className="p-4 font-semibold text-white">{o.robloxUsername || '-'}</td>
+                    <td className="p-4 font-mono text-purple-300 font-bold">
+                      #{o.orderId}
+                      {isService && (
+                        <div className="mt-1">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold uppercase">
+                            ⚔️ งานฟาร์ม
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="font-semibold text-white">{o.robloxUsername || '-'}</div>
+                      {isService && (o.serviceAccountUsername || o.serviceAccountPassword) && (
+                        <div className="mt-1.5 p-2 rounded-xl bg-[#090910] border border-amber-500/30 space-y-1 max-w-xs">
+                          <div className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
+                            <KeyRound className="w-3 h-3" /> ข้อมูลล็อกอินฟาร์ม:
+                          </div>
+                          <div className="text-[11px] text-zinc-200 flex items-center justify-between gap-1 font-mono">
+                            <span className="text-zinc-400">ID:</span>
+                            <span className="font-bold text-white select-all">{o.serviceAccountUsername || o.robloxUsername}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(o.serviceAccountUsername || o.robloxUsername || '');
+                                success('คัดลอก ID แล้ว', 'คัดลอกไอดี Roblox สำเร็จ');
+                              }}
+                              className="text-zinc-500 hover:text-white p-0.5"
+                              title="คัดลอก ID"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                          {o.serviceAccountPassword && (
+                            <div className="text-[11px] text-zinc-200 flex items-center justify-between gap-1 font-mono">
+                              <span className="text-zinc-400">Pass:</span>
+                              <span className="font-bold text-amber-300 select-all">
+                                {isPasswordRevealed ? o.serviceAccountPassword : '••••••••'}
+                              </span>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => togglePasswordVisibility(o.orderId)}
+                                  className="text-zinc-500 hover:text-white p-0.5"
+                                  title={isPasswordRevealed ? 'ซ่อนรหัสผ่าน' : 'ดูรหัสผ่าน'}
+                                >
+                                  {isPasswordRevealed ? <EyeOff className="w-3 h-3 text-amber-400" /> : <Eye className="w-3 h-3" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(o.serviceAccountPassword || '');
+                                    success('คัดลอกรหัสผ่านแล้ว', 'คัดลอกรหัสผ่านสำเร็จ');
+                                  }}
+                                  className="text-zinc-500 hover:text-white p-0.5"
+                                  title="คัดลอกรหัสผ่าน"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {o.note && (
+                        <div className="text-[10px] text-zinc-400 mt-1 italic line-clamp-2" title={o.note}>
+                          โน้ต: {o.note}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4 text-zinc-300">
                       {o.items?.map((it) => `${it.name} (x${it.quantity || 1})`).join(', ') || '-'}
                     </td>
@@ -1381,7 +1466,8 @@ export const AdminView: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1539,6 +1625,10 @@ export const AdminView: React.FC = () => {
                     const link = item.tradeServerLink || item.serverLink || item.metadata?.tradeServerLink || item.metadata?.serverLink || '';
                     const code = item.claimCode || item.metadata?.claimCode || item.metadata?.code || item.metadata?.redeemCode || '';
                     const username = item.metadata?.robloxUsername || '-';
+                    const serviceUser = item.metadata?.serviceAccountUsername;
+                    const servicePass = item.metadata?.serviceAccountPassword;
+                    const isService = item.metadata?.isServiceOrder || !!servicePass || item.deliveryType === 'service' || item.deliveryType === 'manual_service';
+                    const isPasswordRevealed = revealedPasswords[invId];
                     const adminNote = item.metadata?.adminNote || '';
 
                     return (
@@ -1547,6 +1637,13 @@ export const AdminView: React.FC = () => {
                           <span className="font-mono font-bold text-purple-300">
                             #{item.orderId || 'DIRECT'}
                           </span>
+                          {isService && (
+                            <div className="mt-1">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold uppercase">
+                                ⚔️ ฟาร์ม
+                              </span>
+                            </div>
+                          )}
                           <div className="text-[10px] text-zinc-500 mt-0.5">
                             {item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH', { hour12: false }) : '-'}
                           </div>
@@ -1559,6 +1656,59 @@ export const AdminView: React.FC = () => {
                           <div className="text-[10px] text-zinc-400 font-mono mt-0.5 truncate max-w-[140px]" title={item.userEmail || item.uid}>
                             {item.userEmail || (item.uid ? item.uid.substring(0, 10) + '...' : '-')}
                           </div>
+
+                          {/* Farm Login Credentials Box */}
+                          {isService && (serviceUser || servicePass) && (
+                            <div className="mt-2 p-2 rounded-xl bg-[#090910] border border-amber-500/30 space-y-1 max-w-[190px]">
+                              <div className="text-[9px] text-amber-400 font-bold flex items-center gap-1">
+                                <KeyRound className="w-3 h-3" /> ล็อกอินฟาร์ม:
+                              </div>
+                              <div className="text-[10px] text-zinc-200 flex items-center justify-between gap-1 font-mono">
+                                <span className="text-zinc-400">ID:</span>
+                                <span className="font-bold text-white select-all truncate">{serviceUser || username}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(serviceUser || username || '');
+                                    success('คัดลอก ID แล้ว', 'คัดลอกไอดี Roblox สำเร็จ');
+                                  }}
+                                  className="text-zinc-500 hover:text-white p-0.5 shrink-0"
+                                  title="คัดลอก ID"
+                                >
+                                  <Copy className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                              {servicePass && (
+                                <div className="text-[10px] text-zinc-200 flex items-center justify-between gap-1 font-mono">
+                                  <span className="text-zinc-400">Pass:</span>
+                                  <span className="font-bold text-amber-300 select-all truncate">
+                                    {isPasswordRevealed ? servicePass : '••••••••'}
+                                  </span>
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePasswordVisibility(invId)}
+                                      className="text-zinc-500 hover:text-white p-0.5"
+                                      title={isPasswordRevealed ? 'ซ่อนรหัสผ่าน' : 'ดูรหัสผ่าน'}
+                                    >
+                                      {isPasswordRevealed ? <EyeOff className="w-2.5 h-2.5 text-amber-400" /> : <Eye className="w-2.5 h-2.5" />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(servicePass);
+                                        success('คัดลอกรหัสผ่านแล้ว', 'คัดลอกรหัสผ่านสำเร็จ');
+                                      }}
+                                      className="text-zinc-500 hover:text-white p-0.5"
+                                      title="คัดลอกรหัสผ่าน"
+                                    >
+                                      <Copy className="w-2.5 h-2.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
 
                         <td className="p-4">
@@ -2783,6 +2933,73 @@ export const AdminView: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Farm Account Credentials in Modal (if available) */}
+            {(selectedInventoryItem.metadata?.serviceAccountUsername || selectedInventoryItem.metadata?.serviceAccountPassword) && (
+              <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-2 text-xs">
+                <div className="text-amber-300 font-bold flex items-center gap-1.5">
+                  <KeyRound className="w-4 h-4 text-amber-400" />
+                  <span>ข้อมูลไอดีและรหัสผ่านสำหรับเข้าฟาร์ม (ลูกค้าส่งมา)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="p-2 rounded-xl bg-[#0B0B14] border border-[#2D2D44] flex items-center justify-between">
+                    <div>
+                      <span className="text-zinc-500 text-[10px] block">ไอดี Roblox</span>
+                      <span className="text-white font-bold select-all">
+                        {selectedInventoryItem.metadata?.serviceAccountUsername || selectedInventoryItem.metadata?.robloxUsername}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedInventoryItem.metadata?.serviceAccountUsername || selectedInventoryItem.metadata?.robloxUsername || '');
+                        success('คัดลอก ID แล้ว', 'คัดลอกไอดี Roblox สำเร็จ');
+                      }}
+                      className="p-1 text-zinc-400 hover:text-white"
+                      title="คัดลอก ID"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-[#0B0B14] border border-[#2D2D44] flex items-center justify-between">
+                    <div>
+                      <span className="text-zinc-500 text-[10px] block">รหัสผ่าน Roblox</span>
+                      <span className="text-amber-300 font-bold select-all">
+                        {revealedPasswords[selectedInventoryItem.id || selectedInventoryItem.inventoryId] 
+                          ? selectedInventoryItem.metadata?.serviceAccountPassword 
+                          : '••••••••'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility(selectedInventoryItem.id || selectedInventoryItem.inventoryId)}
+                        className="p-1 text-zinc-400 hover:text-white"
+                        title={revealedPasswords[selectedInventoryItem.id || selectedInventoryItem.inventoryId] ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                      >
+                        {revealedPasswords[selectedInventoryItem.id || selectedInventoryItem.inventoryId] ? (
+                          <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                        ) : (
+                          <Eye className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedInventoryItem.metadata?.serviceAccountPassword || '');
+                          success('คัดลอกรหัสผ่านแล้ว', 'คัดลอกรหัสผ่านสำเร็จ');
+                        }}
+                        className="p-1 text-zinc-400 hover:text-white"
+                        title="คัดลอกรหัสผ่าน"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSaveDeliveryDetails} className="space-y-4 text-xs">

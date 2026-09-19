@@ -111,7 +111,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
                 <span className="text-[10px] sm:text-xs text-zinc-500 line-through">฿{(product.oldPrice || 0).toLocaleString()}</span>
               )}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-zinc-500 hidden sm:block truncate">ส่งมอบผ่านเซิร์ฟ VIP</span>
+            <span className="text-[9px] sm:text-[10px] text-zinc-500 hidden sm:block truncate">
+              {product.category === 'บริการ' || product.deliveryType === 'service' || product.deliveryType === 'manual_service'
+                ? 'บริการฟาร์มในเกม'
+                : product.category === 'Gamepass'
+                ? 'ของขวัญ Gamepass'
+                : 'ส่งมอบผ่านเซิร์ฟ VIP'}
+            </span>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">

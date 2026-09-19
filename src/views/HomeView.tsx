@@ -21,6 +21,8 @@ import { Product, HomeConfig } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { BloxImage } from '../components/BloxImage';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 interface HomeViewProps {
   products: Product[];
@@ -37,6 +39,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
+  const { isAdmin } = useAuth();
+  const { error: toastError } = useToast();
+
+  const handleAdminOnlyClick = () => {
+    if (!isAdmin) {
+      toastError('เฉพาะแอดมินเท่านั้น', 'คุณไม่มีสิทธิ์กดปุ่มนี้ เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถกดได้');
+      return;
+    }
+    onNavigate('shop');
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'homeConfig'), (docSnap) => {
@@ -239,8 +251,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">{homeConfig.categoriesSubtitle || DEFAULT_HOME_CONFIG.categoriesSubtitle}</p>
           </div>
           <button
-            onClick={() => onNavigate('shop')}
-            className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer shrink-0"
+            onClick={handleAdminOnlyClick}
+            className={`text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all ${
+              isAdmin 
+                ? 'text-purple-400 hover:text-purple-300' 
+                : 'text-zinc-500 hover:text-zinc-400'
+            }`}
+            title={isAdmin ? 'ดูทั้งหมด (สิทธิ์แอดมิน)' : 'เฉพาะแอดมินเท่านั้น'}
           >
             ดูทั้งหมด <ChevronRight className="w-4 h-4" />
           </button>

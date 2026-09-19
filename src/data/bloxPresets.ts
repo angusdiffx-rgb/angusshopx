@@ -693,6 +693,22 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/race_v4.png',
   },
+  {
+    name: 'Beli Farm (Normal)',
+    th: 'บริการฟาร์มเงินเขียว 1M (ไม่มีคูณ 2)',
+    category: 'บริการ',
+    rarity: 'Rare',
+    subType: 'Material',
+    url: '/images/blox/beli_farm.png',
+  },
+  {
+    name: 'Beli Farm (2x Money)',
+    th: 'บริการฟาร์มเงินเขียว 1M (มีคูณ 2)',
+    category: 'บริการ',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/gamepass_2x_money.png',
+  },
 ];
 
 /**
@@ -795,6 +811,8 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('leviathan') || target.includes('หัวใจ')) return '/images/blox/leviathan_heart.png';
   if (target.includes('valkyrie') || target.includes('วาลคิรี')) return '/images/blox/valkyrie_helm.png';
   if (target.includes('v4') || target.includes('เผ่า v4') || target.includes('awakening')) return '/images/blox/race_v4.png';
+  if (target.includes('คูณ 2') || target.includes('คูณ2') || target.includes('2x money') || target.includes('2x_money')) return '/images/blox/gamepass_2x_money.png';
+  if (target.includes('beli') || target.includes('เงินเขียว') || target.includes('ฟาร์มเงิน') || target.includes('เงิน')) return '/images/blox/beli_farm.png';
 
   // If a valid custom external URL was provided (not broken Wikia), use it
   if (url && !url.includes('static.wikia.nocookie.net/roblox-blox-piece/images/')) {
