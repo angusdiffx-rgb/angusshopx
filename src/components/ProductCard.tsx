@@ -107,9 +107,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
           <div className="min-w-0">
             <div className="flex items-baseline gap-1 sm:gap-1.5 truncate">
               <span className="text-sm sm:text-base font-black text-purple-300">฿{(product.price || 0).toLocaleString()}</span>
-              {Boolean(product.oldPrice && product.oldPrice > product.price) && (
+              {product.name.includes('เลเวล') || product.name.includes('Level') ? (
+                <span className="text-[10px] sm:text-xs text-cyan-400 font-bold">/ 100 Lv</span>
+              ) : product.name.includes('เงินเขียว') || product.name.includes('Beli') ? (
+                <span className="text-[10px] sm:text-xs text-emerald-400 font-bold">/ 1M</span>
+              ) : Boolean(product.oldPrice && product.oldPrice > product.price) ? (
                 <span className="text-[10px] sm:text-xs text-zinc-500 line-through">฿{(product.oldPrice || 0).toLocaleString()}</span>
-              )}
+              ) : null}
             </div>
             <span className="text-[9px] sm:text-[10px] text-zinc-500 hidden sm:block truncate">
               {product.category === 'บริการ' || product.deliveryType === 'service' || product.deliveryType === 'manual_service'

@@ -40,6 +40,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     product.name.includes('Beli') || 
     (product.category === 'บริการ' && product.name.includes('เงิน'));
 
+  const isLevelService = 
+    product.productId === 'prod_farm_level' ||
+    product.name.includes('ฟาร์มเลเวล') ||
+    product.name.includes('Level Farm') ||
+    (product.category === 'บริการ' && (product.name.includes('เลเวล') || product.name.includes('Level')));
+
   const is2xOption = 
     product.name.includes('คูณ 2') || 
     product.name.includes('2x') || 
@@ -219,11 +225,20 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  {isBeliService ? 'เลือกจำนวนเงินที่ต้องการ (M)' : 'เลือกจำนวน'}
+                  {isBeliService 
+                    ? 'เลือกจำนวนเงินที่ต้องการ (M)' 
+                    : isLevelService 
+                    ? 'เลือกจำนวนเลเวลที่ต้องการ (ชุดละ 100 เลเวล)' 
+                    : 'เลือกจำนวน'}
                 </h3>
                 {isBeliService && (
                   <span className="text-[11px] font-bold text-emerald-400">
                     จะได้รับ: {(quantity * 1000000).toLocaleString()} Beli ({quantity}M)
+                  </span>
+                )}
+                {isLevelService && (
+                  <span className="text-[11px] font-bold text-cyan-400">
+                    จะได้รับ: {(quantity * 100).toLocaleString()} เลเวล
                   </span>
                 )}
               </div>
@@ -248,6 +263,35 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
               )}
 
+              {/* Quick Level Preset Buttons for Level Farm (100 Lv = 10 THB) */}
+              {isLevelService && (
+                <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                  {[
+                    { qty: 1, label: '100 Lv (10฿)' },
+                    { qty: 2, label: '200 Lv (20฿)' },
+                    { qty: 5, label: '500 Lv (50฿)' },
+                    { qty: 10, label: '1,000 Lv (100฿)' },
+                    { qty: 15, label: '1,500 Lv (150฿)' },
+                    { qty: 20, label: '2,000 Lv (200฿)' },
+                    { qty: 25, label: '2,500 Lv (250฿)' },
+                    { qty: 28, label: '2,800 Lv Max (280฿)' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.qty}
+                      type="button"
+                      onClick={() => setQuantity(preset.qty)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        quantity === preset.qty
+                          ? 'bg-cyan-500 text-zinc-950 font-black shadow-md shadow-cyan-500/30'
+                          : 'bg-[#141420] hover:bg-[#1C1C2C] border border-[#262638] text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <div className="inline-flex items-center bg-[#11111A] border border-[#262638] rounded-xl p-1">
                   <button
@@ -256,8 +300,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="w-12 text-center text-sm font-bold text-white">
-                    {quantity} {isBeliService ? 'M' : ''}
+                  <span className="w-16 text-center text-sm font-bold text-white">
+                    {quantity} {isBeliService ? 'M' : isLevelService ? 'ชุด' : ''}
                   </span>
                   <button
                     onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
@@ -272,6 +316,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {isBeliService && (
                     <span className="text-emerald-400 font-semibold ml-1.5">
                       ({(quantity * 1000000).toLocaleString()} Beli)
+                    </span>
+                  )}
+                  {isLevelService && (
+                    <span className="text-cyan-400 font-semibold ml-1.5">
+                      ({(quantity * 100).toLocaleString()} เลเวล)
                     </span>
                   )}
                 </span>
@@ -318,7 +367,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 )}
               </div>
               <ul className="text-xs text-zinc-400 space-y-1 list-disc list-inside">
-                {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service' ? (
+                {isLevelService ? (
+                  <>
+                    <li>เลือกจำนวนชุดที่ต้องการ (1 ชุด = 100 เลเวล, 10 บาท) และกรอกข้อมูลไอดี-รหัสผ่าน Roblox ในขั้นตอนชำระเงิน</li>
+                    <li>หลังจากชำระเงิน ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong> เพื่อตรวจสอบสถานะการฟาร์ม</li>
+                    <li>ทีมงาน AngusShop จะเข้าดำเนินการฟาร์มเลเวลให้ครบตามจำนวน {(quantity * 100).toLocaleString()} เลเวลที่สั่งซื้อ</li>
+                    <li>ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน การันตีคุณภาพ รวดเร็ว ปลอดภัย</li>
+                  </>
+                ) : product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service' ? (
                   <>
                     <li>เลือกจำนวน M ที่ต้องการ และกรอกชื่อตัวละคร Roblox ในขั้นตอนชำระเงิน</li>
                     <li>หลังจากชำระเงิน ให้ไปที่เมนู <strong className="text-white">"คลังสินค้า"</strong> เพื่อตรวจสอบสถานะ</li>
@@ -357,7 +413,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           )}
         </div>
         <p className="text-[11px] text-zinc-400 leading-relaxed">
-          {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service'
+          {isLevelService 
+            ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเลเวลให้ครบ ${(quantity * 100).toLocaleString()} เลเวล ปลอดภัย 100%`
+            : product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service'
             ? 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเงินเขียวให้ครบตามจำนวน M ที่สั่งซื้อ ปลอดภัย 100%'
             : 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อกดเข้าร่วม Private Server VIP และเทรดรับผลปีศาจได้ทันที ปลอดภัย ไม่ต้องใช้รหัสผ่าน Roblox'}
         </p>

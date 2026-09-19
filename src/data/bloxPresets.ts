@@ -709,6 +709,14 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/gamepass_2x_money.png',
   },
+  {
+    name: 'Level Farm (100 Levels)',
+    th: 'บริการฟาร์มเลเวล 100 เลเวล (10 บาท)',
+    category: 'บริการ',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/level_farm.png',
+  },
 ];
 
 /**
@@ -716,12 +724,27 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
  * หาก URL ภายนอกเสีย หรือเป็น URL เก่าจาก Fandom จะแปลงเป็นภาพคุณภาพสูงที่บันทึกไว้ในเครื่องทันที
  */
 export function resolveBloxImageUrl(url?: string | null, name?: string): string {
-  // หากเป็น URL ภายในระบบ /images/blox/ อยู่แล้ว ให้ใช้ได้ทันที
-  if (url && url.startsWith('/images/blox/')) {
+  // 1. ถ้าเป็น Data URL (Base64 ที่ผู้ใช้อัปโหลดจากเครื่อง) ให้แสดงภาพนั้นทันที
+  if (url && url.startsWith('data:image/')) {
     return url;
   }
 
-  const target = `${name || ''} ${url || ''}`.toLowerCase();
+  // 2. ถ้าเป็น URL ภายในระบบ /images/ หรือ Blob URL ให้แสดงทันที
+  if (url && (url.startsWith('/images/') || url.startsWith('blob:'))) {
+    return url;
+  }
+
+  // 3. ถ้าเป็น URL รูปภาพภายนอกที่ถูกต้อง (ไม่ใช่ลิงก์เสียของ Wikia เก่า) ให้ใช้ทันที
+  if (
+    url && 
+    (url.startsWith('http://') || url.startsWith('https://')) && 
+    !url.includes('static.wikia.nocookie.net/roblox-blox-piece/images/')
+  ) {
+    return url;
+  }
+
+  // 4. ค้นหารูปตามชื่อสินค้า (ใช้เฉพาะชื่อสินค้า ห้ามนำ base64 หรือ url มาปนเพื่อป้องกันคำซ้ำ)
+  const target = (name || '').toLowerCase();
 
   // Mythical
   if (target.includes('kitsune') || target.includes('คิตสึเนะ') || target.includes('คิตสิเนะ')) return '/images/blox/kitsune.png';
@@ -813,6 +836,7 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('v4') || target.includes('เผ่า v4') || target.includes('awakening')) return '/images/blox/race_v4.png';
   if (target.includes('คูณ 2') || target.includes('คูณ2') || target.includes('2x money') || target.includes('2x_money')) return '/images/blox/gamepass_2x_money.png';
   if (target.includes('beli') || target.includes('เงินเขียว') || target.includes('ฟาร์มเงิน') || target.includes('เงิน')) return '/images/blox/beli_farm.png';
+  if (target.includes('level') || target.includes('เลเวล') || target.includes('ฟาร์มเลเวล') || target.includes('เวล')) return '/images/blox/level_farm.png';
 
   // If a valid custom external URL was provided (not broken Wikia), use it
   if (url && !url.includes('static.wikia.nocookie.net/roblox-blox-piece/images/')) {

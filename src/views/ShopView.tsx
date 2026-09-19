@@ -20,7 +20,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialSearch || '');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'ทั้งหมด');
-  const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc' | 'bestseller'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc' | 'bestseller'>('price-desc');
   const [maxPrice, setMaxPrice] = useState<number>(2000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 

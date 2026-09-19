@@ -95,8 +95,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
-                    <div className="text-xs font-black text-purple-400 mt-0.5">
-                      ฿{(item.price || 0).toLocaleString()}
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-xs font-black text-purple-400">
+                        ฿{((item.price || 0) * item.quantity).toLocaleString()}
+                      </span>
+                      {item.name.includes('เงินเขียว') || item.name.includes('Beli') ? (
+                        <span className="text-[10px] text-emerald-400 font-bold">({item.quantity}M)</span>
+                      ) : item.name.includes('เลเวล') || item.name.includes('Level') ? (
+                        <span className="text-[10px] text-cyan-400 font-bold">({item.quantity * 100} เลเวล)</span>
+                      ) : null}
                     </div>
 
                     <div className="flex items-center justify-between mt-2">

@@ -1421,7 +1421,14 @@ export const AdminView: React.FC = () => {
                       )}
                     </td>
                     <td className="p-4 text-zinc-300">
-                      {o.items?.map((it) => `${it.name} (x${it.quantity || 1})`).join(', ') || '-'}
+                      {o.items?.map((it) => {
+                        const qtyLabel = it.name?.includes('เงินเขียว') || it.name?.includes('Beli')
+                          ? `${it.quantity}M`
+                          : it.name?.includes('เลเวล') || it.name?.includes('Level')
+                          ? `${(it.quantity || 1) * 100} เลเวล`
+                          : `x${it.quantity || 1}`;
+                        return `${it.name} (${qtyLabel})`;
+                      }).join(', ') || '-'}
                     </td>
                     <td className="p-4 font-bold text-white">฿{((o.total ?? o.totalAmount) || 0).toLocaleString()}</td>
                     <td className="p-4">

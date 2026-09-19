@@ -255,6 +255,10 @@ export const InventoryView: React.FC = () => {
                           <span className="text-emerald-400 font-bold">
                             จำนวน: {item.quantity || 1}M ({(Number(item.quantity || 1) * 1000000).toLocaleString()} Beli)
                           </span>
+                        ) : item.productName?.includes('เลเวล') || item.productName?.includes('Level') ? (
+                          <span className="text-cyan-400 font-bold">
+                            จำนวน: {(Number(item.quantity || 1) * 100).toLocaleString()} เลเวล ({item.quantity || 1} ชุด)
+                          </span>
                         ) : (
                           <>จำนวน: {item.quantity || 1} ชิ้น</>
                         )}
