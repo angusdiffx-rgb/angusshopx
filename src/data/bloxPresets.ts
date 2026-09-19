@@ -717,6 +717,22 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/level_farm.png',
   },
+  {
+    name: 'Cursed Dual Katana Service (Has Swords)',
+    th: 'บริการทำดาบคู่โอเด้ง CDK (มีดาบ Yama + Tushita แล้ว)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/cursed_dual_katana.png',
+  },
+  {
+    name: 'Cursed Dual Katana Service (No Swords)',
+    th: 'บริการทำดาบคู่โอเด้ง CDK (ยังไม่มีดาบ Yama และ Tushita)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/cursed_dual_katana.png',
+  },
 ];
 
 /**

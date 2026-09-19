@@ -61,6 +61,25 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     (p.name.includes('เงินเขียว') && (p.name.includes('คูณ 2') || p.name.includes('2x')))
   );
 
+  // CDK (ดาบคู่โอเด้ง) options detection
+  const isCdkService = 
+    product.category === 'บริการ' &&
+    (product.name.includes('ดาบคู่') || product.name.includes('CDK') || product.name.includes('โอเด้ง'));
+
+  const isCdkNoSwords = 
+    product.name.includes('ยังไม่มี') || 
+    product.productId === 'prod_cdk_no_swords';
+
+  const cdkHasSwordsProduct = allProducts.find(p => 
+    p.productId === 'prod_cdk_has_swords' || 
+    (p.category === 'บริการ' && (p.name.includes('ดาบคู่') || p.name.includes('CDK') || p.name.includes('โอเด้ง')) && (p.name.includes('มีดาบ') || p.name.includes('45')))
+  );
+
+  const cdkNoSwordsProduct = allProducts.find(p => 
+    p.productId === 'prod_cdk_no_swords' || 
+    (p.category === 'บริการ' && (p.name.includes('ดาบคู่') || p.name.includes('CDK') || p.name.includes('โอเด้ง')) && (p.name.includes('ยังไม่มี') || p.name.includes('100')))
+  );
+
   const handleAddToCart = () => {
     if (product.stock <= 0) return;
     addToCart(product, quantity);
@@ -208,6 +227,57 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   >
                     <span>มีคูณ 2 (2x Money)</span>
                     <span className="text-[10px] text-purple-300 font-extrabold">1M = 3 บาท (สุดคุ้ม)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CDK Service Options Switcher (มีดาบแล้ว 45฿ / ยังไม่มี 100฿) */}
+            {isCdkService && (
+              <div className="space-y-2 p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-red-950/25 via-[#11111A] to-[#1F1424] border border-red-500/35">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    เลือกตัวเลือกบริการดาบคู่โอเด้ง (CDK)
+                  </span>
+                  <span className="text-[11px] text-zinc-400">
+                    {isCdkNoSwords ? 'แพ็กเกจ: ยังไม่มีดาบ (100฿)' : 'แพ็กเกจ: มีดาบครบแล้ว (45฿)'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isCdkNoSwords && cdkHasSwordsProduct && onSelectProduct) {
+                        onSelectProduct(cdkHasSwordsProduct);
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 border cursor-pointer ${
+                      !isCdkNoSwords
+                        ? 'bg-red-500/20 border-red-400 text-white shadow-md shadow-red-500/25 ring-1 ring-red-400/40'
+                        : 'bg-[#141420] border-[#2A2A3E] text-zinc-400 hover:text-white hover:bg-[#1A1A2A]'
+                    }`}
+                  >
+                    <span>มีดาบ Yama + Tushita แล้ว</span>
+                    <span className="text-[11px] text-amber-300 font-black">ราคา 45 บาท</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isCdkNoSwords && cdkNoSwordsProduct && onSelectProduct) {
+                        onSelectProduct(cdkNoSwordsProduct);
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 border cursor-pointer ${
+                      isCdkNoSwords
+                        ? 'bg-gradient-to-r from-red-600 to-rose-600 border-red-400 text-white shadow-md shadow-red-500/30 ring-1 ring-red-400/40'
+                        : 'bg-[#141420] border-[#2A2A3E] text-zinc-400 hover:text-white hover:bg-[#1A1A2A]'
+                    }`}
+                  >
+                    <span>ยังไม่มีดาบ (รับฟาร์มให้ครบ)</span>
+                    <span className="text-[11px] text-yellow-300 font-black">ราคา 100 บาท</span>
                   </button>
                 </div>
               </div>
