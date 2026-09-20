@@ -22,42 +22,75 @@ interface AccountViewProps {
 
 export const AccountView: React.FC<AccountViewProps> = ({ onNavigate }) => {
   const { user, loginWithGoogle, logoutUser, isAdmin } = useAuth();
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    totalInventory: 0,
-    totalDeposited: 0,
+  const [stats, setStats] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(`user_stats_${user?.uid}`);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return { totalOrders: 0, totalInventory: 0, totalDeposited: 0 };
   });
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchStats = async () => {
+    let isMounted = true;
+    const fetchStats = async (force = false) => {
+      const cacheKey = `user_stats_${user.uid}`;
+      const cacheTimeKey = `user_stats_time_${user.uid}`;
+      const now = Date.now();
+      const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
+
+      if (!force && now - lastTime < 10 * 60 * 1000) {
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            setStats(JSON.parse(cached));
+            return;
+          }
+        } catch {}
+      }
+
       try {
-        const ordersSnap = await getDocs(
-          query(collection(db, 'orders'), where('uid', '==', user.uid), limit(50))
-        );
-        const invSnap = await getDocs(
-          query(collection(db, 'inventory'), where('uid', '==', user.uid), limit(50))
-        );
-        const depSnap = await getDocs(
-          query(collection(db, 'deposits'), where('uid', '==', user.uid), where('status', '==', 'completed'), limit(50))
-        );
+        const [ordersSnap, invSnap, depSnap] = await Promise.all([
+          getDocs(query(collection(db, 'orders'), where('uid', '==', user.uid), limit(15))),
+          getDocs(query(collection(db, 'inventory'), where('uid', '==', user.uid), limit(15))),
+          getDocs(query(collection(db, 'deposits'), where('uid', '==', user.uid), where('status', '==', 'completed'), limit(15)))
+        ]);
+
         let deposited = 0;
         depSnap.forEach((d) => {
           deposited += (d.data().amount || 0);
         });
 
-        setStats({
+        const newStats = {
           totalOrders: ordersSnap.size,
           totalInventory: invSnap.size,
           totalDeposited: deposited,
-        });
+        };
+
+        if (isMounted) {
+          setStats(newStats);
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(newStats));
+            sessionStorage.setItem(cacheTimeKey, String(now));
+          } catch {}
+        }
       } catch (err) {
         console.warn('Stats fetch notice:', err);
       }
     };
 
     fetchStats();
+
+    const handleUpdate = () => {
+      fetchStats(true);
+    };
+    window.addEventListener('accountStatsUpdated', handleUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('accountStatsUpdated', handleUpdate);
+    };
   }, [user]);
 
   if (!user) {

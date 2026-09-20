@@ -122,19 +122,27 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     fetchConfig();
 
-    // Re-check every 5 minutes (hits server memory cache, 0 reads)
-    const interval = setInterval(() => {
-      fetchConfig();
-    }, 300000);
+    // Smart visibility/focus refresh: only check when user returns to active tab after 20+ minutes
+    let lastFetched = Date.now();
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastFetched > 20 * 60 * 1000) {
+        lastFetched = Date.now();
+        fetchConfig();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
 
     const handleConfigUpdated = () => {
+      lastFetched = Date.now();
       fetchConfig(true);
     };
     window.addEventListener('homeConfigUpdated', handleConfigUpdated);
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
       window.removeEventListener('homeConfigUpdated', handleConfigUpdated);
     };
   }, []);

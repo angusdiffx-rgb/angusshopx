@@ -229,8 +229,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (!isAdmin) return;
     const now = Date.now();
     const lastLoaded = tabLastLoaded[tab] || 0;
-    // Cache for 90 seconds per tab unless force refreshed
-    if (!force && now - lastLoaded < 90000) {
+    // Cache for 3 minutes per tab unless force refreshed
+    if (!force && now - lastLoaded < 180000) {
       return;
     }
 
@@ -252,19 +252,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
         setDeposits(dList);
 
         // Fetch settings if not yet loaded
-        getDoc(doc(db, 'settings', 'delivery')).then((sSnap) => {
-          if (sSnap.exists()) {
-            const data = sSnap.data() as DeliverySettings;
-            setVipSettings({
-              vipServerLink: data.vipServerLink || 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
-              defaultInstructions: data.defaultInstructions || 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
-              defaultInstructionsTitle: data.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
-              defaultServerLinkTitle: data.defaultServerLinkTitle || 'ลิงค์รับของ',
-              defaultClaimCodeTitle: data.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
-              claimCodePrefix: data.claimCodePrefix || 'AGS-',
-            });
-          }
-        }).catch(() => {});
+        if (force || !vipSettings.vipServerLink) {
+          getDoc(doc(db, 'settings', 'delivery')).then((sSnap) => {
+            if (sSnap.exists()) {
+              const data = sSnap.data() as DeliverySettings;
+              setVipSettings({
+                vipServerLink: data.vipServerLink || 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
+                defaultInstructions: data.defaultInstructions || 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+                defaultInstructionsTitle: data.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
+                defaultServerLinkTitle: data.defaultServerLinkTitle || 'ลิงค์รับของ',
+                defaultClaimCodeTitle: data.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
+                claimCodePrefix: data.claimCodePrefix || 'AGS-',
+              });
+            }
+          }).catch(() => {});
+        }
       } else if (tab === 'orders') {
         const snap = await getDocs(query(collection(db, 'orders'), limit(adminDataLimit)));
         const list: Order[] = [];

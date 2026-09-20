@@ -17,7 +17,8 @@ import {
   setDoc, 
   updateDoc,
   deleteDoc,
-  serverTimestamp 
+  serverTimestamp,
+  limit 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { initialProducts } from '../data/initialProducts';
@@ -32,17 +33,17 @@ export const apiRouter = Router();
 
 apiRouter.use(express.json({ limit: '25mb' }));
 
-// In-Memory Server Cache to drastically cut Firestore Read units by 95%+
+// In-Memory Server Cache to drastically cut Firestore Read units by 99%+
 interface CacheStore<T> {
   data: T;
   timestamp: number;
 }
 
 let serverProductsCache: CacheStore<any[]> | null = null;
-const SERVER_PRODUCTS_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
+const SERVER_PRODUCTS_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
 
 let serverHomeConfigCache: CacheStore<any> | null = null;
-const SERVER_HOME_CONFIG_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+const SERVER_HOME_CONFIG_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
 
 export const invalidateServerProductsCache = () => {
   serverProductsCache = null;
@@ -223,7 +224,8 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
     const dupDepositQuery = query(
       collection(db, 'deposits'),
       where('transRef', '==', transRef),
-      where('status', '==', 'completed')
+      where('status', '==', 'completed'),
+      limit(1)
     );
     const dupDepositSnap = await getDocs(dupDepositQuery);
     if (!dupDepositSnap.empty) {
@@ -237,7 +239,8 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
 
     const dupTxQuery = query(
       collection(db, 'wallet_transactions'),
-      where('reference', '==', transRef)
+      where('reference', '==', transRef),
+      limit(1)
     );
     const dupTxSnap = await getDocs(dupTxQuery);
     if (!dupTxSnap.empty) {
@@ -408,7 +411,8 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
     const dupDepositQuery = query(
       collection(db, 'deposits'),
       where('voucherHash', '==', cleanCode),
-      where('status', '==', 'completed')
+      where('status', '==', 'completed'),
+      limit(1)
     );
     const dupDepositSnap = await getDocs(dupDepositQuery);
     if (!dupDepositSnap.empty) {
@@ -422,7 +426,8 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
 
     const dupTxQuery = query(
       collection(db, 'wallet_transactions'),
-      where('reference', '==', cleanCode)
+      where('reference', '==', cleanCode),
+      limit(1)
     );
     const dupTxSnap = await getDocs(dupTxQuery);
     if (!dupTxSnap.empty) {

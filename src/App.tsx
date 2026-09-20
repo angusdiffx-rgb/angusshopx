@@ -114,20 +114,28 @@ function MainShop() {
     // Initial fetch from server cache
     fetchProducts();
 
-    // Re-check products every 3 minutes (hits server in-memory cache, 0 reads)
-    const interval = setInterval(() => {
-      fetchProducts();
-    }, 180000);
+    // Smart visibility/focus refresh: only re-check if tab becomes active and 15+ minutes have passed
+    let lastFetched = Date.now();
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastFetched > 15 * 60 * 1000) {
+        lastFetched = Date.now();
+        fetchProducts();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
 
     // Listen to immediate updates triggered by Admin changes
     const handleProductsUpdated = () => {
+      lastFetched = Date.now();
       fetchProducts(true);
     };
     window.addEventListener('productsUpdated', handleProductsUpdated);
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
       window.removeEventListener('productsUpdated', handleProductsUpdated);
     };
   }, []);

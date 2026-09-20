@@ -7,11 +7,12 @@ import {
   ArrowRight, 
   Package, 
   User, 
-  Wallet,
-  ChevronRight
+  Wallet, 
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
 import type { Order } from '../types';
@@ -22,37 +23,79 @@ interface OrdersViewProps {
 
 export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
   const { user, loginWithGoogle } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(`user_orders_${user?.uid}`);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
+  const [loading, setLoading] = useState(!orders.length);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(25);
 
-  useEffect(() => {
+  const fetchOrders = async (force = false) => {
     if (!user) {
       setOrders([]);
       setLoading(false);
       return;
     }
 
-    const q = query(
-      collection(db, 'orders'),
-      where('uid', '==', user.uid),
-      limit(displayLimit)
-    );
+    const cacheKey = `user_orders_${user.uid}`;
+    const cacheTimeKey = `user_orders_time_${user.uid}`;
+    const now = Date.now();
+    const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    if (!force && now - lastTime < 3 * 60 * 1000) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          setOrders(JSON.parse(cached));
+          setLoading(false);
+          return;
+        }
+      } catch {}
+    }
+
+    if (force) setIsRefreshing(true);
+    else if (!orders.length) setLoading(true);
+
+    try {
+      const q = query(
+        collection(db, 'orders'),
+        where('uid', '==', user.uid),
+        limit(displayLimit)
+      );
+      const snapshot = await getDocs(q);
       const list: Order[] = [];
       snapshot.forEach((d) => {
         list.push({ id: d.id, ...(d.data() as Order) });
       });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(list);
-      setLoading(false);
-    }, (err) => {
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(list));
+        sessionStorage.setItem(cacheTimeKey, String(now));
+      } catch {}
+    } catch (err) {
       console.warn('Orders fetch error:', err);
+    } finally {
       setLoading(false);
-    });
+      setIsRefreshing(false);
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchOrders();
+
+    const handleUpdate = () => {
+      fetchOrders(true);
+    };
+    window.addEventListener('ordersUpdated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('ordersUpdated', handleUpdate);
+    };
   }, [user, displayLimit]);
 
   if (!user) {
@@ -77,11 +120,22 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
 
   return (
     <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white">ประวัติคำสั่งซื้อ</h1>
-        <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">
-          รายการคำสั่งซื้อทั้งหมดและการจัดส่งผลปีศาจของคุณ
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">ประวัติคำสั่งซื้อ</h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">
+            รายการคำสั่งซื้อทั้งหมดและการจัดส่งผลปีศาจของคุณ
+          </p>
+        </div>
+        <button
+          onClick={() => fetchOrders(true)}
+          disabled={isRefreshing}
+          className="flex items-center gap-1.5 bg-[#141420] hover:bg-[#1c1c2e] border border-[#212133] text-zinc-300 hover:text-white px-3 py-1.5 rounded-xl text-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+          title="รีเฟรชประวัติคำสั่งซื้อ"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-purple-400' : ''}`} />
+          <span className="hidden sm:inline">{isRefreshing ? 'กำลังโหลด...' : 'รีเฟรช'}</span>
+        </button>
       </div>
 
       {loading ? (

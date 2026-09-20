@@ -14,11 +14,12 @@ import {
   Key,
   MessageSquare,
   Info,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { collection, query, where, limit, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
 import type { InventoryItem } from '../types';
@@ -26,39 +27,81 @@ import type { InventoryItem } from '../types';
 export const InventoryView: React.FC = () => {
   const { user, loginWithGoogle, isAdmin } = useAuth();
   const { success, error: toastError } = useToast();
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<InventoryItem[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(`user_inventory_${user?.uid}`);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
+  const [loading, setLoading] = useState(!items.length);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'ready' | 'claimed'>('all');
   const [displayLimit, setDisplayLimit] = useState(25);
 
-  useEffect(() => {
+  const fetchInventory = async (force = false) => {
     if (!user) {
       setItems([]);
       setLoading(false);
       return;
     }
 
-    const q = query(
-      collection(db, 'inventory'),
-      where('uid', '==', user.uid),
-      limit(displayLimit)
-    );
+    const cacheKey = `user_inventory_${user.uid}`;
+    const cacheTimeKey = `user_inventory_time_${user.uid}`;
+    const now = Date.now();
+    const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    if (!force && now - lastTime < 3 * 60 * 1000) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          setItems(JSON.parse(cached));
+          setLoading(false);
+          return;
+        }
+      } catch {}
+    }
+
+    if (force) setIsRefreshing(true);
+    else if (!items.length) setLoading(true);
+
+    try {
+      const q = query(
+        collection(db, 'inventory'),
+        where('uid', '==', user.uid),
+        limit(displayLimit)
+      );
+      const snapshot = await getDocs(q);
       const list: InventoryItem[] = [];
       snapshot.forEach((d) => {
         list.push({ id: d.id, ...(d.data() as InventoryItem) });
       });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setItems(list);
-      setLoading(false);
-    }, (err) => {
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(list));
+        sessionStorage.setItem(cacheTimeKey, String(now));
+      } catch {}
+    } catch (err) {
       console.warn('Inventory fetch notice:', err);
+    } finally {
       setLoading(false);
-    });
+      setIsRefreshing(false);
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchInventory();
+
+    const handleUpdate = () => {
+      fetchInventory(true);
+    };
+    window.addEventListener('inventoryUpdated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('inventoryUpdated', handleUpdate);
+    };
   }, [user, displayLimit]);
 
   const handleCopyCode = (code: string, id: string) => {
@@ -81,6 +124,13 @@ export const InventoryView: React.FC = () => {
         status: newStatus,
         claimedAt: newStatus === 'claimed' ? new Date().toISOString() : null,
       });
+      setItems((prev) =>
+        prev.map((it) =>
+          (it.id === item.id || it.inventoryId === item.inventoryId)
+            ? { ...it, status: newStatus, claimedAt: newStatus === 'claimed' ? new Date().toISOString() : undefined }
+            : it
+        )
+      );
       success('อัปเดตสถานะแล้ว', `เปลี่ยนสถานะเป็น ${newStatus === 'claimed' ? 'รับสินค้าแล้ว' : 'พร้อมรับ'}`);
     } catch (err: any) {
       console.error('Update inventory error:', err);
@@ -125,37 +175,49 @@ export const InventoryView: React.FC = () => {
           </p>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#11111A] border border-[#212133] self-start sm:self-auto overflow-x-auto no-scrollbar">
+        {/* Filter Pills & Refresh */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#11111A] border border-[#212133] overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                filterStatus === 'all'
+                  ? 'bg-purple-600 text-white shadow'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              ทั้งหมด ({items.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('ready')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                filterStatus === 'ready'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              พร้อมรับ ({items.filter((i) => i.status === 'ready').length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('claimed')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                filterStatus === 'claimed'
+                  ? 'bg-zinc-700 text-white shadow'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              รับแล้ว ({items.filter((i) => i.status === 'claimed').length})
+            </button>
+          </div>
+
           <button
-            onClick={() => setFilterStatus('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
-              filterStatus === 'all'
-                ? 'bg-purple-600 text-white shadow'
-                : 'text-zinc-400 hover:text-white'
-            }`}
+            onClick={() => fetchInventory(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 bg-[#141420] hover:bg-[#1c1c2e] border border-[#212133] text-zinc-300 hover:text-white px-3 py-1.5 rounded-xl text-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            title="รีเฟรชข้อมูลคลังสินค้า"
           >
-            ทั้งหมด ({items.length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('ready')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
-              filterStatus === 'ready'
-                ? 'bg-emerald-600 text-white shadow'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            พร้อมรับ ({items.filter((i) => i.status === 'ready').length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('claimed')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
-              filterStatus === 'claimed'
-                ? 'bg-zinc-700 text-white shadow'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            รับแล้ว ({items.filter((i) => i.status === 'claimed').length})
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-purple-400' : ''}`} />
+            <span className="hidden sm:inline">{isRefreshing ? 'กำลังโหลด...' : 'รีเฟรช'}</span>
           </button>
         </div>
       </div>

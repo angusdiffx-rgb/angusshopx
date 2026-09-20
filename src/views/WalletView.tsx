@@ -34,7 +34,7 @@ import {
   extractVoucherCode, 
   formatPhoneNumber 
 } from '../lib/angpao';
-import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { WalletTransaction } from '../types';
 
@@ -75,8 +75,15 @@ export const WalletView: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
 
   // Transactions list
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [loadingTx, setLoadingTx] = useState(true);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(`user_tx_${user?.uid}`);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
+  const [loadingTx, setLoadingTx] = useState(!transactions.length);
+  const [isRefreshingTx, setIsRefreshingTx] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,32 +111,69 @@ export const WalletView: React.FC = () => {
     return () => { isMounted = false; };
   }, [activeAmount]);
 
-  // Listen to transactions
-  useEffect(() => {
+  // Fetch transactions with cache
+  const fetchTransactions = async (force = false) => {
     if (!user) {
       setTransactions([]);
       setLoadingTx(false);
       return;
     }
-    const q = query(
-      collection(db, 'wallet_transactions'),
-      where('uid', '==', user.uid),
-      limit(50)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+
+    const cacheKey = `user_tx_${user.uid}`;
+    const cacheTimeKey = `user_tx_time_${user.uid}`;
+    const now = Date.now();
+    const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
+
+    if (!force && now - lastTime < 3 * 60 * 1000) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          setTransactions(JSON.parse(cached));
+          setLoadingTx(false);
+          return;
+        }
+      } catch {}
+    }
+
+    if (force) setIsRefreshingTx(true);
+    else if (!transactions.length) setLoadingTx(true);
+
+    try {
+      const q = query(
+        collection(db, 'wallet_transactions'),
+        where('uid', '==', user.uid),
+        limit(15)
+      );
+      const snapshot = await getDocs(q);
       const items: WalletTransaction[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...(docSnap.data() as WalletTransaction) });
       });
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setTransactions(items);
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(items));
+        sessionStorage.setItem(cacheTimeKey, String(now));
+      } catch {}
+    } catch (err) {
+      console.warn('Transactions fetch notice:', err);
+    } finally {
       setLoadingTx(false);
-    }, (err) => {
-      console.warn('Transactions listen notice:', err);
-      setLoadingTx(false);
-    });
+      setIsRefreshingTx(false);
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchTransactions();
+
+    const handleUpdate = () => {
+      fetchTransactions(true);
+    };
+    window.addEventListener('walletUpdated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('walletUpdated', handleUpdate);
+    };
   }, [user]);
 
   const handleCopyNumber = () => {
@@ -265,6 +309,8 @@ export const WalletView: React.FC = () => {
         setSlipFile(null);
         setSlipPreview(null);
         if (refreshUserProfile) refreshUserProfile();
+        fetchTransactions(true);
+        window.dispatchEvent(new CustomEvent('accountStatsUpdated'));
       } else {
         setVerificationResult({
           success: false,
@@ -355,6 +401,8 @@ export const WalletView: React.FC = () => {
         });
         setAngpaoInput('');
         if (refreshUserProfile) refreshUserProfile();
+        fetchTransactions(true);
+        window.dispatchEvent(new CustomEvent('accountStatsUpdated'));
       } else {
         setAngpaoResult({
           success: false,
@@ -1009,12 +1057,23 @@ export const WalletView: React.FC = () => {
 
       {/* Transaction History Section */}
       <div className="p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#212133]">
+        <div className="flex items-center justify-between pb-3 border-b border-[#212133] gap-2">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-white">ประวัติธุรกรรม Wallet</h3>
             <p className="text-xs text-zinc-400">รายการเติมเงินและสั่งซื้อสินค้าทั้งหมดของคุณ</p>
           </div>
-          <span className="text-xs text-zinc-500">{transactions.length} รายการ</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-500 hidden sm:inline">{transactions.length} รายการ</span>
+            <button
+              onClick={() => fetchTransactions(true)}
+              disabled={isRefreshingTx}
+              className="flex items-center gap-1 bg-[#141420] hover:bg-[#1c1c2e] border border-[#212133] text-zinc-300 hover:text-white px-2.5 py-1 rounded-xl text-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              title="รีเฟรชประวัติธุรกรรม"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingTx ? 'animate-spin text-purple-400' : ''}`} />
+              <span className="hidden sm:inline">{isRefreshingTx ? '...' : 'รีเฟรช'}</span>
+            </button>
+          </div>
         </div>
 
         {loadingTx ? (

@@ -152,6 +152,20 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         });
         clearCart();
         if (refreshUserProfile) refreshUserProfile();
+        try {
+          sessionStorage.removeItem(`user_orders_${user.uid}`);
+          sessionStorage.removeItem(`user_orders_time_${user.uid}`);
+          sessionStorage.removeItem(`user_inventory_${user.uid}`);
+          sessionStorage.removeItem(`user_inventory_time_${user.uid}`);
+          sessionStorage.removeItem(`user_tx_${user.uid}`);
+          sessionStorage.removeItem(`user_tx_time_${user.uid}`);
+          sessionStorage.removeItem(`user_stats_${user.uid}`);
+          sessionStorage.removeItem(`user_stats_time_${user.uid}`);
+        } catch {}
+        window.dispatchEvent(new CustomEvent('ordersUpdated'));
+        window.dispatchEvent(new CustomEvent('inventoryUpdated'));
+        window.dispatchEvent(new CustomEvent('walletUpdated'));
+        window.dispatchEvent(new CustomEvent('accountStatsUpdated'));
         onOrderCompleted(data.order);
       } else {
         setCheckoutError(data.error || data.message || 'ไม่สามารถทำรายการสั่งซื้อได้');
