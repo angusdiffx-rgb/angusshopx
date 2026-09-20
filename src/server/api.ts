@@ -39,6 +39,25 @@ interface CacheStore<T> {
   timestamp: number;
 }
 
+/**
+ * Recursively cleans any object to be saved to Cloud Firestore.
+ * Removes all undefined keys and ensures valid Firestore data types.
+ */
+function sanitizeForFirestore<T>(obj: T): T {
+  if (obj === undefined) return null as any;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeForFirestore) as any;
+  }
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = sanitizeForFirestore(value);
+    }
+  }
+  return result as T;
+}
+
 let serverProductsCache: CacheStore<any[]> | null = null;
 const SERVER_PRODUCTS_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
 
@@ -627,12 +646,12 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         calculatedSubtotal += serverPrice * reqQty;
 
         verifiedItems.push({
-          productId: prodData.productId || item.productId,
-          name: prodData.name,
-          slug: prodData.slug,
-          price: serverPrice,
+          productId: prodData.productId || item.productId || '',
+          name: prodData.name || '',
+          slug: prodData.slug || '',
+          price: serverPrice || 0,
           quantity: reqQty,
-          image: prodData.image,
+          image: prodData.image || '',
           deliveryType: prodData.deliveryType || 'fruit',
           deliveryInstructions: prodData.deliveryInstructions || prodData.instructions || '',
           instructionsTitle: prodData.instructionsTitle || '',
@@ -669,11 +688,13 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         it.deliveryType === 'manual_service' || 
         it.name?.includes('ฟาร์ม') || 
         it.name?.includes('เงินเขียว') || 
-        it.name?.includes('บริการ')
+        it.name?.includes('บริการ') ||
+        it.name?.includes('CDK') ||
+        it.name?.includes('โอเด้ง')
       );
 
       // 5. Create Order Record
-      finalOrder = {
+      finalOrder = sanitizeForFirestore({
         orderId,
         uid,
         userEmail: userDoc.data().email || '',
@@ -693,14 +714,14 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         note: note || '',
         createdAt: nowIso,
         updatedAt: nowIso
-      };
+      });
 
       const orderRef = doc(db, 'orders', orderId);
       transaction.set(orderRef, finalOrder);
 
       // 6. Create Wallet Transaction for purchase
       const txRef = doc(db, 'wallet_transactions', txId);
-      transaction.set(txRef, {
+      transaction.set(txRef, sanitizeForFirestore({
         transactionId: txId,
         uid,
         type: 'purchase',
@@ -710,7 +731,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         orderId,
         description: `ชำระคำสั่งซื้อ #${orderId} (${verifiedItems.length} รายการ)`,
         createdAt: nowIso
-      });
+      }));
 
       // 7. Deliver to Inventory
       for (const item of verifiedItems) {
@@ -722,7 +743,9 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           item.deliveryType === 'manual_service' || 
           item.name?.includes('ฟาร์ม') || 
           item.name?.includes('เงินเขียว') || 
-          item.name?.includes('บริการ');
+          item.name?.includes('บริการ') ||
+          item.name?.includes('CDK') ||
+          item.name?.includes('โอเด้ง');
 
         const customInstructions = item.deliveryInstructions?.trim();
         const customTradeServer = item.tradeServerLink?.trim();
@@ -744,7 +767,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         const serverLinkTitle = item.serverLinkTitle?.trim() || (isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
         const claimCodeTitle = item.claimCodeTitle?.trim() || (isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
 
-        transaction.set(invRef, {
+        transaction.set(invRef, sanitizeForFirestore({
           inventoryId: invId,
           uid,
           userEmail: userDoc.data().email || '',
@@ -779,13 +802,13 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           },
           createdAt: nowIso,
           updatedAt: nowIso
-        });
+        }));
       }
 
       // 8. Create Notification
       const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const notifRef = doc(db, 'notifications', notifId);
-      transaction.set(notifRef, {
+      transaction.set(notifRef, sanitizeForFirestore({
         notifId,
         uid,
         title: 'สั่งซื้อสินค้าสำเร็จ!',
@@ -793,7 +816,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         type: 'order',
         isRead: false,
         createdAt: nowIso
-      });
+      }));
     });
 
     res.json({
@@ -997,10 +1020,10 @@ apiRouter.post('/admin/update-product', async (req: Request, res: Response): Pro
     const prodRef = doc(db, 'products', productId);
     await setDoc(
       prodRef,
-      {
+      sanitizeForFirestore({
         ...updateData,
         updatedAt: new Date().toISOString()
-      },
+      }),
       { merge: true }
     );
     invalidateServerProductsCache();
@@ -1085,10 +1108,10 @@ apiRouter.post('/admin/update-home-config', async (req: Request, res: Response):
     const configRef = doc(db, 'settings', 'homeConfig');
     await setDoc(
       configRef,
-      {
+      sanitizeForFirestore({
         ...config,
         updatedAt: new Date().toISOString()
-      },
+      }),
       { merge: true }
     );
     invalidateServerHomeConfigCache();

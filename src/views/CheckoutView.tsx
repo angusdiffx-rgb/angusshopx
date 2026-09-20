@@ -168,8 +168,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         window.dispatchEvent(new CustomEvent('accountStatsUpdated'));
         onOrderCompleted(data.order);
       } else {
-        setCheckoutError(data.error || data.message || 'ไม่สามารถทำรายการสั่งซื้อได้');
-        toastError('ชำระเงินไม่สำเร็จ', data.error || data.message);
+        const errMsg = data.message || data.error || 'ไม่สามารถทำรายการสั่งซื้อได้';
+        setCheckoutError(errMsg);
+        toastError('ชำระเงินไม่สำเร็จ', errMsg);
       }
     } catch (err: any) {
       console.error('Checkout error:', err);
