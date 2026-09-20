@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Flame, Shield, Zap, Heart, MessageSquare, ExternalLink } from 'lucide-react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { HomeConfig } from '../types';
+import { useHomeConfig } from '../context/HomeConfigContext';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
 interface FooterProps {
@@ -10,20 +8,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
-  const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'homeConfig'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as HomeConfig;
-        setHomeConfig({
-          ...DEFAULT_HOME_CONFIG,
-          ...data,
-        });
-      }
-    });
-    return () => unsub();
-  }, []);
+  const { homeConfig } = useHomeConfig();
 
   return (
     <footer className="w-full bg-[#08080C] border-t border-[#1E1E2E] mt-24">

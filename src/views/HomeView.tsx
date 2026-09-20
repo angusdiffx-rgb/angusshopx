@@ -15,14 +15,13 @@ import {
   HelpCircle, 
   Gamepad2 
 } from 'lucide-react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { Product, HomeConfig } from '../types';
+import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { BloxImage } from '../components/BloxImage';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useHomeConfig } from '../context/HomeConfigContext';
 
 interface HomeViewProps {
   products: Product[];
@@ -38,7 +37,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onBuyNow 
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
-  const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
+  const { homeConfig } = useHomeConfig();
   const { isAdmin } = useAuth();
   const { error: toastError } = useToast();
 
@@ -49,25 +48,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
     }
     onNavigate('shop');
   };
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'homeConfig'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as HomeConfig;
-        setHomeConfig({
-          ...DEFAULT_HOME_CONFIG,
-          ...data,
-          trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
-          promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
-          promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
-        });
-      }
-    }, (err) => {
-      console.warn('HomeConfig listener error:', err);
-    });
-
-    return () => unsub();
-  }, []);
 
   const featuredProducts = products.filter(p => p.isFeatured).slice(0, 4);
   const bestSellers = products.filter(p => p.isBestSeller).slice(0, 4);

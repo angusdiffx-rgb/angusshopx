@@ -23,9 +23,10 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
+import { useHomeConfig } from '../context/HomeConfigContext';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { Notification, HomeConfig } from '../types';
+import type { Notification } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
 interface NavbarProps {
@@ -37,11 +38,11 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearch }) => {
   const { user, loginWithGoogle, logoutUser, isAdmin, openAuthModal } = useAuth();
   const { totalItemsCount, setIsCartOpen } = useCart();
+  const { homeConfig } = useHomeConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -61,21 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch home config
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'homeConfig'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as HomeConfig;
-        setHomeConfig({
-          ...DEFAULT_HOME_CONFIG,
-          ...data,
-        });
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  // Listen to user's notifications
+  // Listen to user's notifications (limited to recent 10 to save Firestore quota)
   useEffect(() => {
     if (!user) {
       setNotifications([]);
@@ -83,7 +70,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
     }
     const q = query(
       collection(db, 'notifications'),
-      where('uid', '==', user.uid)
+      where('uid', '==', user.uid),
+      limit(10)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items: Notification[] = [];

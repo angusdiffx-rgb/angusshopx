@@ -13,7 +13,7 @@ import {
   Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface AccountViewProps {
@@ -34,13 +34,13 @@ export const AccountView: React.FC<AccountViewProps> = ({ onNavigate }) => {
     const fetchStats = async () => {
       try {
         const ordersSnap = await getDocs(
-          query(collection(db, 'orders'), where('uid', '==', user.uid))
+          query(collection(db, 'orders'), where('uid', '==', user.uid), limit(50))
         );
         const invSnap = await getDocs(
-          query(collection(db, 'inventory'), where('uid', '==', user.uid))
+          query(collection(db, 'inventory'), where('uid', '==', user.uid), limit(50))
         );
         const depSnap = await getDocs(
-          query(collection(db, 'deposits'), where('uid', '==', user.uid), where('status', '==', 'completed'))
+          query(collection(db, 'deposits'), where('uid', '==', user.uid), where('status', '==', 'completed'), limit(50))
         );
         let deposited = 0;
         depSnap.forEach((d) => {

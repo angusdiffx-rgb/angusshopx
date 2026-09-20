@@ -11,7 +11,10 @@ import {
   type User as FirebaseUser
 } from 'firebase/auth';
 import { 
-  getFirestore, 
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc, 
   getDoc, 
   setDoc, 
@@ -36,23 +39,47 @@ const firebaseConfig = {
 // Initialize Firebase App
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = firebaseAppletConfig.firestoreDatabaseId 
-  ? getFirestore(app, firebaseAppletConfig.firestoreDatabaseId) 
-  : getFirestore(app);
+
+// Initialize Firestore with Persistent Local Cache (IndexedDB)
+// Drastically cuts read quota consumption by serving cached documents locally across tabs and reloads!
+let firestoreDb: ReturnType<typeof getFirestore>;
+try {
+  if (typeof window !== 'undefined') {
+    firestoreDb = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    }, firebaseAppletConfig.firestoreDatabaseId || undefined);
+  } else {
+    firestoreDb = firebaseAppletConfig.firestoreDatabaseId 
+      ? getFirestore(app, firebaseAppletConfig.firestoreDatabaseId) 
+      : getFirestore(app);
+  }
+} catch (err) {
+  // If already initialized, retrieve the existing instance
+  try {
+    firestoreDb = firebaseAppletConfig.firestoreDatabaseId 
+      ? getFirestore(app, firebaseAppletConfig.firestoreDatabaseId) 
+      : getFirestore(app);
+  } catch (fallbackErr) {
+    firestoreDb = getFirestore(app);
+  }
+}
+
+export const db = firestoreDb;
 export const storage = getStorage(app);
 
-// Test connection to Firestore as recommended by Firebase skill
-const testConnection = async () => {
-  try {
-    const { getDocFromServer } = await import('firebase/firestore');
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Firestore connection check: client is offline or database ID pending.");
-    }
-  }
+export const isQuotaExceededError = (err: any): boolean => {
+  if (!err) return false;
+  const message = String(err?.message || '');
+  const code = String(err?.code || '');
+  return (
+    code === 'resource-exhausted' ||
+    message.includes('Quota exceeded') ||
+    message.includes('resource_exhausted') ||
+    message.includes('RESOURCE_EXHAUSTED')
+  );
 };
-testConnection();
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({

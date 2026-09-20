@@ -21,20 +21,29 @@ import {
   RefreshCw,
   Upload
 } from 'lucide-react';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useToast } from '../context/ToastContext';
+import { useHomeConfig } from '../context/HomeConfigContext';
 import { HomeConfig, TrendingFruitItem, PromoShowcaseCard } from '../types';
 import { BLOX_FRUITS_PRESETS, DEFAULT_HOME_CONFIG, BloxPreset } from '../data/bloxPresets';
 import { BloxImage } from './BloxImage';
 
 export const HomeConfigManager: React.FC = () => {
   const { success, error: toastError } = useToast();
+  const { homeConfig, saveFullHomeConfig } = useHomeConfig();
   
-  const [config, setConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
-  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<HomeConfig>(homeConfig);
+  const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'all' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('all');
+
+  // Sync with context if updated externally
+  useEffect(() => {
+    if (homeConfig) {
+      setConfig(homeConfig);
+    }
+  }, [homeConfig]);
 
   // Preset picker modal state
   const [presetModalTarget, setPresetModalTarget] = useState<{
@@ -44,46 +53,17 @@ export const HomeConfigManager: React.FC = () => {
   const [presetSearch, setPresetSearch] = useState('');
   const [presetFilterCategory, setPresetFilterCategory] = useState<'all' | 'fruit' | 'gamepass' | 'sword' | 'style'>('all');
 
-  // Load from Firestore
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'homeConfig'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as HomeConfig;
-        setConfig({
-          ...DEFAULT_HOME_CONFIG,
-          ...data,
-          trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
-          promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
-          promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
-        });
-      }
-      setLoading(false);
-    }, (err) => {
-      console.warn('Error loading homeConfig:', err);
-      setLoading(false);
-    });
-
-    return () => unsub();
-  }, []);
-
-  // Save changes to Firestore
+  // Save changes to Firestore and context
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Also call server API as fallback/logging
-      const res = await fetch('/api/admin/update-home-config', {
+      await saveFullHomeConfig(config);
+      // Also call server API as background fallback/logging
+      fetch('/api/admin/update-home-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ config })
-      });
-
-      if (!res.ok) {
-        // Direct setDoc fallback if API had issue
-        await setDoc(doc(db, 'settings', 'homeConfig'), {
-          ...config,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      }
+      }).catch(() => {});
 
       success('บันทึกการตกแต่งหน้าแรกและแบนเนอร์เรียบร้อยแล้ว! หน้าเว็บอัปเดตทันที');
     } catch (err: any) {

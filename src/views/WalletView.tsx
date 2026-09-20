@@ -34,7 +34,7 @@ import {
   extractVoucherCode, 
   formatPhoneNumber 
 } from '../lib/angpao';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { WalletTransaction } from '../types';
 
@@ -113,7 +113,8 @@ export const WalletView: React.FC = () => {
     }
     const q = query(
       collection(db, 'wallet_transactions'),
-      where('uid', '==', user.uid)
+      where('uid', '==', user.uid),
+      limit(50)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items: WalletTransaction[] = [];

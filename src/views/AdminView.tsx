@@ -68,6 +68,7 @@ import {
   query, 
   where,
   orderBy, 
+  limit,
   onSnapshot 
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -77,7 +78,15 @@ import { HomeConfigManager } from '../components/HomeConfigManager';
 import { BloxPresetPickerModal } from '../components/BloxPresetPickerModal';
 import { BloxImage } from '../components/BloxImage';
 
-export const AdminView: React.FC = () => {
+interface AdminViewProps {
+  products?: Product[];
+  setProducts?: React.Dispatch<React.SetStateAction<Product[]>>;
+}
+
+export const AdminView: React.FC<AdminViewProps> = ({ 
+  products: initialProductsFromProps, 
+  setProducts: setProductsFromProps 
+}) => {
   const { user, isAdmin } = useAuth();
   const { success, error: toastError } = useToast();
 
@@ -88,7 +97,10 @@ export const AdminView: React.FC = () => {
   const [presetPickerTarget, setPresetPickerTarget] = useState<'new' | 'edit'>('new');
   
   // Data states
-  const [products, setProducts] = useState<Product[]>([]);
+  const [internalProducts, setInternalProducts] = useState<Product[]>([]);
+  const products = initialProductsFromProps || internalProducts;
+  const setProducts = setProductsFromProps || setInternalProducts;
+  const [adminDataLimit, setAdminDataLimit] = useState<number>(100);
   
   // Category management & view controls for Products
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>('all');
@@ -210,28 +222,31 @@ export const AdminView: React.FC = () => {
     isActive: true,
   });
 
-  // Load products, orders, deposits
+  // Load products, orders, deposits with customizable limit to conserve quota
   useEffect(() => {
     if (!isAdmin) return;
 
-    // Listen to products
-    const unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
-      const list: Product[] = [];
-      snap.forEach((d) => {
-        const item = d.data() as Product;
-        list.push({
-          ...item,
-          productId: item.productId || d.id
+    // Listen to products only if not passed from props (never limit products)
+    let unsubProducts = () => {};
+    if (!initialProductsFromProps) {
+      unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
+        const list: Product[] = [];
+        snap.forEach((d) => {
+          const item = d.data() as Product;
+          list.push({
+            ...item,
+            productId: item.productId || d.id
+          });
         });
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setProducts(list);
+      }, (err) => {
+        console.warn('Products admin listen notice:', err);
       });
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setProducts(list);
-    }, (err) => {
-      console.warn('Products admin listen notice:', err);
-    });
+    }
 
-    // Listen to orders
-    const unsubOrders = onSnapshot(collection(db, 'orders'), (snap) => {
+    // Listen to recent orders
+    const unsubOrders = onSnapshot(query(collection(db, 'orders'), limit(adminDataLimit)), (snap) => {
       const list: Order[] = [];
       snap.forEach((d) => list.push(d.data() as Order));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -240,8 +255,8 @@ export const AdminView: React.FC = () => {
       console.warn('Orders admin listen notice:', err);
     });
 
-    // Listen to deposits
-    const unsubDeposits = onSnapshot(collection(db, 'deposits'), (snap) => {
+    // Listen to recent deposits
+    const unsubDeposits = onSnapshot(query(collection(db, 'deposits'), limit(adminDataLimit)), (snap) => {
       const list: Deposit[] = [];
       snap.forEach((d) => list.push(d.data() as Deposit));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -252,8 +267,8 @@ export const AdminView: React.FC = () => {
       setLoading(false);
     });
 
-    // Listen to all inventory items across customers
-    const unsubInventory = onSnapshot(collection(db, 'inventory'), (snap) => {
+    // Listen to recent customer inventory items
+    const unsubInventory = onSnapshot(query(collection(db, 'inventory'), limit(adminDataLimit)), (snap) => {
       const list: InventoryItem[] = [];
       snap.forEach((d) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -263,7 +278,7 @@ export const AdminView: React.FC = () => {
     });
 
     // Listen to system users
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+    const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(adminDataLimit)), (snap) => {
       const list: UserProfile[] = [];
       snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -297,7 +312,7 @@ export const AdminView: React.FC = () => {
       unsubUsers();
       unsubSettings();
     };
-  }, [isAdmin]);
+  }, [isAdmin, initialProductsFromProps, adminDataLimit]);
 
   if (!isAdmin) {
     return (
@@ -937,10 +952,24 @@ export const AdminView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-[#141420] border border-[#212133] px-3 py-1 rounded-xl text-[11px] text-zinc-300">
+            <span className="text-zinc-500">แสดงผล:</span>
+            <select
+              value={adminDataLimit}
+              onChange={(e) => setAdminDataLimit(Number(e.target.value))}
+              className="bg-transparent text-purple-300 font-bold outline-none cursor-pointer"
+            >
+              <option value={50} className="bg-[#141420] text-white">50 รายการล่าสุด</option>
+              <option value={100} className="bg-[#141420] text-white">100 รายการล่าสุด</option>
+              <option value={200} className="bg-[#141420] text-white">200 รายการล่าสุด</option>
+              <option value={500} className="bg-[#141420] text-white">500 รายการล่าสุด</option>
+            </select>
+          </div>
+
           <span className="text-[11px] font-semibold text-zinc-400 px-3 py-1.5 rounded-xl bg-[#141420] border border-[#212133] flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>โหมดสินค้า: กรอกเองเท่านั้น (Manual Entry)</span>
+            <span>โหมดสินค้า: กรอกเองเท่านั้น</span>
           </span>
         </div>
       </div>

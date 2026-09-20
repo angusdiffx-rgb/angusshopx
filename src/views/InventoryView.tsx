@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
 import type { InventoryItem } from '../types';
@@ -30,6 +30,7 @@ export const InventoryView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'ready' | 'claimed'>('all');
+  const [displayLimit, setDisplayLimit] = useState(60);
 
   useEffect(() => {
     if (!user) {
@@ -40,7 +41,8 @@ export const InventoryView: React.FC = () => {
 
     const q = query(
       collection(db, 'inventory'),
-      where('uid', '==', user.uid)
+      where('uid', '==', user.uid),
+      limit(displayLimit)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -57,7 +59,7 @@ export const InventoryView: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, displayLimit]);
 
   const handleCopyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
@@ -190,8 +192,9 @@ export const InventoryView: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6">
-          {filteredItems.map((item) => {
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-6">
+            {filteredItems.map((item) => {
             const claimCode = item.claimCode || item.metadata?.claimCode || item.metadata?.code || item.metadata?.redeemCode;
             const claimCodeTitle = item.claimCodeTitle || item.metadata?.claimCodeTitle || 'รหัสรับสินค้า (Claim Code)';
 
@@ -379,6 +382,18 @@ export const InventoryView: React.FC = () => {
               </div>
             );
           })}
+        </div>
+
+        {filteredItems.length >= displayLimit && (
+          <div className="pt-4 text-center">
+            <button
+              onClick={() => setDisplayLimit((prev) => prev + 60)}
+              className="px-6 py-2.5 rounded-xl bg-[#1C1C2C] hover:bg-purple-600/30 border border-[#2B2B40] text-purple-300 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+            >
+              โหลดคลังสินค้าเพิ่มเติม (+60 รายการ)
+            </button>
+          </div>
+        )}
         </div>
       )}
     </div>

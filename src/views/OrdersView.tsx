@@ -11,7 +11,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
 import type { Order } from '../types';
@@ -24,6 +24,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
   const { user, loginWithGoogle } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [displayLimit, setDisplayLimit] = useState(50);
 
   useEffect(() => {
     if (!user) {
@@ -34,7 +35,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
 
     const q = query(
       collection(db, 'orders'),
-      where('uid', '==', user.uid)
+      where('uid', '==', user.uid),
+      limit(displayLimit)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -51,7 +53,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, displayLimit]);
 
   if (!user) {
     return (
@@ -209,6 +211,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
               </div>
             </div>
           ))}
+
+          {orders.length >= displayLimit && (
+            <div className="pt-4 text-center">
+              <button
+                onClick={() => setDisplayLimit((prev) => prev + 50)}
+                className="px-6 py-2.5 rounded-xl bg-[#1C1C2C] hover:bg-purple-600/30 border border-[#2B2B40] text-purple-300 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                โหลดประวัติคำสั่งซื้อเพิ่มเติม (+50 รายการ)
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
