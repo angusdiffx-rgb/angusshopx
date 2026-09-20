@@ -2025,7 +2025,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </td>
                     <td className="p-4 text-zinc-300">
                       {o.items?.map((it) => {
-                        const qtyLabel = it.name?.includes('เงินเขียว') || it.name?.includes('Beli')
+                        const qtyLabel = it.name?.includes('เงินม่วง') || it.name?.includes('Fragment')
+                          ? `${(it.quantity || 1) * 10}k ม่วง`
+                          : it.name?.includes('เงินเขียว') || it.name?.includes('Beli')
                           ? `${it.quantity}M`
                           : it.name?.includes('เลเวล') || it.name?.includes('Level')
                           ? `${(it.quantity || 1) * 100} เลเวล`

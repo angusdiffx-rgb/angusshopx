@@ -113,6 +113,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
               <span className="text-sm sm:text-base font-black text-purple-300">฿{(product.price || 0).toLocaleString()}</span>
               {product.name.includes('เลเวล') || product.name.includes('Level') ? (
                 <span className="text-[10px] sm:text-xs text-cyan-400 font-bold">/ 100 Lv</span>
+              ) : product.name.includes('เงินม่วง') || product.name.includes('Fragment') ? (
+                <span className="text-[10px] sm:text-xs text-purple-400 font-bold">/ 10k</span>
               ) : product.name.includes('เงินเขียว') || product.name.includes('Beli') ? (
                 <span className="text-[10px] sm:text-xs text-emerald-400 font-bold">/ 1M</span>
               ) : product.name.includes('มาสเตอร์') || product.name.includes('มาส') || product.name.includes('Mastery') ? (

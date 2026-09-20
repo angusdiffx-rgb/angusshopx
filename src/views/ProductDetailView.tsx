@@ -36,10 +36,20 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   const { addToCart } = useCart();
   const { success } = useToast();
 
+  const isFragmentService = 
+    product.productId === 'prod_farm_fragment_10k' ||
+    product.name.includes('เงินม่วง') ||
+    product.name.includes('Fragment') ||
+    product.name.includes('แฟรกเมนต์');
+
   const isBeliService = 
-    product.name.includes('เงินเขียว') || 
-    product.name.includes('Beli') || 
-    (product.category === 'บริการ' && product.name.includes('เงิน'));
+    !isFragmentService && (
+      product.productId === 'prod_beli_normal' ||
+      product.productId === 'prod_beli_2x' ||
+      product.name.includes('เงินเขียว') || 
+      product.name.includes('Beli') || 
+      (product.category === 'บริการ' && product.name.includes('เงิน') && !product.name.includes('เงินม่วง') && !product.name.includes('Fragment'))
+    );
 
   const isLevelService = 
     product.productId === 'prod_farm_level' ||
@@ -64,12 +74,20 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   // Find partner product (normal vs 2x)
   const normalBeliProduct = allProducts.find(p => 
-    p.productId === 'prod_beli_normal' || 
-    (p.name.includes('เงินเขียว') && !p.name.includes('คูณ 2') && !p.name.includes('2x'))
+    !p.name.includes('เงินม่วง') &&
+    !p.name.includes('Fragment') &&
+    !p.name.includes('แฟรกเมนต์') &&
+    (p.productId === 'prod_beli_normal' || 
+     ((p.name.includes('เงินเขียว') || p.name.includes('Beli') || (p.category === 'บริการ' && p.name.includes('เงิน'))) && 
+      !p.name.includes('คูณ 2') && !p.name.includes('2x')))
   );
   const doubleBeliProduct = allProducts.find(p => 
-    p.productId === 'prod_beli_2x' || 
-    (p.name.includes('เงินเขียว') && (p.name.includes('คูณ 2') || p.name.includes('2x')))
+    !p.name.includes('เงินม่วง') &&
+    !p.name.includes('Fragment') &&
+    !p.name.includes('แฟรกเมนต์') &&
+    (p.productId === 'prod_beli_2x' || 
+     ((p.name.includes('เงินเขียว') || p.name.includes('Beli') || (p.category === 'บริการ' && p.name.includes('เงิน'))) && 
+      (p.name.includes('คูณ 2') || p.name.includes('2x'))))
   );
 
   // CDK (ดาบคู่โอเด้ง) options detection
@@ -189,6 +207,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               {isBeliService && (
                 <span className="text-xs px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold">
                   ต่อ 1,000,000 Beli (1M)
+                </span>
+              )}
+              {isFragmentService && (
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold">
+                  ต่อ 10,000 Fragments (10k)
                 </span>
               )}
               {isLevelService && (
@@ -403,6 +426,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                   {isBeliService 
                     ? 'เลือกจำนวนเงินที่ต้องการ (M)' 
+                    : isFragmentService
+                    ? 'เลือกจำนวนเงินม่วงที่ต้องการ (ชุดละ 10,000 Fragments)'
                     : isLevelService 
                     ? 'เลือกจำนวนเลเวลที่ต้องการ (ชุดละ 100 เลเวล)' 
                     : isMasteryService
@@ -412,6 +437,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 {isBeliService && (
                   <span className="text-[11px] font-bold text-emerald-400">
                     จะได้รับ: {(quantity * 1000000).toLocaleString()} Beli ({quantity}M)
+                  </span>
+                )}
+                {isFragmentService && (
+                  <span className="text-[11px] font-bold text-purple-400">
+                    จะได้รับ: {(quantity * 10000).toLocaleString()} Fragments ({quantity * 10}k)
                   </span>
                 )}
                 {isLevelService && (
@@ -425,6 +455,32 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   </span>
                 )}
               </div>
+
+              {/* Quick Fragment Preset Buttons for Fragment Farm (10k = 20 THB) */}
+              {isFragmentService && (
+                <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                  {[
+                    { qty: 1, label: '10k ม่วง (20฿)' },
+                    { qty: 2, label: '20k ม่วง (40฿)' },
+                    { qty: 3, label: '30k ม่วง (60฿)' },
+                    { qty: 5, label: '50k ม่วง (100฿)' },
+                    { qty: 10, label: '100k ม่วง (200฿)' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.qty}
+                      type="button"
+                      onClick={() => setQuantity(preset.qty)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        quantity === preset.qty
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black shadow-md shadow-purple-500/30 ring-1 ring-purple-400/50'
+                          : 'bg-[#141420] hover:bg-[#1C1C2C] border border-[#262638] text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Quick M Preset Buttons for Beli Farm */}
               {isBeliService && (
@@ -516,7 +572,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="w-16 text-center text-sm font-bold text-white">
-                    {quantity} {isBeliService ? 'M' : isLevelService ? 'ชุด' : isMasteryService ? 'ชุด' : ''}
+                    {quantity} {isBeliService ? 'M' : isFragmentService ? 'ชุด' : isLevelService ? 'ชุด' : isMasteryService ? 'ชุด' : ''}
                   </span>
                   <button
                     onClick={() => setQuantity(Math.min(maxAllowedQty, quantity + 1))}
@@ -531,6 +587,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {isBeliService && (
                     <span className="text-emerald-400 font-semibold ml-1.5">
                       ({(quantity * 1000000).toLocaleString()} Beli)
+                    </span>
+                  )}
+                  {isFragmentService && (
+                    <span className="text-purple-400 font-semibold ml-1.5">
+                      ({(quantity * 10000).toLocaleString()} Fragments)
                     </span>
                   )}
                   {isLevelService && (
@@ -645,8 +706,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มมาสเตอร์รี่ให้ครบ ${(quantity * 100).toLocaleString()} มาส ปลอดภัย 100%`
             : isLevelService 
             ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเลเวลให้ครบ ${(quantity * 100).toLocaleString()} เลเวล ปลอดภัย 100%`
+            : isFragmentService
+            ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเงินม่วงให้ครบ ${(quantity * 10000).toLocaleString()} Fragments ปลอดภัย 100%`
+            : isBeliService
+            ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเงินเขียวให้ครบ ${(quantity * 1000000).toLocaleString()} Beli (${quantity}M) ปลอดภัย 100%`
             : product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service'
-            ? 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มเงินเขียวให้ครบตามจำนวน M ที่สั่งซื้อ ปลอดภัย 100%'
+            ? 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มให้ตามรายการสั่งซื้อ ปลอดภัย 100%'
             : 'หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อกดเข้าร่วม Private Server VIP และเทรดรับผลปีศาจได้ทันที ปลอดภัย ไม่ต้องใช้รหัสผ่าน Roblox'}
         </p>
       </div>
@@ -656,8 +721,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <div className="flex items-center justify-between gap-3">
           <div>
             <span className="text-[10px] text-zinc-400 block">
-              ราคารวม ({quantity} {isMasteryService ? 'ชุด' : isLevelService ? 'ชุด' : isBeliService ? 'M' : 'ชิ้น'})
+              ราคารวม ({quantity} {isMasteryService ? 'ชุด' : isLevelService ? 'ชุด' : isFragmentService ? 'ชุด' : isBeliService ? 'M' : 'ชิ้น'})
               {isMasteryService && <span className="text-amber-400 font-bold ml-1">({(quantity * 100).toLocaleString()} มาส)</span>}
+              {isFragmentService && <span className="text-purple-400 font-bold ml-1">({(quantity * 10000).toLocaleString()} ม่วง)</span>}
             </span>
             <span className="text-base font-black text-purple-300">฿{((product.price || 0) * quantity).toLocaleString()}</span>
           </div>

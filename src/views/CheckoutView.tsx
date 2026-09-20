@@ -355,7 +355,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     <div className="truncate">
                       <h5 className="font-semibold text-white truncate text-xs">{it.name}</h5>
                       <span className="text-zinc-500 text-[10px]">
-                        {it.name.includes('เงินเขียว') || it.name.includes('Beli') 
+                        {it.name.includes('เงินม่วง') || it.name.includes('Fragment')
+                          ? `${(Number(it.quantity) * 10).toLocaleString()}k Fragments (${it.quantity} ชุด)`
+                          : it.name.includes('เงินเขียว') || it.name.includes('Beli') 
                           ? `${it.quantity}M (${(Number(it.quantity) * 1000000).toLocaleString()} Beli)`
                           : it.name.includes('เลเวล') || it.name.includes('Level')
                           ? `${(Number(it.quantity) * 100).toLocaleString()} เลเวล (${it.quantity} ชุด)`

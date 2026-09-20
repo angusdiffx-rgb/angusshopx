@@ -169,7 +169,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
                       <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
                       <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 sm:mt-1">
                         <span>
-                          {item.name.includes('เงินเขียว') || item.name.includes('Beli')
+                          {item.name.includes('เงินม่วง') || item.name.includes('Fragment')
+                            ? `${(Number(item.quantity || 1) * 10).toLocaleString()}k ม่วง (${item.quantity || 1} ชุด)`
+                            : item.name.includes('เงินเขียว') || item.name.includes('Beli')
                             ? `${item.quantity || 1}M`
                             : item.name.includes('เลเวล') || item.name.includes('Level')
                             ? `${(Number(item.quantity || 1) * 100).toLocaleString()} Lv (${item.quantity || 1} ชุด)`

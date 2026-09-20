@@ -99,7 +99,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       <span className="text-xs font-black text-purple-400">
                         ฿{((item.price || 0) * item.quantity).toLocaleString()}
                       </span>
-                      {item.name.includes('เงินเขียว') || item.name.includes('Beli') ? (
+                      {item.name.includes('เงินม่วง') || item.name.includes('Fragment') ? (
+                        <span className="text-[10px] text-purple-400 font-bold">({item.quantity * 10}k ม่วง)</span>
+                      ) : item.name.includes('เงินเขียว') || item.name.includes('Beli') ? (
                         <span className="text-[10px] text-emerald-400 font-bold">({item.quantity}M)</span>
                       ) : item.name.includes('เลเวล') || item.name.includes('Level') ? (
                         <span className="text-[10px] text-cyan-400 font-bold">({item.quantity * 100} เลเวล)</span>

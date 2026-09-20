@@ -254,7 +254,11 @@ export const InventoryView: React.FC = () => {
                     <div className="min-w-0 flex-1">
                       <h4 className="text-sm sm:text-base font-bold text-white truncate">{item.productName || 'สินค้า'}</h4>
                       <p className="text-xs text-purple-400 font-semibold mt-0.5">
-                        {item.productName?.includes('เงินเขียว') || item.productName?.includes('Beli') ? (
+                        {item.productName?.includes('เงินม่วง') || item.productName?.includes('Fragment') ? (
+                          <span className="text-purple-400 font-bold">
+                            จำนวน: {(Number(item.quantity || 1) * 10).toLocaleString()}k Fragments ({item.quantity || 1} ชุด)
+                          </span>
+                        ) : item.productName?.includes('เงินเขียว') || item.productName?.includes('Beli') ? (
                           <span className="text-emerald-400 font-bold">
                             จำนวน: {item.quantity || 1}M ({(Number(item.quantity || 1) * 1000000).toLocaleString()} Beli)
                           </span>
