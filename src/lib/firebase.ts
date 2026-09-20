@@ -110,7 +110,8 @@ export const signInWithGoogle = async (): Promise<UserProfile | null> => {
     const now = new Date().toISOString();
     
     // Check if initial admin email (e.g. otinrealxz@gmail.com or angusdiffx@gmail.com)
-    const isAdminEmail = fbUser.email === 'otinrealxz@gmail.com' || fbUser.email === 'angusdiffx@gmail.com';
+    const emailLower = (fbUser.email || '').toLowerCase().trim();
+    const isAdminEmail = emailLower === 'otinrealxz@gmail.com' || emailLower === 'angusdiffx@gmail.com';
 
     if (!userSnap.exists()) {
       const newUser: UserProfile = {

@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Product, OrderItem } from '../types';
 
-interface CartItem extends OrderItem {
+export interface CartItem extends OrderItem {
+  cartItemId: string;
   stock: number;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (product: Product, quantity?: number, selectedOption?: string, targetNote?: string) => void;
+  removeFromCart: (cartItemIdOrProductId: string) => void;
+  updateQuantity: (cartItemIdOrProductId: string, quantity: number) => void;
   clearCart: () => void;
   subtotal: number;
   total: number;
@@ -57,16 +58,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return stock;
   };
 
-  const addToCart = (product: Product, quantity = 1) => {
+  const addToCart = (product: Product, quantity = 1, selectedOption?: string, targetNote?: string) => {
     setItems((prev) => {
+      const cartItemId = selectedOption 
+        ? `${product.productId}_${selectedOption}` 
+        : product.productId;
+      const displayName = selectedOption 
+        ? `${product.name} [${selectedOption}]` 
+        : product.name;
+
       const maxLimit = getItemMaxQty(product.stock, product.name, product.productId);
-      const existingIndex = prev.findIndex((item) => item.productId === product.productId);
+      const existingIndex = prev.findIndex((item) => item.cartItemId === cartItemId || (!item.cartItemId && item.productId === cartItemId));
+      
       if (existingIndex > -1) {
         const updated = [...prev];
         const newQty = Math.min(maxLimit, updated[existingIndex].quantity + quantity);
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: newQty,
+          targetNote: targetNote || updated[existingIndex].targetNote,
         };
         return updated;
       } else {
@@ -74,14 +84,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [
           ...prev,
           {
+            cartItemId,
             productId: product.productId,
-            name: product.name,
+            name: displayName,
             slug: product.slug,
             price: product.price,
             quantity: initialQty,
             image: product.image,
             deliveryType: product.deliveryType,
             stock: product.stock,
+            selectedOption: selectedOption || undefined,
+            targetNote: targetNote || undefined,
+            deliveryInstructions: product.deliveryInstructions,
+            instructionsTitle: product.instructionsTitle,
+            tradeServerLink: product.tradeServerLink,
+            serverLinkTitle: product.serverLinkTitle,
+            claimCode: product.claimCode,
+            claimCodeTitle: product.claimCodeTitle,
           },
         ];
       }
@@ -89,18 +108,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (productId: string) => {
-    setItems((prev) => prev.filter((item) => item.productId !== productId));
+  const removeFromCart = (cartItemIdOrProductId: string) => {
+    setItems((prev) => prev.filter((item) => item.cartItemId !== cartItemIdOrProductId && item.productId !== cartItemIdOrProductId));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (cartItemIdOrProductId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemIdOrProductId);
       return;
     }
     setItems((prev) =>
       prev.map((item) => {
-        if (item.productId === productId) {
+        if (item.cartItemId === cartItemIdOrProductId || (!item.cartItemId && item.productId === cartItemIdOrProductId)) {
           const maxLimit = getItemMaxQty(item.stock, item.name, item.productId);
           return { ...item, quantity: Math.min(maxLimit, quantity) };
         }

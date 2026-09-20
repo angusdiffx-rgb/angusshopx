@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { CartProvider, useCart } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
 import { HomeConfigProvider } from './context/HomeConfigContext';
 import { Navbar } from './components/Navbar';
@@ -40,6 +40,7 @@ const getInitialProducts = (): Product[] => {
 };
 
 function MainShop() {
+  const { addToCart } = useCart();
   const [currentView, setCurrentView] = useState<string>('home');
   const [navParam, setNavParam] = useState<string | undefined>(undefined);
   const [products, setProducts] = useState<Product[]>(getInitialProducts);
@@ -153,6 +154,7 @@ function MainShop() {
   };
 
   const handleBuyNow = (product: Product, quantity = 1) => {
+    addToCart(product, quantity);
     setSelectedProduct(product);
     setCurrentView('checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });

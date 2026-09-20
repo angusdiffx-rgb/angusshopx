@@ -10,7 +10,9 @@ import {
   Sparkles,
   Server,
   Lock,
-  Calculator
+  Calculator,
+  Target,
+  Flame
 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
@@ -33,6 +35,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onBuyNow 
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [masteryTarget, setMasteryTarget] = useState<'ผล' | 'หมัด' | 'ปืน'>('ผล');
+  const [masteryItemName, setMasteryItemName] = useState('');
   const { addToCart } = useCart();
   const { success } = useToast();
 
@@ -109,17 +113,36 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     (p.category === 'บริการ' && (p.name.includes('ดาบคู่') || p.name.includes('CDK') || p.name.includes('โอเด้ง')) && (p.name.includes('ยังไม่มี') || p.name.includes('100')))
   );
 
+  // Haki V2 service detection
+  const isHakiV2 = 
+    product.category === 'บริการ' &&
+    (product.name.includes('ฮาคิ') || product.name.includes('Haki'));
+
+  // Dragon Race V4 T10 service detection
+  const isDragonRaceV4 = 
+    product.category === 'บริการ' &&
+    (product.name.includes('เผ่ามังกร') || product.name.includes('V4T10') || product.productId === 'prod_race_v4_dragon_t10');
+
   const handleAddToCart = () => {
     if (product.stock <= 0) return;
     const finalQty = Math.min(quantity, maxAllowedQty);
-    addToCart(product, finalQty);
-    success('เพิ่มลงตะกร้าแล้ว', `เพิ่ม ${product.name} จำนวน ${finalQty} ชิ้นเรียบร้อย`);
+    const selectedOption = isMasteryService ? masteryTarget : undefined;
+    const targetNote = isMasteryService && masteryItemName.trim() ? masteryItemName.trim() : undefined;
+    addToCart(product, finalQty, selectedOption, targetNote);
+    success(
+      'เพิ่มลงตะกร้าแล้ว', 
+      isMasteryService
+        ? `เพิ่ม ${product.name} [ประเภท: ${masteryTarget}] ${masteryItemName.trim() ? `(${masteryItemName.trim()})` : ''} จำนวน ${finalQty} ชุดเรียบร้อย`
+        : `เพิ่ม ${product.name} จำนวน ${finalQty} ชิ้นเรียบร้อย`
+    );
   };
 
   const handleDirectBuy = () => {
     if (product.stock <= 0) return;
     const finalQty = Math.min(quantity, maxAllowedQty);
-    addToCart(product, finalQty);
+    const selectedOption = isMasteryService ? masteryTarget : undefined;
+    const targetNote = isMasteryService && masteryItemName.trim() ? masteryItemName.trim() : undefined;
+    addToCart(product, finalQty, selectedOption, targetNote);
     onBuyNow(product, finalQty);
   };
 
@@ -333,6 +356,54 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
             )}
 
+            {/* Haki V2 Service Requirement Alert */}
+            {isHakiV2 && (
+              <div className="space-y-2 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-950/25 via-[#13121F] to-[#1F1610] border border-amber-500/35">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    เงื่อนไขสำคัญก่อนสั่งซื้อบริการฮาคิ V2
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-black border border-amber-500/30">
+                    ราคา 20 บาท
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-300 space-y-1 pt-1">
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold text-xs">
+                    <span className="text-base">⚠️</span>
+                    <span>เงินในเกม (Beli) ต้องมีครบอย่างน้อย 5,000,000 (5 ล้าน Beli)</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed pt-1">
+                    ทีมงานจะเข้าไอดีเพื่อทำ Citizen Quest และซื้อปลดล็อกฮาคิสังเกต V2 ให้จนเสร็จสิ้น ปลอดภัย 100% ดูแลโดยทีมงานมืออาชีพ
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Dragon Race V4 T10 Highlight Card */}
+            {isDragonRaceV4 && (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-red-950/35 via-[#161018] to-[#1C1220] border border-red-500/40 shadow-lg shadow-red-950/25 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-black text-red-400 flex items-center gap-1.5">
+                    <Flame className="w-4 h-4 text-red-400" />
+                    บริการรับทำ เผ่ามังกร V4T10 (Draco Race V4 Max T10)
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 font-black border border-red-500/30">
+                    ราคา 300 บาท
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-300 space-y-1 pt-0.5">
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 font-bold text-xs">
+                    <span className="text-base">🐉</span>
+                    <span>หมุนเกียร์ครบทุกเฟือง ปลดล็อกเกียร์สูงสุด Tier 10 (Max T10) ครบสูตร</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed pt-1">
+                    ทีมงานเข้าทำเควส Trial เผ่ามังกรและอัปเกรดเกียร์ V4 จนเต็ม T10 ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน ตรวจสอบคิวงานและสถานะได้ในคลังสินค้า
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Mastery Calculator (เครื่องคำนวณราคาและจำนวนมาสเตอร์รี่ Blox Fruits) */}
             {isMasteryService && (
               <div className="space-y-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-950/25 via-[#13121E] to-[#1C1726] border border-amber-500/35 shadow-lg shadow-amber-950/20">
@@ -346,7 +417,90 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   </span>
                 </div>
 
-                <div className="text-[11px] text-zinc-300 leading-snug">
+                {/* Mastery Target Option Selector: ผล, หมัด, ปืน */}
+                <div className="space-y-2 pt-1 pb-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-amber-400" />
+                      เลือกประเภทที่ต้องการฟาร์มมาสเตอร์รี่:
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                      กดเลือกระหว่าง: ผล / หมัด / ปืน
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Option 1: ผล */}
+                    <button
+                      type="button"
+                      onClick={() => setMasteryTarget('ผล')}
+                      className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                        masteryTarget === 'ผล'
+                          ? 'bg-gradient-to-b from-purple-500/25 to-purple-950/40 border-purple-400 text-white shadow-md shadow-purple-950/40 ring-2 ring-purple-400/50 font-bold'
+                          : 'bg-[#151522] hover:bg-[#1E1D30] border-[#2A293E] text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <span className="text-lg sm:text-xl">🍎</span>
+                      <span className="text-xs font-black">ผล</span>
+                      <span className={`text-[10px] ${masteryTarget === 'ผล' ? 'text-purple-300 font-bold' : 'text-zinc-500'}`}>
+                        ผลปีศาจ (Fruit)
+                      </span>
+                    </button>
+
+                    {/* Option 2: หมัด */}
+                    <button
+                      type="button"
+                      onClick={() => setMasteryTarget('หมัด')}
+                      className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                        masteryTarget === 'หมัด'
+                          ? 'bg-gradient-to-b from-amber-500/25 to-amber-950/40 border-amber-400 text-white shadow-md shadow-amber-950/40 ring-2 ring-amber-400/50 font-bold'
+                          : 'bg-[#151522] hover:bg-[#1E1D30] border-[#2A293E] text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <span className="text-lg sm:text-xl">🥊</span>
+                      <span className="text-xs font-black">หมัด</span>
+                      <span className={`text-[10px] ${masteryTarget === 'หมัด' ? 'text-amber-300 font-bold' : 'text-zinc-500'}`}>
+                        หมัดมวย (Melee)
+                      </span>
+                    </button>
+
+                    {/* Option 3: ปืน */}
+                    <button
+                      type="button"
+                      onClick={() => setMasteryTarget('ปืน')}
+                      className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                        masteryTarget === 'ปืน'
+                          ? 'bg-gradient-to-b from-cyan-500/25 to-cyan-950/40 border-cyan-400 text-white shadow-md shadow-cyan-950/40 ring-2 ring-cyan-400/50 font-bold'
+                          : 'bg-[#151522] hover:bg-[#1E1D30] border-[#2A293E] text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <span className="text-lg sm:text-xl">🔫</span>
+                      <span className="text-xs font-black">ปืน</span>
+                      <span className={`text-[10px] ${masteryTarget === 'ปืน' ? 'text-cyan-300 font-bold' : 'text-zinc-500'}`}>
+                        ปืนทุกชนิด (Gun)
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Optional Specific Item Name */}
+                  <div className="pt-0.5">
+                    <input
+                      type="text"
+                      placeholder={`ระบุชื่อ${masteryTarget}ที่ต้องการให้ฟาร์ม เช่น ${
+                        masteryTarget === 'ผล' 
+                          ? 'ผล Kitsune, ผล Leopard, ผล Buddha ฯลฯ' 
+                          : masteryTarget === 'หมัด' 
+                          ? 'หมัด Godhuman, Dragon Talon, Sanguine Art ฯลฯ' 
+                          : 'ปืน Soul Guitar, Kabucha, Acidum Rifle ฯลฯ'
+                      } (ไม่บังคับ)`}
+                      value={masteryItemName}
+                      onChange={(e) => setMasteryItemName(e.target.value)}
+                      className="w-full bg-[#0D0C16] border border-[#29283D] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-zinc-300 leading-snug pt-1">
                   เลือกหรือคำนวณจำนวนมาสเตอร์รี่ที่ต้องการฟาร์ม (ชุดละ 100 มาส = 10 บาท, 200 มาส = 20 บาท):
                 </div>
 
@@ -389,8 +543,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 {/* Calculation summary banner */}
                 <div className="p-3 rounded-xl bg-[#0D0C16] border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div className="space-y-0.5">
-                    <div className="text-[11px] text-zinc-400">ผลการคำนวณมาสเตอร์รี่:</div>
-                    <div className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                    <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 flex-wrap">
+                      <span>ประเภทที่เลือกฟาร์ม:</span>
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-black text-[11px] border border-amber-500/30">
+                        {masteryTarget === 'ผล' ? '🍎 ผล' : masteryTarget === 'หมัด' ? '🥊 หมัด' : '🔫 ปืน'}
+                        {masteryItemName.trim() && ` - ${masteryItemName.trim()}`}
+                      </span>
+                    </div>
+                    <div className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2 pt-0.5">
                       <span className="text-amber-300">{(quantity * 100).toLocaleString()} มาสเตอร์รี่</span>
                       <span className="text-zinc-500 text-xs font-normal">({quantity} ชุด x 100 มาส)</span>
                     </div>
@@ -407,7 +567,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 {/* Scope Note */}
                 <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>รองรับการฟาร์ม: ผลปีศาจ • ดาบเดี่ยว/ดาบคู่ • หมัด/สไตล์ต่อสู้ • ปืน ทุกชนิด</span>
+                  <span>รองรับการฟาร์ม: ผลปีศาจ • หมัด/สไตล์ต่อสู้ • ปืน ทุกชนิด</span>
                 </div>
               </div>
             )}

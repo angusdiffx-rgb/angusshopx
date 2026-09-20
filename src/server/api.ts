@@ -72,27 +72,19 @@ export const invalidateServerHomeConfigCache = () => {
   serverHomeConfigCache = null;
 };
 
-// Health Check Endpoint (For keep-alive ping)
-apiRouter.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    cachedProducts: serverProductsCache ? serverProductsCache.data.length : 0,
-    cachedConfig: Boolean(serverHomeConfigCache)
-  });
-});
-
+// Health Check Endpoint (For keep-alive ping and system monitoring)
 const SLIPOK_URL = process.env.SLIPOK_API_URL || 'https://api.slipok.com/api/line/apikey/76096';
 const SLIPOK_KEY = process.env.SLIPOK_API_KEY || 'SLIPOKTMX6PUU';
 const PROMPTPAY_ACCOUNT = process.env.PROMPTPAY_ACCOUNT || '0829848852';
 const PROMPTPAY_NAME = process.env.PROMPTPAY_NAME || 'นาย กฤติน สุโขพล';
 
-// Health check
 apiRouter.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     store: 'AngusShop',
-    time: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
+    cachedProducts: serverProductsCache ? serverProductsCache.data.length : 0,
+    cachedConfig: Boolean(serverHomeConfigCache),
     slipokConfigured: Boolean(SLIPOK_KEY),
     promptpay: PROMPTPAY_ACCOUNT
   });
@@ -313,15 +305,15 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
       newBalance = currentBalance + creditAmount;
 
       // 1. Update or create user balance
-      transaction.set(userRef, {
+      transaction.set(userRef, sanitizeForFirestore({
         uid,
         balance: newBalance,
         updatedAt: nowIso
-      }, { merge: true });
+      }), { merge: true });
 
       // 2. Update/create deposit record
       const depositRef = doc(db, 'deposits', actualDepositId);
-      transaction.set(depositRef, {
+      transaction.set(depositRef, sanitizeForFirestore({
         depositId: actualDepositId,
         uid,
         amount: creditAmount,
@@ -332,11 +324,11 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
         slipokResponse: slipData,
         createdAt: nowIso,
         updatedAt: nowIso
-      }, { merge: true });
+      }), { merge: true });
 
       // 3. Create wallet transaction
       const txRef = doc(db, 'wallet_transactions', txId);
-      transaction.set(txRef, {
+      transaction.set(txRef, sanitizeForFirestore({
         transactionId: txId,
         uid,
         type: 'deposit',
@@ -346,11 +338,11 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
         depositId: actualDepositId,
         description: `เติมเงินผ่าน PromptPay ${PROMPTPAY_ACCOUNT} ยอด ฿${creditAmount.toLocaleString()} สำเร็จ`,
         createdAt: nowIso
-      });
+      }));
 
       // 4. Create notification
       const notifRef = doc(db, 'notifications', notifId);
-      transaction.set(notifRef, {
+      transaction.set(notifRef, sanitizeForFirestore({
         notifId,
         uid,
         title: 'เติมเงินสำเร็จ!',
@@ -358,7 +350,7 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
         type: 'deposit',
         isRead: false,
         createdAt: nowIso
-      });
+      }));
     });
 
     let successMsg = `ตรวจสอบสลิปและเติมเงิน ฿${creditAmount.toLocaleString()} เข้ากระเป๋าเรียบร้อยแล้ว`;
@@ -490,30 +482,30 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
       newBalance = currentBalance + creditAmount;
 
       // 1. Update user balance
-      transaction.set(userRef, {
+      transaction.set(userRef, sanitizeForFirestore({
         uid,
         balance: newBalance,
         updatedAt: nowIso
-      }, { merge: true });
+      }), { merge: true });
 
       // 2. Create deposit record
       const depositRef = doc(db, 'deposits', depositId);
-      transaction.set(depositRef, {
+      transaction.set(depositRef, sanitizeForFirestore({
         depositId,
         uid,
         amount: creditAmount,
         method: 'truemoney_angpao',
         voucherHash: cleanCode,
         recipientPhone: targetPhone,
-        senderName: redeemResult.senderName || null,
+        senderName: redeemResult.senderName || '',
         status: 'completed',
         createdAt: nowIso,
         updatedAt: nowIso
-      });
+      }));
 
       // 3. Create wallet transaction
       const txRef = doc(db, 'wallet_transactions', txId);
-      transaction.set(txRef, {
+      transaction.set(txRef, sanitizeForFirestore({
         transactionId: txId,
         uid,
         type: 'deposit',
@@ -523,11 +515,11 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
         depositId,
         description: `เติมเงินผ่านซองอั่งเปา TrueMoney Wallet ฿${creditAmount.toLocaleString()} สำเร็จ (เบอร์รับ: ${targetPhone})`,
         createdAt: nowIso
-      });
+      }));
 
       // 4. Create notification
       const notifRef = doc(db, 'notifications', notifId);
-      transaction.set(notifRef, {
+      transaction.set(notifRef, sanitizeForFirestore({
         notifId,
         uid,
         title: 'เติมเงินซองอั่งเปาสำเร็จ!',
@@ -535,7 +527,7 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
         type: 'deposit',
         isRead: false,
         createdAt: nowIso
-      });
+      }));
     });
 
     res.json({
@@ -631,7 +623,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         }
 
         const prodData = prodDoc.data();
-        if (!prodData.isActive) {
+        if (prodData.isActive === false) {
           throw new Error(`สินค้า "${prodData.name}" ปิดจำหน่ายชั่วคราว`);
         }
 
@@ -645,9 +637,15 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         const serverPrice = Number(prodData.price);
         calculatedSubtotal += serverPrice * reqQty;
 
+        const finalItemName = item.selectedOption 
+          ? `${prodData.name} [${item.selectedOption}${item.targetNote ? `: ${item.targetNote}` : ''}]`
+          : (item.name || prodData.name || '');
+
         verifiedItems.push({
           productId: prodData.productId || item.productId || '',
-          name: prodData.name || '',
+          name: finalItemName,
+          selectedOption: item.selectedOption || '',
+          targetNote: item.targetNote || '',
           slug: prodData.slug || '',
           price: serverPrice || 0,
           quantity: reqQty,
@@ -690,7 +688,9 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         it.name?.includes('เงินเขียว') || 
         it.name?.includes('บริการ') ||
         it.name?.includes('CDK') ||
-        it.name?.includes('โอเด้ง')
+        it.name?.includes('โอเด้ง') ||
+        it.name?.includes('ฮาคิ') ||
+        it.name?.includes('Haki')
       );
 
       // 5. Create Order Record
@@ -745,7 +745,11 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           item.name?.includes('เงินเขียว') || 
           item.name?.includes('บริการ') ||
           item.name?.includes('CDK') ||
-          item.name?.includes('โอเด้ง');
+          item.name?.includes('โอเด้ง') ||
+          item.name?.includes('ฮาคิ') ||
+          item.name?.includes('Haki') ||
+          item.name?.includes('เผ่า') ||
+          item.name?.includes('V4');
 
         const customInstructions = item.deliveryInstructions?.trim();
         const customTradeServer = item.tradeServerLink?.trim();

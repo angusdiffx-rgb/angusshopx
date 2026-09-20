@@ -80,7 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             // Create user profile if not exists
             const now = new Date().toISOString();
-            const isAdmin = fbUser.email === 'otinrealxz@gmail.com' || fbUser.email === 'angusdiffx@gmail.com';
+            const emailLower = (fbUser.email || '').toLowerCase().trim();
+            const isAdmin = emailLower === 'otinrealxz@gmail.com' || emailLower === 'angusdiffx@gmail.com';
             const initialUser: UserProfile = {
               uid: fbUser.uid,
               displayName: fbUser.displayName || 'Blox Player',
@@ -177,7 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isAdmin = user?.role === 'admin' || firebaseUser?.email === 'otinrealxz@gmail.com' || firebaseUser?.email === 'angusdiffx@gmail.com';
+    const fbEmailLower = (firebaseUser?.email || '').toLowerCase().trim();
+    const isAdmin = user?.role === 'admin' || fbEmailLower === 'otinrealxz@gmail.com' || fbEmailLower === 'angusdiffx@gmail.com';
 
   return (
     <AuthContext.Provider

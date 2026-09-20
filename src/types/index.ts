@@ -48,6 +48,7 @@ export interface Product {
 export type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'cancelled' | 'refunded';
 
 export interface OrderItem {
+  cartItemId?: string;
   productId: string;
   name: string;
   slug: string;
@@ -55,6 +56,8 @@ export interface OrderItem {
   quantity: number;
   image: string;
   deliveryType: DeliveryType;
+  selectedOption?: string;
+  targetNote?: string;
   deliveryInstructions?: string;
   instructionsTitle?: string;
   tradeServerLink?: string;

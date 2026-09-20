@@ -52,7 +52,28 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     item.name?.includes('ฟาร์ม') ||
     item.name?.includes('เงินเขียว') ||
     item.name?.includes('Beli') ||
-    item.name?.includes('บริการ')
+    item.name?.includes('บริการ') ||
+    item.name?.includes('CDK') ||
+    item.name?.includes('โอเด้ง') ||
+    item.name?.includes('ฮาคิ') ||
+    item.name?.includes('Haki') ||
+    item.name?.includes('เผ่า') ||
+    item.name?.includes('V4')
+  );
+
+  const hasHakiItem = items.some(item => 
+    item.name?.includes('ฮาคิ') || item.name?.includes('Haki')
+  );
+
+  const hasDragonRaceItem = items.some(item => 
+    item.name?.includes('เผ่ามังกร') || item.name?.includes('V4T10')
+  );
+
+  const hasMasteryItem = items.some(item => 
+    item.productId === 'prod_farm_mastery_100' ||
+    item.name?.includes('มาสเตอร์') ||
+    item.name?.includes('มาส') ||
+    item.name?.includes('Mastery')
   );
 
   if (!user) {
@@ -227,6 +248,36 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 </div>
               </div>
 
+              {/* Haki V2 Condition Banner */}
+              {hasHakiItem && (
+                <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-2.5 text-[11px] text-amber-200 leading-relaxed shadow-lg shadow-amber-950/20">
+                  <span className="text-sm">⚠️</span>
+                  <div>
+                    <strong className="text-amber-300 font-bold">เงื่อนไขสำคัญบริการฮาคิ V2:</strong> ในไอดี Roblox ต้องมีเงินในเกม (Beli) ครบอย่างน้อย <strong className="text-white underline">5,000,000 (5 ล้าน Beli)</strong> สำหรับจ่ายให้ NPC ในเกม
+                  </div>
+                </div>
+              )}
+
+              {/* Dragon Race V4 T10 Info Banner */}
+              {hasDragonRaceItem && (
+                <div className="p-3 rounded-2xl bg-red-950/40 border border-red-500/40 flex items-start gap-2.5 text-[11px] text-red-200 leading-relaxed shadow-lg shadow-red-950/20">
+                  <span className="text-sm">🐉</span>
+                  <div>
+                    <strong className="text-red-300 font-bold">บริการทำเผ่ามังกร V4T10:</strong> ทีมงานจะดำเนินการทำเควสและหมุนเกียร์จนเต็ม Tier 10 ปลดล็อกพลังสูงสุด ปลอดภัย 100%
+                  </div>
+                </div>
+              )}
+
+              {/* Mastery Service Target Info Banner */}
+              {hasMasteryItem && (
+                <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/30 flex items-start gap-2.5 text-[11px] text-amber-200 leading-relaxed">
+                  <span className="text-sm">🥊</span>
+                  <div>
+                    <strong className="text-amber-300 font-bold">บริการฟาร์มมาสเตอร์รี่:</strong> ทีมงานจะเข้าดำเนินการฟาร์มมาสเตอร์รี่ตามประเภทที่ท่านเลือกไว้ (ผล / หมัด / ปืน) อย่างแม่นยำ
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Service Username */}
                 <div className="space-y-1.5">
@@ -357,7 +408,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             {/* Items list */}
             <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1 divide-y divide-[#1A1A28]">
               {items.map((it) => (
-                <div key={it.productId} className="pt-2 first:pt-0 flex items-center justify-between gap-2.5 text-xs">
+                <div key={it.cartItemId || it.productId} className="pt-2 first:pt-0 flex items-center justify-between gap-2.5 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-9 h-9 rounded-lg bg-[#0B0B14] border border-[#232336] shrink-0 p-0.5 flex items-center justify-center overflow-hidden">
                       <BloxImage
@@ -368,7 +419,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                       />
                     </div>
                     <div className="truncate">
-                      <h5 className="font-semibold text-white truncate text-xs">{it.name}</h5>
+                      <div className="flex items-center gap-1.5 truncate">
+                        <h5 className="font-semibold text-white truncate text-xs">{it.name}</h5>
+                        {it.selectedOption && (
+                          <span className="shrink-0 text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                            {it.selectedOption}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-zinc-500 text-[10px]">
                         {it.name.includes('เงินม่วง') || it.name.includes('Fragment')
                           ? `${(Number(it.quantity) * 10).toLocaleString()}k Fragments (${it.quantity} ชุด)`

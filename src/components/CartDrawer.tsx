@@ -94,7 +94,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
+                    <div className="flex items-center gap-1.5">
+                      <h5 className="text-xs font-bold text-white truncate">{item.name}</h5>
+                    </div>
+                    {item.selectedOption && (
+                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold mt-0.5">
+                        <span>ประเภท:</span>
+                        <span>{item.selectedOption}</span>
+                        {item.targetNote && <span className="text-zinc-400 font-normal">({item.targetNote})</span>}
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="text-xs font-black text-purple-400">
                         ฿{((item.price || 0) * item.quantity).toLocaleString()}
@@ -114,7 +123,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       {/* Quantity Controller */}
                       <div className="flex items-center gap-1 bg-[#0A0A10] border border-[#262638] rounded-lg p-0.5">
                         <button
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.cartItemId || item.productId, item.quantity - 1)}
                           className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#1C1C2C] cursor-pointer"
                         >
                           <Minus className="w-3 h-3" />
@@ -125,7 +134,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                           const itemMax = isMastery ? Math.min(item.stock, 6) : item.stock;
                           return (
                             <button
-                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.cartItemId || item.productId, item.quantity + 1)}
                               disabled={item.quantity >= itemMax}
                               className="w-6 h-6 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#1C1C2C] disabled:opacity-30 cursor-pointer"
                               title={item.quantity >= itemMax && isMastery ? 'ตันสูงสุดที่ 600 มาส (6 ชุด)' : undefined}
@@ -137,7 +146,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       </div>
 
                       <button
-                        onClick={() => removeFromCart(item.productId)}
+                        onClick={() => removeFromCart(item.cartItemId || item.productId)}
                         className="text-zinc-500 hover:text-rose-400 p-1.5 transition-colors cursor-pointer"
                         title="ลบออกจากตะกร้า"
                       >

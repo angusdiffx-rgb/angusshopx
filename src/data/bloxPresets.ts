@@ -749,6 +749,22 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/cursed_dual_katana.png',
   },
+  {
+    name: 'Ken Haki V2 Service',
+    th: 'บริการรับทำ ฮาคิv2 (เงื่อนไขเงินครบ 5 ล้าน)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/ken_haki_v2.png',
+  },
+  {
+    name: 'Draco Race V4 T10 Service',
+    th: 'บริการรับทำ เผ่ามังกร V4T10 (300 บาท)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/race_v4.png',
+  },
 
   // --------------------------------------------------------------------------
   // สกินผลปีศาจล่าสุด (Fruit Skins / Chromatic Fruit Skins)
