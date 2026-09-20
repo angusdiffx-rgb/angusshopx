@@ -61,15 +61,15 @@ import { useToast } from '../context/ToastContext';
 import { 
   collection, 
   getDocs, 
+  getDoc,
   doc, 
   setDoc, 
   updateDoc, 
   deleteDoc, 
   query, 
-  where,
+  where, 
   orderBy, 
-  limit,
-  onSnapshot 
+  limit 
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Product, Order, Deposit, ProductCategory, InventoryItem, DeliveryType, DeliverySettings, UserProfile } from '../types';
@@ -100,7 +100,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [internalProducts, setInternalProducts] = useState<Product[]>([]);
   const products = initialProductsFromProps || internalProducts;
   const setProducts = setProductsFromProps || setInternalProducts;
-  const [adminDataLimit, setAdminDataLimit] = useState<number>(100);
+  const [adminDataLimit, setAdminDataLimit] = useState<number>(20);
+  const [tabLastLoaded, setTabLastLoaded] = useState<Record<string, number>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Category management & view controls for Products
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>('all');
@@ -222,97 +224,107 @@ export const AdminView: React.FC<AdminViewProps> = ({
     isActive: true,
   });
 
-  // Load products, orders, deposits with customizable limit to conserve quota
-  useEffect(() => {
+  // Tab-specific, on-demand loader to eliminate redundant Firestore reads (Quota Guardian)
+  const loadTabData = async (tab: string, force = false) => {
     if (!isAdmin) return;
-
-    // Listen to products only if not passed from props (never limit products)
-    let unsubProducts = () => {};
-    if (!initialProductsFromProps) {
-      unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
-        const list: Product[] = [];
-        snap.forEach((d) => {
-          const item = d.data() as Product;
-          list.push({
-            ...item,
-            productId: item.productId || d.id
-          });
-        });
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setProducts(list);
-      }, (err) => {
-        console.warn('Products admin listen notice:', err);
-      });
+    const now = Date.now();
+    const lastLoaded = tabLastLoaded[tab] || 0;
+    // Cache for 90 seconds per tab unless force refreshed
+    if (!force && now - lastLoaded < 90000) {
+      return;
     }
 
-    // Listen to recent orders
-    const unsubOrders = onSnapshot(query(collection(db, 'orders'), limit(adminDataLimit)), (snap) => {
-      const list: Order[] = [];
-      snap.forEach((d) => list.push(d.data() as Order));
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setOrders(list);
-    }, (err) => {
-      console.warn('Orders admin listen notice:', err);
-    });
+    try {
+      if (tab === 'dashboard') {
+        const [ordersSnap, depositsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'orders'), limit(adminDataLimit))),
+          getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)))
+        ]);
 
-    // Listen to recent deposits
-    const unsubDeposits = onSnapshot(query(collection(db, 'deposits'), limit(adminDataLimit)), (snap) => {
-      const list: Deposit[] = [];
-      snap.forEach((d) => list.push(d.data() as Deposit));
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setDeposits(list);
-      setLoading(false);
-    }, (err) => {
-      console.warn('Deposits admin listen notice:', err);
-      setLoading(false);
-    });
+        const oList: Order[] = [];
+        ordersSnap.forEach((d) => oList.push(d.data() as Order));
+        oList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setOrders(oList);
 
-    // Listen to recent customer inventory items
-    const unsubInventory = onSnapshot(query(collection(db, 'inventory'), limit(adminDataLimit)), (snap) => {
-      const list: InventoryItem[] = [];
-      snap.forEach((d) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setInventoryItems(list);
-    }, (err) => {
-      console.warn('Inventory admin listen notice:', err);
-    });
+        const dList: Deposit[] = [];
+        depositsSnap.forEach((d) => dList.push(d.data() as Deposit));
+        dList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setDeposits(dList);
 
-    // Listen to system users
-    const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(adminDataLimit)), (snap) => {
-      const list: UserProfile[] = [];
-      snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setSystemUsers(list);
-    }, (err) => {
-      console.warn('Users admin listen notice:', err);
-    });
-
-    // Listen to delivery settings
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'delivery'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as DeliverySettings;
-        setVipSettings({
-          vipServerLink: data.vipServerLink || 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
-          defaultInstructions: data.defaultInstructions || 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
-          defaultInstructionsTitle: data.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
-          defaultServerLinkTitle: data.defaultServerLinkTitle || 'ลิงค์รับของ',
-          defaultClaimCodeTitle: data.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
-          claimCodePrefix: data.claimCodePrefix || 'AGS-',
-        });
+        // Fetch settings if not yet loaded
+        getDoc(doc(db, 'settings', 'delivery')).then((sSnap) => {
+          if (sSnap.exists()) {
+            const data = sSnap.data() as DeliverySettings;
+            setVipSettings({
+              vipServerLink: data.vipServerLink || 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
+              defaultInstructions: data.defaultInstructions || 'เข้าด้านล่างเพื่อรับผลปีศาจผ่านระบบ Trade ในเกม Blox Fruits',
+              defaultInstructionsTitle: data.defaultInstructionsTitle || 'คำแนะนำการรับสินค้า',
+              defaultServerLinkTitle: data.defaultServerLinkTitle || 'ลิงค์รับของ',
+              defaultClaimCodeTitle: data.defaultClaimCodeTitle || 'รหัสรับสินค้า (Claim Code)',
+              claimCodePrefix: data.claimCodePrefix || 'AGS-',
+            });
+          }
+        }).catch(() => {});
+      } else if (tab === 'orders') {
+        const snap = await getDocs(query(collection(db, 'orders'), limit(adminDataLimit)));
+        const list: Order[] = [];
+        snap.forEach((d) => list.push(d.data() as Order));
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setOrders(list);
+      } else if (tab === 'deposits') {
+        const snap = await getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)));
+        const list: Deposit[] = [];
+        snap.forEach((d) => list.push(d.data() as Deposit));
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setDeposits(list);
+      } else if (tab === 'inventory') {
+        const snap = await getDocs(query(collection(db, 'inventory'), limit(adminDataLimit)));
+        const list: InventoryItem[] = [];
+        snap.forEach((d) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setInventoryItems(list);
+      } else if (tab === 'users') {
+        const snap = await getDocs(query(collection(db, 'users'), limit(adminDataLimit)));
+        const list: UserProfile[] = [];
+        snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setSystemUsers(list);
+      } else if (tab === 'products' && !initialProductsFromProps) {
+        const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.products)) {
+            setProducts(data.products);
+          }
+        }
       }
-    }, (err) => {
-      console.warn('Settings listen notice:', err);
-    });
 
-    return () => {
-      unsubProducts();
-      unsubOrders();
-      unsubDeposits();
-      unsubInventory();
-      unsubUsers();
-      unsubSettings();
-    };
-  }, [isAdmin, initialProductsFromProps, adminDataLimit]);
+      setTabLastLoaded((prev) => ({ ...prev, [tab]: now }));
+      setLoading(false);
+    } catch (err: any) {
+      console.warn(`Error loading tab ${tab}:`, err);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadTabData(activeTab);
+  }, [isAdmin, activeTab, adminDataLimit]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+      setTabLastLoaded({});
+      await loadTabData(activeTab, true);
+      success('รีเฟรชข้อมูลสำเร็จ', 'ดึงข้อมูลล่าสุดเรียบร้อยแล้ว');
+    } catch (err) {
+      toastError('เกิดข้อผิดพลาด', 'ไม่สามารถรีเฟรชข้อมูลได้');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (!isAdmin) {
     return (
@@ -447,6 +459,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
       };
 
       await setDoc(doc(db, 'products', productId), productPayload);
+      setProducts((prev) => [productPayload, ...prev]);
+      window.dispatchEvent(new CustomEvent('productsUpdated'));
+      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       success('เพิ่มสินค้าแล้ว', `เพิ่ม ${newProduct.name} ลงในร้านค้าสำเร็จ`);
       setIsAddModalOpen(false);
     } catch (err: any) {
@@ -588,6 +603,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
           item.productId === selectedProduct.productId ? { ...item, ...updateData } : item
         )
       );
+      window.dispatchEvent(new CustomEvent('productsUpdated'));
+      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
 
       success('อัปเดตสินค้าสำเร็จ', `บันทึกข้อมูลและรูปภาพของ "${selectedProduct.name}" เรียบร้อยแล้ว`);
       setIsEditModalOpen(false);
@@ -870,6 +887,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
       }
 
       setProducts((prev) => prev.filter((item) => item.productId !== targetId));
+      window.dispatchEvent(new CustomEvent('productsUpdated'));
+      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       success('ลบสินค้าสำเร็จ', `ลบ "${targetName}" ออกจากระบบเรียบร้อยแล้ว`);
       setProductToDelete(null);
     } catch (err: any) {
@@ -953,23 +972,33 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md shadow-purple-900/20 active:scale-95 disabled:opacity-50"
+            title="รีเฟรชดึงข้อมูลล่าสุด"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล'}</span>
+          </button>
+
           <div className="flex items-center gap-1.5 bg-[#141420] border border-[#212133] px-3 py-1 rounded-xl text-[11px] text-zinc-300">
-            <span className="text-zinc-500">แสดงผล:</span>
+            <span className="text-zinc-500">จำกัด:</span>
             <select
               value={adminDataLimit}
               onChange={(e) => setAdminDataLimit(Number(e.target.value))}
               className="bg-transparent text-purple-300 font-bold outline-none cursor-pointer"
             >
-              <option value={50} className="bg-[#141420] text-white">50 รายการล่าสุด</option>
-              <option value={100} className="bg-[#141420] text-white">100 รายการล่าสุด</option>
-              <option value={200} className="bg-[#141420] text-white">200 รายการล่าสุด</option>
-              <option value={500} className="bg-[#141420] text-white">500 รายการล่าสุด</option>
+              <option value={15} className="bg-[#141420] text-white">15 รายการ (ประหยัดสูงสุด)</option>
+              <option value={20} className="bg-[#141420] text-white">20 รายการ (แนะนำ)</option>
+              <option value={50} className="bg-[#141420] text-white">50 รายการ</option>
+              <option value={100} className="bg-[#141420] text-white">100 รายการ</option>
             </select>
           </div>
 
           <span className="text-[11px] font-semibold text-zinc-400 px-3 py-1.5 rounded-xl bg-[#141420] border border-[#212133] flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>โหมดสินค้า: กรอกเองเท่านั้น</span>
+            <span>โหมดประหยัดโควต้า</span>
           </span>
         </div>
       </div>

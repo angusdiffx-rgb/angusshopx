@@ -16,7 +16,7 @@ import { InventoryView } from './views/InventoryView';
 import { OrdersView } from './views/OrdersView';
 import { AccountView } from './views/AccountView';
 import { AdminView } from './views/AdminView';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db, isQuotaExceededError } from './lib/firebase';
 import { initialProducts } from './data/initialProducts';
 import type { Product, Order } from './types';
@@ -60,38 +60,76 @@ function MainShop() {
     return () => clearInterval(interval);
   }, []);
 
-  // Subscribe to products in Firestore (Realtime with local cache & graceful fallback)
+  // Fetch products with smart caching (Zero continuous Firestore reads for visitors):
+  // 1. Initial render from localStorage (0ms, 0 reads)
+  // 2. Fetch from /api/products (which is server-cached in memory for 5 minutes, 0 Firestore reads)
+  // 3. Fallback to direct Firestore getDocs only if /api/products fails
+  // 4. Listen for 'productsUpdated' custom event to immediately re-fetch with force=true
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'products'), (snapshot) => {
-      if (snapshot.empty) {
-        // If empty in firestore, maintain cache or initial products
-        setProducts(prev => prev.length > 0 ? prev : initialProducts);
-      } else {
-        const list: Product[] = [];
-        snapshot.forEach((d) => {
-          const item = d.data() as Product;
-          list.push({
-            ...item,
-            productId: item.productId || d.id
-          });
-        });
-        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-        setProducts(list);
-        setQuotaExceeded(false);
-        try {
-          localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(list));
-        } catch {}
-      }
-    }, (err: any) => {
-      console.warn('Products onSnapshot notice:', err);
-      if (isQuotaExceededError(err)) {
-        setQuotaExceeded(true);
-      }
-      // Never leave products empty on error or quota limit
-      setProducts(prev => prev.length > 0 ? prev : getInitialProducts());
-    });
+    let isMounted = true;
 
-    return () => unsub();
+    const fetchProducts = async (force = false) => {
+      try {
+        const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+            if (isMounted) {
+              setProducts(data.products);
+              setQuotaExceeded(false);
+            }
+            try {
+              localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(data.products));
+            } catch {}
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('API /api/products notice:', err);
+      }
+
+      // If /api/products was not available (e.g. running client-only dev), try one-time Firestore getDocs
+      try {
+        const snap = await getDocs(collection(db, 'products'));
+        if (!snap.empty && isMounted) {
+          const list: Product[] = [];
+          snap.forEach((d) => {
+            const item = d.data() as Product;
+            list.push({ ...item, productId: item.productId || d.id });
+          });
+          list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          setProducts(list);
+          setQuotaExceeded(false);
+          try {
+            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(list));
+          } catch {}
+        }
+      } catch (fbErr: any) {
+        if (isQuotaExceededError(fbErr)) {
+          if (isMounted) setQuotaExceeded(true);
+        }
+      }
+    };
+
+    // Initial fetch from server cache
+    fetchProducts();
+
+    // Re-check products every 3 minutes (hits server in-memory cache, 0 reads)
+    const interval = setInterval(() => {
+      fetchProducts();
+    }, 180000);
+
+    // Listen to immediate updates triggered by Admin changes
+    const handleProductsUpdated = () => {
+      fetchProducts(true);
+    };
+    window.addEventListener('productsUpdated', handleProductsUpdated);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('productsUpdated', handleProductsUpdated);
+    };
   }, []);
 
   const handleNavigate = (view: string, param?: string) => {

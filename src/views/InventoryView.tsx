@@ -30,7 +30,7 @@ export const InventoryView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'ready' | 'claimed'>('all');
-  const [displayLimit, setDisplayLimit] = useState(60);
+  const [displayLimit, setDisplayLimit] = useState(25);
 
   useEffect(() => {
     if (!user) {

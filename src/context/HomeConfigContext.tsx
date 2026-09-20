@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { HomeConfig } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
@@ -56,39 +56,87 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
-  // Single shared listener for homeConfig with persistent cache support
+  // Single shared loader for homeConfig with server caching & local persistence (Zero continuous Firestore reads)
   useEffect(() => {
     // Apply cached favicon immediately
     if (homeConfig.siteLogo) {
       applyFavicon(homeConfig.siteLogo);
     }
 
-    const unsub = onSnapshot(doc(db, 'settings', 'homeConfig'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as HomeConfig;
-        const merged: HomeConfig = {
-          ...DEFAULT_HOME_CONFIG,
-          ...data,
-          trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
-          promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
-          promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
-        };
-        setHomeConfig(merged);
-        if (merged.siteLogo) {
-          applyFavicon(merged.siteLogo);
-        }
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
-        } catch {
-          // localStorage full or restricted
-        }
-      }
-    }, (err: any) => {
-      // If quota exceeded or offline, graceful fallback without crash
-      console.warn('HomeConfig notice (using local cached config):', err?.message || err);
-    });
+    let isMounted = true;
 
-    return () => unsub();
+    const fetchConfig = async (force = false) => {
+      try {
+        const res = await fetch(`/api/home-config${force ? '?force=true' : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.config) {
+            const serverData = data.config as Partial<HomeConfig>;
+            const merged: HomeConfig = {
+              ...DEFAULT_HOME_CONFIG,
+              ...serverData,
+              trendingItems: serverData.trendingItems?.length ? serverData.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
+              promoCard1: serverData.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
+              promoCard2: serverData.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
+            };
+            if (isMounted) {
+              setHomeConfig(merged);
+              if (merged.siteLogo) {
+                applyFavicon(merged.siteLogo);
+              }
+            }
+            try {
+              localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+            } catch {}
+            return;
+          }
+        }
+      } catch (err) {
+        // network or dev fallback
+      }
+
+      // Fallback: one-time read from Firestore if API unreachable
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'homeConfig'));
+        if (docSnap.exists() && isMounted) {
+          const data = docSnap.data() as HomeConfig;
+          const merged: HomeConfig = {
+            ...DEFAULT_HOME_CONFIG,
+            ...data,
+            trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
+            promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
+            promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
+          };
+          setHomeConfig(merged);
+          if (merged.siteLogo) {
+            applyFavicon(merged.siteLogo);
+          }
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+          } catch {}
+        }
+      } catch (err: any) {
+        console.warn('HomeConfig notice (using local cached config):', err?.message || err);
+      }
+    };
+
+    fetchConfig();
+
+    // Re-check every 5 minutes (hits server memory cache, 0 reads)
+    const interval = setInterval(() => {
+      fetchConfig();
+    }, 300000);
+
+    const handleConfigUpdated = () => {
+      fetchConfig(true);
+    };
+    window.addEventListener('homeConfigUpdated', handleConfigUpdated);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('homeConfigUpdated', handleConfigUpdated);
+    };
   }, []);
 
   const updateHomeConfig = async (newConfig: Partial<HomeConfig>) => {
@@ -96,7 +144,15 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setHomeConfig(updated);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
+      // Save via API to invalidate server cache immediately
+      fetch('/api/admin/update-home-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: updated })
+      }).catch(() => {});
+      // Also save directly to Firestore as fallback
       await setDoc(doc(db, 'settings', 'homeConfig'), updated, { merge: true });
+      window.dispatchEvent(new CustomEvent('homeConfigUpdated'));
     } catch (err) {
       console.warn('Could not save home config to Firestore:', err);
     }
@@ -107,7 +163,13 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setHomeConfig(updated);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
+      fetch('/api/admin/update-home-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: updated })
+      }).catch(() => {});
       await setDoc(doc(db, 'settings', 'homeConfig'), updated, { merge: true });
+      window.dispatchEvent(new CustomEvent('homeConfigUpdated'));
     } catch (err) {
       console.warn('Could not save full home config to Firestore:', err);
       throw err;

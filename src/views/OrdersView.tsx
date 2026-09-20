@@ -24,7 +24,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
   const { user, loginWithGoogle } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [displayLimit, setDisplayLimit] = useState(50);
+  const [displayLimit, setDisplayLimit] = useState(25);
 
   useEffect(() => {
     if (!user) {

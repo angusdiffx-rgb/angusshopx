@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useHomeConfig } from '../context/HomeConfigContext';
-import { collection, query, where, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Notification } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
@@ -62,29 +62,49 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Listen to user's notifications (limited to recent 10 to save Firestore quota)
+  // Load user's notifications on-demand (saves Firestore read quota)
   useEffect(() => {
     if (!user) {
       setNotifications([]);
       return;
     }
-    const q = query(
-      collection(db, 'notifications'),
-      where('uid', '==', user.uid),
-      limit(10)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items: Notification[] = [];
-      snapshot.forEach((docSnap) => {
-        items.push({ id: docSnap.id, ...(docSnap.data() as Notification) });
-      });
-      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setNotifications(items.slice(0, 8));
-    }, (err) => {
-      console.warn('Notifications fetch notice:', err);
-    });
 
-    return () => unsubscribe();
+    let isMounted = true;
+    const fetchNotifications = async () => {
+      try {
+        const q = query(
+          collection(db, 'notifications'),
+          where('uid', '==', user.uid),
+          limit(8)
+        );
+        const snapshot = await getDocs(q);
+        if (!isMounted) return;
+        const items: Notification[] = [];
+        snapshot.forEach((docSnap) => {
+          items.push({ id: docSnap.id, ...(docSnap.data() as Notification) });
+        });
+        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setNotifications(items);
+      } catch (err) {
+        console.warn('Notifications fetch notice:', err);
+      }
+    };
+
+    fetchNotifications();
+
+    const handleUpdate = () => {
+      fetchNotifications();
+    };
+    window.addEventListener('notificationUpdate', handleUpdate);
+
+    // Light periodic check every 5 minutes only
+    const interval = setInterval(fetchNotifications, 300000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('notificationUpdate', handleUpdate);
+    };
   }, [user]);
 
   // Lock body scroll when mobile menu is open

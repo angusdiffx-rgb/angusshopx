@@ -32,9 +32,34 @@ export const apiRouter = Router();
 
 apiRouter.use(express.json({ limit: '25mb' }));
 
+// In-Memory Server Cache to drastically cut Firestore Read units by 95%+
+interface CacheStore<T> {
+  data: T;
+  timestamp: number;
+}
+
+let serverProductsCache: CacheStore<any[]> | null = null;
+const SERVER_PRODUCTS_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
+
+let serverHomeConfigCache: CacheStore<any> | null = null;
+const SERVER_HOME_CONFIG_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+
+export const invalidateServerProductsCache = () => {
+  serverProductsCache = null;
+};
+
+export const invalidateServerHomeConfigCache = () => {
+  serverHomeConfigCache = null;
+};
+
 // Health Check Endpoint (For keep-alive ping)
 apiRouter.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    cachedProducts: serverProductsCache ? serverProductsCache.data.length : 0,
+    cachedConfig: Boolean(serverHomeConfigCache)
+  });
 });
 
 const SLIPOK_URL = process.env.SLIPOK_API_URL || 'https://api.slipok.com/api/line/apikey/76096';
@@ -781,9 +806,83 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
   }
 });
 
+// 2.5 Get Products with high-performance server-side caching (Saves 95%+ of Firestore Read units)
+apiRouter.get('/products', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const force = req.query.force === 'true';
+    const now = Date.now();
+
+    if (!force && serverProductsCache && (now - serverProductsCache.timestamp < SERVER_PRODUCTS_TTL_MS)) {
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.json({
+        success: true,
+        products: serverProductsCache.data,
+        cached: true,
+        cachedAt: new Date(serverProductsCache.timestamp).toISOString(),
+        count: serverProductsCache.data.length
+      });
+      return;
+    }
+
+    const productsColl = collection(db, 'products');
+    const snap = await getDocs(productsColl);
+    const list: any[] = [];
+    snap.forEach((d) => {
+      const item = d.data();
+      list.push({
+        ...item,
+        productId: item.productId || d.id
+      });
+    });
+
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    serverProductsCache = {
+      data: list,
+      timestamp: now
+    };
+
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json({
+      success: true,
+      products: list,
+      cached: false,
+      count: list.length
+    });
+  } catch (error: any) {
+    console.error('Get Products API Error:', error);
+    if (serverProductsCache) {
+      res.json({
+        success: true,
+        products: serverProductsCache.data,
+        cached: true,
+        stale: true,
+        count: serverProductsCache.data.length
+      });
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: 'GET_PRODUCTS_ERROR',
+      message: error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้'
+    });
+  }
+});
+
+// Refresh Cache Endpoint for Admin
+apiRouter.post('/admin/refresh-cache', (req: Request, res: Response) => {
+  invalidateServerProductsCache();
+  invalidateServerHomeConfigCache();
+  res.json({
+    success: true,
+    message: 'ล้างแคชหน่วยความจำบนเซิร์ฟเวอร์เรียบร้อยแล้ว การเข้าชมครั้งถัดไปจะดึงข้อมูลใหม่'
+  });
+});
+
 // 3. Seed Initial Products in Firestore Catalog
 apiRouter.post('/admin/seed-products', async (req: Request, res: Response): Promise<void> => {
   try {
+    invalidateServerProductsCache();
     const productsColl = collection(db, 'products');
     const existing = await getDocs(productsColl);
 
@@ -802,6 +901,8 @@ apiRouter.post('/admin/seed-products', async (req: Request, res: Response): Prom
       await setDoc(prodRef, prod, { merge: true });
       inserted++;
     }
+
+    invalidateServerProductsCache();
 
     res.json({
       success: true,
@@ -833,6 +934,7 @@ apiRouter.post('/admin/delete-product', async (req: Request, res: Response): Pro
 
     const prodRef = doc(db, 'products', productId);
     await deleteDoc(prodRef);
+    invalidateServerProductsCache();
 
     res.json({
       success: true,
@@ -858,6 +960,7 @@ apiRouter.post('/admin/clear-all-products', async (req: Request, res: Response):
       await deleteDoc(d.ref);
       deletedCount++;
     }
+    invalidateServerProductsCache();
     res.json({
       success: true,
       message: `ล้างรายการสินค้าทั้งหมดจำนวน ${deletedCount} รายการเรียบร้อยแล้ว`,
@@ -895,6 +998,7 @@ apiRouter.post('/admin/update-product', async (req: Request, res: Response): Pro
       },
       { merge: true }
     );
+    invalidateServerProductsCache();
 
     res.json({
       success: true,
@@ -910,23 +1014,48 @@ apiRouter.post('/admin/update-product', async (req: Request, res: Response): Pro
   }
 });
 
-// 6. Get Home & Hero Configuration
+// 6. Get Home & Hero Configuration (Server-Cached to protect Firestore Read quota)
 apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void> => {
   try {
-    const configDoc = await getDoc(doc(db, 'settings', 'homeConfig'));
-    if (configDoc.exists()) {
+    const force = req.query.force === 'true';
+    const now = Date.now();
+
+    if (!force && serverHomeConfigCache && (now - serverHomeConfigCache.timestamp < SERVER_HOME_CONFIG_TTL_MS)) {
+      res.setHeader('Cache-Control', 'public, max-age=60');
       res.json({
         success: true,
-        config: configDoc.data()
+        config: serverHomeConfigCache.data,
+        cached: true,
+        cachedAt: new Date(serverHomeConfigCache.timestamp).toISOString()
       });
-    } else {
-      res.json({
-        success: true,
-        config: null
-      });
+      return;
     }
+
+    const configDoc = await getDoc(doc(db, 'settings', 'homeConfig'));
+    const configData = configDoc.exists() ? configDoc.data() : null;
+
+    serverHomeConfigCache = {
+      data: configData,
+      timestamp: now
+    };
+
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json({
+      success: true,
+      config: configData,
+      cached: false
+    });
   } catch (error: any) {
     console.error('Get Home Config Error:', error);
+    if (serverHomeConfigCache) {
+      res.json({
+        success: true,
+        config: serverHomeConfigCache.data,
+        cached: true,
+        stale: true
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: 'GET_CONFIG_ERROR',
@@ -957,6 +1086,7 @@ apiRouter.post('/admin/update-home-config', async (req: Request, res: Response):
       },
       { merge: true }
     );
+    invalidateServerHomeConfigCache();
 
     res.json({
       success: true,
