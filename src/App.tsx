@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
 import { HomeConfigProvider } from './context/HomeConfigContext';
@@ -67,6 +67,7 @@ const getInitialProducts = (): Product[] => {
 
 function MainShop() {
   const { addToCart } = useCart();
+  const { isAdmin } = useAuth();
   const [currentView, setCurrentView] = useState<string>('home');
   const [navParam, setNavParam] = useState<string | undefined>(undefined);
   const [products, setProducts] = useState<Product[]>(getInitialProducts);
@@ -195,13 +196,16 @@ function MainShop() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#08080C] text-white selection:bg-purple-600 selection:text-white">
-      {/* Quota Exceeded Notice Banner */}
-      {quotaExceeded && !hideQuotaNotice && (
+      {/* Quota Exceeded Notice Banner (Visible to Admin ONLY) */}
+      {isAdmin && quotaExceeded && !hideQuotaNotice && (
         <div id="quota-exceeded-banner" className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
+                <span className="bg-amber-500/30 text-amber-300 font-bold px-1.5 py-0.5 rounded text-[10px] mr-1.5 border border-amber-500/40">
+                  เฉพาะแอดมิน
+                </span>
                 <strong>แจ้งเตือนโควต้า:</strong> โควต้าการอ่านฟรีประจำวันของ Firestore เต็มแล้ว (50,000 reads/วัน) — ระบบเปิดใช้แคชออฟไลน์อัตโนมัติ หน้าร้านยังสามารถเรียกดูสินค้าเดิมได้ตามปกติ และจะรีเซ็ตใหม่อัตโนมัติเวลาเที่ยงคืน
               </span>
             </div>
@@ -217,7 +221,7 @@ function MainShop() {
               </a>
               <button 
                 onClick={() => setHideQuotaNotice(true)}
-                className="p-1 hover:bg-amber-500/20 rounded text-amber-300"
+                className="p-1 hover:bg-amber-500/20 rounded text-amber-300 cursor-pointer"
                 title="ปิดการแจ้งเตือน"
               >
                 <X className="w-3.5 h-3.5" />
