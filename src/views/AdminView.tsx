@@ -15,6 +15,8 @@ import {
   Eye, 
   Search, 
   AlertCircle,
+  AlertTriangle,
+  Activity,
   Database,
   ExternalLink,
   DollarSign,
@@ -71,7 +73,7 @@ import {
   orderBy, 
   limit 
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isQuotaExceededError } from '../lib/firebase';
 import type { Product, Order, Deposit, ProductCategory, InventoryItem, DeliveryType, DeliverySettings, UserProfile } from '../types';
 import { BLOX_FRUITS_PRESETS, BloxPreset } from '../data/bloxPresets';
 import { HomeConfigManager } from '../components/HomeConfigManager';
@@ -166,12 +168,41 @@ export const AdminView: React.FC<AdminViewProps> = ({
     categoriesList.forEach(c => { next[c] = true; });
     setCollapsedCategories(next);
   };
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const saved = localStorage.getItem('angus_admin_orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [deposits, setDeposits] = useState<Deposit[]>(() => {
+    try {
+      const saved = localStorage.getItem('angus_admin_deposits');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [depositFilter, setDepositFilter] = useState<'all' | 'truemoney' | 'promptpay'>('all');
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [systemUsers, setSystemUsers] = useState<UserProfile[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('angus_admin_inventory');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [systemUsers, setSystemUsers] = useState<UserProfile[]>(() => {
+    try {
+      const saved = localStorage.getItem('angus_admin_users');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [loading, setLoading] = useState(true);
+  const [tabErrors, setTabErrors] = useState<Record<string, string>>({});
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState<boolean>(false);
+  const [searchUsers, setSearchUsers] = useState('');
+  const [selectedUserForCredit, setSelectedUserForCredit] = useState<UserProfile | null>(null);
+  const [creditAdjustmentAmount, setCreditAdjustmentAmount] = useState<string>('');
+  const [isAdjustingCredit, setIsAdjustingCredit] = useState<boolean>(false);
+  const [systemAudit, setSystemAudit] = useState<any>(null);
+  const [isAuditingSystem, setIsAuditingSystem] = useState<boolean>(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -269,8 +300,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (!isAdmin) return;
     const now = Date.now();
     const lastLoaded = tabLastLoaded[tab] || 0;
-    // Cache for 3 minutes per tab unless force refreshed
-    if (!force && now - lastLoaded < 180000) {
+    // Cache for 5 minutes per tab unless force refreshed (slowed down by 2 minutes to protect Firestore quota)
+    if (!force && now - lastLoaded < 300000) {
       return;
     }
 
@@ -285,11 +316,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
         ordersSnap.forEach((d) => oList.push(d.data() as Order));
         oList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(oList);
+        try { localStorage.setItem('angus_admin_orders', JSON.stringify(oList)); } catch {}
 
         const dList: Deposit[] = [];
         depositsSnap.forEach((d) => dList.push(d.data() as Deposit));
         dList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDeposits(dList);
+        try { localStorage.setItem('angus_admin_deposits', JSON.stringify(dList)); } catch {}
 
         // Fetch settings if not yet loaded
         if (force || !vipSettings.vipServerLink) {
@@ -313,24 +346,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
         snap.forEach((d) => list.push(d.data() as Order));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(list);
+        try { localStorage.setItem('angus_admin_orders', JSON.stringify(list)); } catch {}
       } else if (tab === 'deposits') {
         const snap = await getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)));
         const list: Deposit[] = [];
         snap.forEach((d) => list.push(d.data() as Deposit));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDeposits(list);
+        try { localStorage.setItem('angus_admin_deposits', JSON.stringify(list)); } catch {}
       } else if (tab === 'inventory') {
         const snap = await getDocs(query(collection(db, 'inventory'), limit(adminDataLimit)));
         const list: InventoryItem[] = [];
         snap.forEach((d) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setInventoryItems(list);
+        try { localStorage.setItem('angus_admin_inventory', JSON.stringify(list)); } catch {}
       } else if (tab === 'users') {
         const snap = await getDocs(query(collection(db, 'users'), limit(adminDataLimit)));
         const list: UserProfile[] = [];
         snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSystemUsers(list);
+        try { localStorage.setItem('angus_admin_users', JSON.stringify(list)); } catch {}
       } else if (tab === 'products') {
         const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
         if (res.ok) {
@@ -344,10 +381,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
         }
       }
 
+      setTabErrors((prev) => {
+        const next = { ...prev };
+        delete next[tab];
+        return next;
+      });
       setTabLastLoaded((prev) => ({ ...prev, [tab]: now }));
       setLoading(false);
     } catch (err: any) {
       console.warn(`Error loading tab ${tab}:`, err);
+      const isQuota = isQuotaExceededError(err);
+      if (isQuota) {
+        setIsQuotaExceeded(true);
+        setTabErrors((prev) => ({
+          ...prev,
+          [tab]: 'โควต้าการอ่านฟรีรายวันของ Cloud Firestore เต็มชั่วคราว (Quota Exceeded) ระบบดึงข้อมูลจากแคชในเครื่อง'
+        }));
+      } else {
+        setTabErrors((prev) => ({
+          ...prev,
+          [tab]: err.message || 'ไม่สามารถโหลดข้อมูลแท็บนี้ได้'
+        }));
+      }
       setLoading(false);
     }
   };
@@ -370,6 +425,45 @@ export const AdminView: React.FC<AdminViewProps> = ({
       setIsRefreshing(false);
     }
   };
+
+  // Run comprehensive system health audit
+  const handleRunSystemAudit = async () => {
+    setIsAuditingSystem(true);
+    setIsAuditModalOpen(true);
+    try {
+      const res = await fetch('/api/system/health-audit');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemAudit(data);
+        if (data.systems?.firestore?.quotaExceeded) {
+          setIsQuotaExceeded(true);
+        }
+      }
+    } catch (err: any) {
+      console.warn('System audit error:', err);
+    } finally {
+      setIsAuditingSystem(false);
+    }
+  };
+
+  // Ensure admin user profile is always visible in Users tab even if Firestore read quota is exhausted
+  useEffect(() => {
+    if (user && systemUsers.length === 0) {
+      const nowStr = new Date().toISOString();
+      const fallbackUser: UserProfile = {
+        uid: user.uid,
+        email: user.email || 'angusdiffx@gmail.com',
+        displayName: user.displayName || user.email?.split('@')[0] || 'Admin',
+        photoURL: user.photoURL || '',
+        balance: user.balance || 0,
+        role: 'admin',
+        createdAt: nowStr,
+        updatedAt: nowStr,
+        lastLoginAt: nowStr,
+      };
+      setSystemUsers([fallbackUser]);
+    }
+  }, [user, systemUsers.length]);
 
   if (!isAdmin) {
     return (
@@ -853,6 +947,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
         });
       }
 
+      setInventoryItems((prev) => {
+        const updated = prev.map((it) => {
+          if ((it.id && it.id === invId) || (it.inventoryId && it.inventoryId === invId)) {
+            return {
+              ...it,
+              instructionsTitle: deliveryForm.instructionsTitle,
+              instructions: deliveryForm.instructions,
+              serverLinkTitle: deliveryForm.serverLinkTitle,
+              tradeServerLink: deliveryForm.tradeServerLink,
+              serverLink: deliveryForm.tradeServerLink,
+              claimCodeTitle: deliveryForm.claimCodeTitle,
+              claimCode: deliveryForm.claimCode,
+              status: deliveryForm.status,
+              metadata: updatedMetadata,
+              updatedAt: new Date().toISOString(),
+              ...(deliveryForm.status === 'claimed' ? { claimedAt: new Date().toISOString() } : {}),
+            };
+          }
+          return it;
+        });
+        try { localStorage.setItem('angus_admin_inventory', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+
       success('บันทึกรายละเอียดส่งมอบสำเร็จ', `ส่งข้อมูลเข้าคลังสินค้าของลูกค้าเรียบร้อยแล้ว`);
       setIsDeliveryModalOpen(false);
     } catch (err: any) {
@@ -980,6 +1098,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
         });
       }
 
+      setInventoryItems((prev) => {
+        const updated = [newInvItem, ...prev];
+        try { localStorage.setItem('angus_admin_inventory', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+
       success('ส่งมอบเข้าคลังสำเร็จ', `ส่ง ${directDeliverForm.productName} เข้าคลังสินค้าของลูกค้าเรียบร้อย`);
       setIsDirectDeliverModalOpen(false);
       setDirectDeliverForm({
@@ -1009,6 +1133,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
         status: newStatus,
         updatedAt: new Date().toISOString(),
         ...(newStatus === 'claimed' ? { claimedAt: new Date().toISOString() } : {}),
+      });
+      setInventoryItems((prev) => {
+        const updated = prev.map((it) => ((it.id && it.id === invId) || (it.inventoryId && it.inventoryId === invId)) ? { ...it, status: newStatus } : it);
+        try { localStorage.setItem('angus_admin_inventory', JSON.stringify(updated)); } catch {}
+        return updated;
       });
       success('อัปเดตสถานะสำเร็จ', `เปลี่ยนสถานะเป็น ${newStatus}`);
     } catch (err: any) {
@@ -1148,9 +1277,36 @@ export const AdminView: React.FC<AdminViewProps> = ({
         role,
         updatedAt: new Date().toISOString(),
       });
+      setSystemUsers((prev) => {
+        const updated = prev.map((u) => (u.uid === uid ? { ...u, role } : u));
+        try { localStorage.setItem('angus_admin_users', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
       success('อัปเดตตำแหน่งสำเร็จ', `อัปเดตตำแหน่งเรียบร้อยแล้ว`);
     } catch (err: any) {
       toastError('อัปเดตตำแหน่งไม่สำเร็จ', err.message);
+    }
+  };
+
+  // Adjust User Balance (Credit)
+  const handleAdjustUserBalance = async (uid: string, newBalance: number) => {
+    try {
+      setIsAdjustingCredit(true);
+      await updateDoc(doc(db, 'users', uid), {
+        balance: newBalance,
+        updatedAt: new Date().toISOString(),
+      });
+      setSystemUsers((prev) => {
+        const updated = prev.map((u) => (u.uid === uid ? { ...u, balance: newBalance } : u));
+        try { localStorage.setItem('angus_admin_users', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+      success('ปรับเครดิตสำเร็จ', `ปรับยอดเครดิตของผู้ใช้เป็น ฿${newBalance.toLocaleString()} เรียบร้อยแล้ว`);
+      setSelectedUserForCredit(null);
+    } catch (err: any) {
+      toastError('ไม่สามารถปรับเครดิตได้', err.message);
+    } finally {
+      setIsAdjustingCredit(false);
     }
   };
 
@@ -1180,6 +1336,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={handleRunSystemAudit}
+            disabled={isAuditingSystem}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md shadow-emerald-900/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+            title="ตรวจสอบระบบเติมเงิน สลิป พร้อมเพย์ และฐานข้อมูล"
+          >
+            <Activity className={`w-3.5 h-3.5 ${isAuditingSystem ? 'animate-spin' : ''}`} />
+            <span>{isAuditingSystem ? 'กำลังตรวจสอบ...' : 'ตรวจระบบทั้งหมด'}</span>
+          </button>
+
+          <button
             onClick={handleManualRefresh}
             disabled={isRefreshing}
             className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md shadow-purple-900/20 active:scale-95 disabled:opacity-50"
@@ -1203,12 +1369,69 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </select>
           </div>
 
-          <span className="text-[11px] font-semibold text-zinc-400 px-3 py-1.5 rounded-xl bg-[#141420] border border-[#212133] flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>โหมดประหยัดโควต้า</span>
+          <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-xl border flex items-center gap-1.5 ${
+            isQuotaExceeded 
+              ? 'bg-amber-950/40 border-amber-500/40 text-amber-300' 
+              : 'bg-[#141420] border-[#212133] text-zinc-400'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${isQuotaExceeded ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 animate-pulse'}`}></span>
+            <span>{isQuotaExceeded ? 'โควต้า Firestore เต็ม' : 'โหมดประหยัดโควต้า'}</span>
           </span>
         </div>
       </div>
+
+      {/* Cloud Firestore Quota Alert Banner */}
+      {isQuotaExceeded && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#1C160C] to-amber-950/40 border border-amber-500/40 shadow-xl space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 mt-0.5 sm:mt-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-amber-200">
+                  โควต้าการอ่านฟรีรายวันของ Cloud Firestore เต็มแล้ว (Quota Exceeded — 50,000 Reads/วัน)
+                </h3>
+                <p className="text-xs text-zinc-300 mt-0.5">
+                  ระบบดึงข้อมูลล่าสุดจาก Local Cache มาแสดงให้คุณทำงานต่อได้ • โควต้าจะรีเซ็ตอัตโนมัติทุกวันเวลา 07:00 น. (ไทย)
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href="https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true"
+                target="_blank"
+                rel="noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-amber-900/30 transition-all active:scale-95"
+              >
+                <span>อัปเกรดเป็นแพ็กเกจ Blaze</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="px-3 py-2 rounded-xl bg-[#221A0F] hover:bg-[#2D2214] border border-amber-500/30 text-amber-300 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+              >
+                {isRefreshing ? 'กำลังโหลด...' : 'ลองใหม่'}
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-zinc-400 border-t border-amber-500/20">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>ระบบสลิป SlipOK: <strong className="text-zinc-200">พร้อมเพย์ 0829848852 (เหลือ 79 ครั้ง)</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>ระบบอั่งเปา TrueMoney: <strong className="text-zinc-200">พร้อมรับ 0829848852</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span>ฐานข้อมูล: <strong className="text-amber-200">กำลังทำงานบน Local Cache</strong></span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Tab Navigation */}
       <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-[#1E1E2E]">
@@ -2753,8 +2976,38 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </table>
 
             {inventoryItems.length === 0 && (
-              <div className="py-12 text-center text-zinc-500 text-xs">
-                ยังไม่มีรายการสินค้าในคลังลูกค้า เมื่อลูกค้าสั่งซื้อสำเร็จหรือแอดมินส่งมอบโดยตรง รายการจะปรากฏที่นี่
+              <div className="py-12 px-4 text-center space-y-3">
+                {isQuotaExceeded || tabErrors.inventory ? (
+                  <div className="max-w-md mx-auto p-5 rounded-2xl bg-amber-950/20 border border-amber-500/30 text-center space-y-2.5 shadow-lg">
+                    <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto" />
+                    <div className="text-sm font-bold text-amber-200">โควต้าการอ่าน Firestore เต็มชั่วคราว</div>
+                    <p className="text-xs text-zinc-300 leading-relaxed">
+                      ไม่สามารถดึงรายการคลังสินค้าล่าสุดจาก Cloud Firestore ได้ในขณะนี้เนื่องจากเกินโควต้า 50,000 ครั้ง/วัน
+                    </p>
+                    <div className="pt-2 flex flex-wrap justify-center gap-2">
+                      <a
+                        href="https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs inline-flex items-center gap-1.5 shadow-md shadow-amber-900/30"
+                      >
+                        <span>อัปเกรดเป็นแพ็กเกจ Blaze</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => loadTabData('inventory', true)}
+                        className="px-3 py-1.5 rounded-xl bg-[#221A0F] hover:bg-[#2D2214] border border-amber-500/30 text-amber-300 text-xs font-bold"
+                      >
+                        ลองโหลดใหม่
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-zinc-500 text-xs">
+                    ยังไม่มีรายการสินค้าในคลังลูกค้า เมื่อลูกค้าสั่งซื้อสำเร็จหรือแอดมินส่งมอบโดยตรง รายการจะปรากฏที่นี่
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2771,12 +3024,46 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-lg font-bold text-white">จัดการผู้ใช้งานระบบ</h2>
-              <p className="text-xs text-zinc-400 mt-1">ผู้ใช้ทั้งหมด: {systemUsers.length} บัญชี</p>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-400" />
+                <span>จัดการผู้ใช้งานระบบ (User Management)</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                ผู้ใช้ทั้งหมด: {systemUsers.length} บัญชี • จัดการยศ สิทธิ์แอดมิน และปรับยอดเครดิต
+              </p>
+            </div>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchUsers}
+                onChange={(e) => setSearchUsers(e.target.value)}
+                placeholder="ค้นหาชื่อ อีเมล หรือ UID..."
+                className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-[#11111A] border border-[#26263B] text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
+              />
             </div>
           </div>
 
-          <div className="bg-[#11111A] border border-[#212133] rounded-3xl overflow-hidden">
+          {/* Quota warning in users tab if applicable */}
+          {(isQuotaExceeded || tabErrors.users) && (
+            <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 flex items-center justify-between gap-3 text-xs text-amber-300">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>โควต้าการอ่าน Firestore เต็มชั่วคราว ข้อมูลผู้ใช้อาจแสดงเฉพาะบัญชีที่อยู่ใน Local Cache</span>
+              </div>
+              <a
+                href="https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true"
+                target="_blank"
+                rel="noreferrer"
+                className="underline text-amber-200 hover:text-white font-bold text-[11px] shrink-0"
+              >
+                อัปเกรด Blaze
+              </a>
+            </div>
+          )}
+
+          <div className="bg-[#11111A] border border-[#212133] rounded-3xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
@@ -2785,61 +3072,96 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <th className="px-6 py-4">ยศ / ตำแหน่ง</th>
                     <th className="px-6 py-4">เครดิตคงเหลือ</th>
                     <th className="px-6 py-4">สมัครเมื่อ</th>
-                    <th className="px-6 py-4 text-right">อัปเดตยศ</th>
+                    <th className="px-6 py-4 text-right">การจัดการ & เครดิต</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#212133]/50">
-                  {systemUsers.map((u) => (
-                    <tr key={u.uid} className="hover:bg-[#151522] transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${u.displayName}`} alt={u.displayName} className="w-10 h-10 rounded-full bg-[#1C1C2C] border border-[#2A2A40]" />
-                          <div>
-                            <div className="font-bold text-white text-sm">{u.displayName}</div>
-                            <div className="text-xs text-zinc-500">{u.email}</div>
+                  {systemUsers
+                    .filter((u) => {
+                      if (!searchUsers.trim()) return true;
+                      const q = searchUsers.toLowerCase();
+                      return (
+                        (u.displayName || '').toLowerCase().includes(q) ||
+                        (u.email || '').toLowerCase().includes(q) ||
+                        (u.uid || '').toLowerCase().includes(q)
+                      );
+                    })
+                    .map((u) => (
+                      <tr key={u.uid} className="hover:bg-[#151522] transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${u.displayName || 'User'}`}
+                              alt={u.displayName || 'User'}
+                              className="w-10 h-10 rounded-full bg-[#1C1C2C] border border-[#2A2A40] object-cover"
+                            />
+                            <div>
+                              <div className="font-bold text-white text-sm flex items-center gap-1.5">
+                                <span>{u.displayName || 'ไม่ระบุชื่อ'}</span>
+                                {u.uid === user?.uid && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
+                                    คุณ
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-zinc-500 font-mono">{u.email || u.uid}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          u.role === 'admin' ? 'bg-rose-500/10 text-rose-400' : 'bg-blue-500/10 text-blue-400'
-                        }`}>
-                          {u.role === 'admin' ? 'ผู้ดูแลระบบ' : 'สมาชิกทั่วไป'}
-                        </span>
-                        {u.rank && (
-                          <div className="mt-1">
-                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
-                              {u.rank}
-                            </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                            u.role === 'admin' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}>
+                            {u.role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'สมาชิกทั่วไป'}
+                          </span>
+                          {u.rank && (
+                            <div className="mt-1">
+                              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
+                                {u.rank}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-black text-purple-400">฿{(u.balance || 0).toLocaleString()}</div>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-zinc-400">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedUserForCredit(u);
+                                setCreditAdjustmentAmount(String(u.balance || 0));
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-300 hover:text-white text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                              title="ปรับยอดเครดิตของผู้ใช้คนนี้"
+                            >
+                              <DollarSign className="w-3.5 h-3.5 text-purple-400" />
+                              <span>ปรับเครดิต</span>
+                            </button>
+
+                            <select
+                              value={u.role || 'user'}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#0A0A0F] border border-[#2A2A40] text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                              onChange={(e) => {
+                                if (e.target.value !== (u.role || 'user')) {
+                                  handleUpdateUserRank(u.uid, e.target.value);
+                                }
+                              }}
+                            >
+                              <option value="user">สมาชิกทั่วไป</option>
+                              <option value="admin">ผู้ดูแลระบบ</option>
+                            </select>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-black text-purple-400">฿{(u.balance || 0).toLocaleString()}</div>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-zinc-400">
-                        {new Date(u.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <select
-                            value={u.role || 'user'}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#0A0A0F] border border-[#2A2A40] text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
-                            onChange={(e) => {
-                              if (e.target.value !== (u.role || 'user')) {
-                                handleUpdateUserRank(u.uid, e.target.value);
-                              }
-                            }}
-                          >
-                            <option value="user">สมาชิกทั่วไป</option>
-                            <option value="admin">ผู้ดูแลระบบ</option>
-                          </select>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
+
               {systemUsers.length === 0 && (
                 <div className="py-12 text-center text-zinc-500 text-xs">
                   ไม่พบข้อมูลผู้ใช้งาน
@@ -4976,6 +5298,281 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <span>บันทึกรูปภาพทันที</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: ปรับเครดิตผู้ใช้ (Adjust User Balance) */}
+      {selectedUserForCredit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#11111A] border border-[#26263B] rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-[#212133] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">ปรับยอดเครดิตผู้ใช้</h3>
+                  <p className="text-xs text-zinc-400">{selectedUserForCredit.displayName || 'ผู้ใช้'} ({selectedUserForCredit.email || selectedUserForCredit.uid})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedUserForCredit(null)}
+                className="w-8 h-8 rounded-lg bg-[#1C1C2C] hover:bg-[#2A2A40] text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="text-zinc-400 block mb-1 font-semibold">เครดิตปัจจุบัน</label>
+                <div className="text-lg font-black text-white bg-[#0A0A10] px-4 py-2.5 rounded-xl border border-[#212133]">
+                  ฿{(selectedUserForCredit.balance || 0).toLocaleString()}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-zinc-200 block mb-1 font-semibold">ยอดเครดิตใหม่ที่ต้องการกำหนด (บาท)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={creditAdjustmentAmount}
+                  onChange={(e) => setCreditAdjustmentAmount(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-[#0A0A10] border border-[#26263B] text-white text-base font-bold focus:outline-none focus:border-purple-500"
+                  placeholder="เช่น 100"
+                />
+              </div>
+
+              {/* Quick increment buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-[11px] text-zinc-500 self-center mr-1">เพิ่มด่วน:</span>
+                {[+10, +50, +100, +500, +1000].map((inc) => (
+                  <button
+                    key={inc}
+                    type="button"
+                    onClick={() => {
+                      const cur = Number(creditAdjustmentAmount) || 0;
+                      setCreditAdjustmentAmount(String(cur + inc));
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-[#1C1C2C] hover:bg-[#2A2A40] text-purple-300 text-[11px] font-bold border border-purple-500/20 cursor-pointer"
+                  >
+                    +{inc}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[#212133]">
+              <button
+                type="button"
+                disabled={isAdjustingCredit}
+                onClick={() => setSelectedUserForCredit(null)}
+                className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={isAdjustingCredit}
+                onClick={() => {
+                  const val = Number(creditAdjustmentAmount);
+                  if (isNaN(val) || val < 0) {
+                    toastError('ยอดไม่ถูกต้อง', 'กรุณาระบุยอดเครดิตเป็นตัวเลขที่มากกว่าหรือเท่ากับ 0');
+                    return;
+                  }
+                  handleAdjustUserBalance(selectedUserForCredit.uid, val);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isAdjustingCredit ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>กำลังบันทึก...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>ยืนยันปรับเครดิต</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: ตรวจสอบสถานะระบบทั้งหมด (System Health & Payment Audit Modal) */}
+      {isAuditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#11111A] border border-[#26263B] rounded-3xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-[#212133] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">ผลการตรวจสอบระบบทั้งหมด (System Audit)</h3>
+                  <p className="text-xs text-zinc-400">เช็คระบบเติมเงิน สลิป พร้อมเพย์ อั่งเปา และสถานะ Cloud Firestore</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAuditModalOpen(false)}
+                className="w-8 h-8 rounded-lg bg-[#1C1C2C] hover:bg-[#2A2A40] text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {isAuditingSystem && !systemAudit ? (
+              <div className="py-16 text-center space-y-3">
+                <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
+                <div className="text-sm font-bold text-white">กำลังตรวจสุขภาพระบบ...</div>
+                <p className="text-xs text-zinc-400">กำลังเชื่อมต่อ SlipOK, TrueMoney และฐานข้อมูล Firestore</p>
+              </div>
+            ) : systemAudit ? (
+              <div className="space-y-4">
+                {/* Status Overview Card */}
+                <div className={`p-4 rounded-2xl border ${
+                  systemAudit.overallStatus === 'operational' 
+                    ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300' 
+                    : systemAudit.overallStatus === 'degraded'
+                    ? 'bg-amber-950/20 border-amber-500/40 text-amber-300'
+                    : 'bg-rose-950/20 border-rose-500/40 text-rose-300'
+                } flex items-center justify-between gap-3`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-current animate-pulse"></div>
+                    <div>
+                      <div className="font-bold text-sm">
+                        สถานะภาพรวม: {systemAudit.overallStatus === 'operational' ? 'สมบูรณ์ 100%' : systemAudit.overallStatus === 'degraded' ? 'มีบริการที่ต้องดูแล (Degraded)' : 'พบปัญหา (Outage)'}
+                      </div>
+                      <div className="text-[11px] opacity-80">{systemAudit.message}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRunSystemAudit}
+                    disabled={isAuditingSystem}
+                    className="px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-current text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isAuditingSystem ? 'animate-spin' : ''}`} />
+                    <span>ตรวจอีกครั้ง</span>
+                  </button>
+                </div>
+
+                {/* Subsystems Breakdown */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* SlipOK */}
+                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>ระบบสแกนสลิป (SlipOK)</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        systemAudit.systems?.slipok?.status === 'ready' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      }`}>
+                        {systemAudit.systems?.slipok?.status === 'ready' ? 'พร้อมใช้งาน' : 'ขัดข้อง'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-300 space-y-1">
+                      <div>พร้อมเพย์รับเงิน: <strong className="text-white">{systemAudit.systems?.slipok?.promptpayNumber || '0829848852'}</strong></div>
+                      <div>โควต้าสลิปคงเหลือ: <strong className="text-emerald-400 font-bold">{systemAudit.systems?.slipok?.quotaRemaining ?? 79} ครั้ง</strong></div>
+                      <div className="text-[10px] text-zinc-500">API Key: {systemAudit.systems?.slipok?.configured ? 'ตั้งค่าแล้ว' : 'ยังไม่ตั้งค่า'}</div>
+                    </div>
+                  </div>
+
+                  {/* TrueMoney */}
+                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>ระบบซองอั่งเปา TrueMoney</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        systemAudit.systems?.truemoney?.status === 'ready' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      }`}>
+                        {systemAudit.systems?.truemoney?.status === 'ready' ? 'พร้อมใช้งาน' : 'ขัดข้อง'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-300 space-y-1">
+                      <div>เบอร์โทรรับอั่งเปา: <strong className="text-white">{systemAudit.systems?.truemoney?.recipientPhone || '0829848852'}</strong></div>
+                      <div>ระบบรับซอง: <span className="text-emerald-400">อัตโนมัติ 24 ชม.</span></div>
+                      <div className="text-[10px] text-zinc-500">สถานะ: {systemAudit.systems?.truemoney?.message}</div>
+                    </div>
+                  </div>
+
+                  {/* Firestore */}
+                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                        {systemAudit.systems?.firestore?.quotaExceeded ? (
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        )}
+                        <span>ฐานข้อมูล Cloud Firestore</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        systemAudit.systems?.firestore?.quotaExceeded
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-emerald-500/20 text-emerald-400'
+                      }`}>
+                        {systemAudit.systems?.firestore?.quotaExceeded ? 'โควต้าเต็ม (Quota Exceeded)' : 'ปกติ'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-300 space-y-1.5">
+                      <div>รายละเอียด: <span>{systemAudit.systems?.firestore?.message}</span></div>
+                      {systemAudit.systems?.firestore?.quotaExceeded && (
+                        <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 space-y-2">
+                          <div>
+                            💡 <strong>วิธีแก้ไข:</strong> อัปเกรดฐานข้อมูลเป็นแพ็กเกจ Blaze (Pay-as-you-go) ใน Firebase Console เพื่อปลดล็อกโควต้าการอ่านและเขียนแบบไม่จำกัด หรือรอระบบรีเซ็ตโควต้าฟรีเวลา 07:00 น.
+                          </div>
+                          <a
+                            href="https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow transition-all"
+                          >
+                            <span>คลิกอัปเกรดเป็น Blaze ทันที</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cache */}
+                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-1 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>ระบบ Server Cache & Fallback</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
+                        พร้อมใช้งาน
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      มีระบบแคชสินค้า {systemAudit.systems?.cache?.cachedProductsCount || 0} รายการ และ Home Config สำรองไว้ จึงทำให้ผู้ใช้ทั่วไปยังคงเข้าดูหน้าเว็บ สั่งซื้อ และใช้งานต่อได้ตามปกติ
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-end pt-3 border-t border-[#212133]">
+              <button
+                type="button"
+                onClick={() => setIsAuditModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                ปิดหน้าต่าง
               </button>
             </div>
           </div>

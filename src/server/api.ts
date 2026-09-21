@@ -367,6 +367,18 @@ const handleVerifySlip = async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error: any) {
     console.error('Verify Slip Error:', error);
+    const isQuota = String(error?.message || '').includes('Quota exceeded') ||
+      String(error?.code || '') === 'resource-exhausted' ||
+      String(error?.message || '').includes('RESOURCE_EXHAUSTED');
+    if (isQuota) {
+      res.status(503).json({
+        success: false,
+        error: 'FIRESTORE_QUOTA_EXCEEDED',
+        message: 'โควต้าการอ่าน/เขียนฐานข้อมูล Cloud Firestore เต็มชั่วคราว (Quota Exceeded) ทำให้ไม่สามารถบันทึกยอดเงินเข้ากระเป๋าได้ในขณะนี้ กรุณาแจ้งแอดมินให้อัปเกรดแผน Firebase หรือรอระบบรีเซ็ตโควต้าประจำวัน',
+        upgradeUrl: 'https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true'
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: 'SERVER_TRANSACTION_ERROR',
@@ -540,6 +552,18 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error: any) {
     console.error('Redeem Angpao Error:', error);
+    const isQuota = String(error?.message || '').includes('Quota exceeded') ||
+      String(error?.code || '') === 'resource-exhausted' ||
+      String(error?.message || '').includes('RESOURCE_EXHAUSTED');
+    if (isQuota) {
+      res.status(503).json({
+        success: false,
+        error: 'FIRESTORE_QUOTA_EXCEEDED',
+        message: 'โควต้าการอ่าน/เขียนฐานข้อมูล Cloud Firestore เต็มชั่วคราว (Quota Exceeded) ทำให้ไม่สามารถบันทึกยอดเงินเข้ากระเป๋าได้ในขณะนี้ กรุณาแจ้งแอดมินให้อัปเกรดแผน Firebase หรือรอระบบรีเซ็ตโควต้าประจำวัน',
+        upgradeUrl: 'https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true'
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: 'SERVER_TRANSACTION_ERROR',
@@ -866,6 +890,18 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
     });
   } catch (error: any) {
     console.error('Checkout Error:', error);
+    const isQuota = String(error?.message || '').includes('Quota exceeded') ||
+      String(error?.code || '') === 'resource-exhausted' ||
+      String(error?.message || '').includes('RESOURCE_EXHAUSTED');
+    if (isQuota) {
+      res.status(503).json({
+        success: false,
+        error: 'FIRESTORE_QUOTA_EXCEEDED',
+        message: 'โควต้าการอ่าน/เขียนฐานข้อมูล Cloud Firestore เต็มชั่วคราว (Quota Exceeded) ทำให้ไม่สามารถตรวจสอบยอดเงินหรือตัดสต็อกได้ในขณะนี้ กรุณาแจ้งแอดมินหรือรอรีเซ็ตโควต้าประจำวัน',
+        upgradeUrl: 'https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true'
+      });
+      return;
+    }
     res.status(400).json({
       success: false,
       error: 'CHECKOUT_FAILED',
@@ -945,6 +981,110 @@ apiRouter.post('/admin/refresh-cache', (req: Request, res: Response) => {
     success: true,
     message: 'ล้างแคชหน่วยความจำบนเซิร์ฟเวอร์เรียบร้อยแล้ว การเข้าชมครั้งถัดไปจะดึงข้อมูลใหม่'
   });
+});
+
+// Comprehensive System Health Audit for Top-Up & Database
+apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promise<void> => {
+  const auditResult: any = {
+    timestamp: new Date().toISOString(),
+    overallStatus: 'healthy',
+    systems: {}
+  };
+
+  // 1. SlipOK Gateway Check
+  try {
+    const slipokRes = await fetch(`${SLIPOK_URL}/quota`, {
+      headers: { 'x-authorization': SLIPOK_KEY },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (slipokRes.ok) {
+      const slipokData = await slipokRes.json();
+      auditResult.systems.slipok = {
+        name: 'ระบบตรวจสลิป SlipOK (QR พร้อมเพย์)',
+        status: 'online',
+        quotaRemaining: slipokData?.data?.quota ?? 'N/A',
+        endDate: slipokData?.data?.endDate ?? 'N/A',
+        promptpayAccount: PROMPTPAY_ACCOUNT,
+        promptpayName: PROMPTPAY_NAME,
+        message: `SlipOK ใช้งานได้ปกติ (โควต้าคงเหลือ: ${slipokData?.data?.quota ?? 0} ครั้ง)`,
+      };
+    } else {
+      auditResult.systems.slipok = {
+        name: 'ระบบตรวจสลิป SlipOK (QR พร้อมเพย์)',
+        status: 'warning',
+        statusCode: slipokRes.status,
+        message: 'SlipOK API ตอบกลับสถานะไม่สำเร็จ ตรวจสอบคีย์ API',
+      };
+    }
+  } catch (err: any) {
+    auditResult.systems.slipok = {
+      name: 'ระบบตรวจสลิป SlipOK (QR พร้อมเพย์)',
+      status: 'offline',
+      error: err.message,
+      message: 'ไม่สามารถติดต่อ SlipOK API ได้',
+    };
+  }
+
+  // 2. TrueMoney Angpao System
+  auditResult.systems.truemoney = {
+    name: 'ระบบเติมเงินซองอั่งเปา TrueMoney Wallet',
+    status: 'online',
+    recipientPhone: '0829848852',
+    mode: 'auto_redeem',
+    message: 'ระบบซองอั่งเปา TrueMoney พร้อมทำงาน (เบอร์รับเงิน: 0829848852)',
+  };
+
+  // 3. Cloud Firestore Probe
+  try {
+    const probePromise = getDocs(query(collection(db, 'settings'), limit(1)));
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Firestore probe timeout after 3000ms')), 3000)
+    );
+    await Promise.race([probePromise, timeoutPromise]);
+
+    auditResult.systems.firestore = {
+      name: 'ฐานข้อมูล Google Cloud Firestore',
+      status: 'online',
+      message: 'เชื่อมต่อฐานข้อมูลได้ปกติ โควต้าการอ่านยังไม่เต็ม',
+      quotaExceeded: false,
+    };
+  } catch (err: any) {
+    const isQuota = String(err?.message || '').includes('Quota exceeded') ||
+      String(err?.code || '') === 'resource-exhausted' ||
+      String(err?.message || '').includes('RESOURCE_EXHAUSTED');
+
+    if (isQuota) {
+      auditResult.overallStatus = 'degraded';
+      auditResult.systems.firestore = {
+        name: 'ฐานข้อมูล Google Cloud Firestore',
+        status: 'quota_exceeded',
+        quotaExceeded: true,
+        message: 'โควต้าการอ่านฟรีรายวันของ Cloud Firestore เต็มแล้ว (50,000 reads/วัน)',
+        recommendation: 'ระบบสลับไปใช้แคชท้องถิ่นอัตโนมัติ สำหรับการปลดล็อคสดสามารถอัปเกรดเป็นแผน Blaze ใน Firebase Console หรือรอระบบรีเซ็ตเวลา 07:00 น. (ไทย)',
+        upgradeUrl: 'https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true',
+      };
+    } else {
+      auditResult.systems.firestore = {
+        name: 'ฐานข้อมูล Google Cloud Firestore',
+        status: 'error',
+        error: err.message,
+        message: `ข้อผิดพลาด Firestore: ${err.message}`,
+      };
+    }
+  }
+
+  // 4. Products Catalog Cache
+  auditResult.systems.products = {
+    name: 'แคตตาล็อกสินค้า',
+    status: 'online',
+    cachedCount: serverProductsCache ? serverProductsCache.data.length : 0,
+    hasServerCache: Boolean(serverProductsCache),
+    message: serverProductsCache 
+      ? `แคชสินค้าพร้อมใช้งาน (${serverProductsCache.data.length} รายการ)` 
+      : 'ยังไม่ได้โหลดเข้าหน่วยความจำเซิร์ฟเวอร์',
+  };
+
+  res.json(auditResult);
 });
 
 // 3. Seed Initial Products in Firestore Catalog

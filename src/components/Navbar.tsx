@@ -18,14 +18,16 @@ import {
   ExternalLink,
   MessageSquare,
   HelpCircle,
-  ChevronRight
+  ChevronRight,
+  RefreshCw,
+  CheckCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useHomeConfig } from '../context/HomeConfigContext';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isQuotaExceededError } from '../lib/firebase';
 import type { Notification } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
@@ -42,7 +44,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    try {
+      const saved = localStorage.getItem('angus_cached_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isLoadingNotifs, setIsLoadingNotifs] = useState(false);
+  const [notifError, setNotifError] = useState<string | null>(null);
+  const lastNotifsFetchRef = useRef<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -62,50 +74,92 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load user's notifications on-demand (saves Firestore read quota)
+  // Restore cached notifications locally on user change (0 Firestore reads)
   useEffect(() => {
     if (!user) {
       setNotifications([]);
       return;
     }
+    try {
+      const saved = localStorage.getItem(`angus_cached_notifications_${user.uid}`);
+      if (saved) {
+        setNotifications(JSON.parse(saved));
+      }
+    } catch {}
+  }, [user]);
 
-    let isMounted = true;
-    const fetchNotifications = async () => {
-      try {
-        const q = query(
-          collection(db, 'notifications'),
-          where('uid', '==', user.uid),
-          limit(8)
-        );
-        const snapshot = await getDocs(q);
-        if (!isMounted) return;
-        const items: Notification[] = [];
-        snapshot.forEach((docSnap) => {
-          items.push({ id: docSnap.id, ...(docSnap.data() as Notification) });
-        });
-        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setNotifications(items);
-      } catch (err) {
-        console.warn('Notifications fetch notice:', err);
+  // Listen for in-app updates to invalidate cooldown
+  useEffect(() => {
+    const handleUpdate = () => {
+      lastNotifsFetchRef.current = 0;
+      if (notifDropdownOpen && user) {
+        fetchNotificationsOnDemand(true);
       }
     };
-
-    fetchNotifications();
-
-    const handleUpdate = () => {
-      fetchNotifications();
-    };
     window.addEventListener('notificationUpdate', handleUpdate);
+    return () => window.removeEventListener('notificationUpdate', handleUpdate);
+  }, [notifDropdownOpen, user]);
 
-    // Light periodic check every 5 minutes only
-    const interval = setInterval(fetchNotifications, 300000);
+  // On-Demand loader: Strictly queries Firestore only when user clicks the notification bell
+  // Enforces a 2-minute request throttle / cooldown to prevent quota consumption
+  const fetchNotificationsOnDemand = async (force = false) => {
+    if (!user) return;
+    const now = Date.now();
+    // 2-minute cooldown between requests unless manually forced
+    if (!force && now - lastNotifsFetchRef.current < 120000 && notifications.length > 0) {
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-      window.removeEventListener('notificationUpdate', handleUpdate);
-    };
-  }, [user]);
+    setIsLoadingNotifs(true);
+    setNotifError(null);
+    try {
+      const q = query(
+        collection(db, 'notifications'),
+        where('uid', '==', user.uid),
+        limit(8)
+      );
+      const snapshot = await getDocs(q);
+      const items: Notification[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({ id: docSnap.id, ...(docSnap.data() as Notification) });
+      });
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setNotifications(items);
+      lastNotifsFetchRef.current = Date.now();
+      try {
+        localStorage.setItem(`angus_cached_notifications_${user.uid}`, JSON.stringify(items));
+        localStorage.setItem('angus_cached_notifications', JSON.stringify(items));
+      } catch {}
+    } catch (err: any) {
+      if (isQuotaExceededError(err)) {
+        setNotifError('โควต้า Firestore เต็มชั่วคราว (แสดงข้อมูลจากแคช)');
+      } else {
+        console.warn('Notifications fetch notice:', err);
+      }
+    } finally {
+      setIsLoadingNotifs(false);
+    }
+  };
+
+  const handleToggleNotifDropdown = () => {
+    const nextState = !notifDropdownOpen;
+    setNotifDropdownOpen(nextState);
+    if (nextState) {
+      // Trigger On-Demand fetch only when user clicks to open
+      fetchNotificationsOnDemand();
+    }
+  };
+
+  const handleMarkAllAsRead = () => {
+    const updated = notifications.map((n) => ({ ...n, isRead: true }));
+    setNotifications(updated);
+    if (user) {
+      try {
+        localStorage.setItem(`angus_cached_notifications_${user.uid}`, JSON.stringify(updated));
+        localStorage.setItem('angus_cached_notifications', JSON.stringify(updated));
+      } catch {}
+    }
+  };
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -261,13 +315,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
                 </button>
               )}
 
-              {/* Notification Bell (desktop/tablet) */}
+              {/* Notification Bell (On-Demand) */}
               {user && (
-                <div ref={notifMenuRef} className="relative hidden sm:block">
+                <div ref={notifMenuRef} className="relative flex">
                   <button
-                    onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                    onClick={handleToggleNotifDropdown}
                     className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#11111A] hover:bg-[#181827] border border-[#27273A] text-zinc-300 hover:text-white flex items-center justify-center relative transition-colors cursor-pointer"
-                    title="การแจ้งเตือน"
+                    title="การแจ้งเตือน (คลิกเพื่อโหลด On-Demand)"
                   >
                     <Bell className="w-4 h-4" />
                     {unreadNotifs > 0 && (
@@ -279,12 +333,50 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
 
                   {/* Notifications Dropdown */}
                   {notifDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-80 bg-[#11111A] border border-[#2A2A3E] rounded-2xl shadow-2xl p-4 z-50">
+                    <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-[#11111A] border border-[#2A2A3E] rounded-2xl shadow-2xl p-4 z-50">
                       <div className="flex items-center justify-between pb-3 border-b border-[#242436] mb-3">
-                        <h4 className="text-sm font-semibold text-white">การแจ้งเตือน</h4>
-                        <span className="text-[11px] text-zinc-400">{notifications.length} รายการ</span>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-sm font-semibold text-white">การแจ้งเตือน</h4>
+                          {unreadNotifs > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-bold border border-rose-500/30">
+                              {unreadNotifs} ใหม่
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {unreadNotifs > 0 && (
+                            <button
+                              onClick={handleMarkAllAsRead}
+                              className="text-[11px] text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-purple-950/40 cursor-pointer"
+                              title="ทำเครื่องหมายว่าอ่านแล้วทั้งหมด"
+                            >
+                              <CheckCheck className="w-3.5 h-3.5" />
+                              <span>อ่านหมด</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => fetchNotificationsOnDemand(true)}
+                            disabled={isLoadingNotifs}
+                            className="p-1 rounded-lg hover:bg-[#1E1E2E] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                            title="รีเฟรชการแจ้งเตือนสด (On-Demand)"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingNotifs ? 'animate-spin text-purple-400' : ''}`} />
+                          </button>
+                        </div>
                       </div>
-                      {notifications.length === 0 ? (
+
+                      {notifError && (
+                        <div className="mb-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300 leading-tight">
+                          {notifError}
+                        </div>
+                      )}
+
+                      {isLoadingNotifs && notifications.length === 0 ? (
+                        <div className="text-center py-6 text-zinc-400 text-xs flex flex-col items-center gap-2">
+                          <RefreshCw className="w-5 h-5 animate-spin text-purple-400" />
+                          <span>กำลังดึงข้อมูลการแจ้งเตือน...</span>
+                        </div>
+                      ) : notifications.length === 0 ? (
                         <div className="text-center py-6 text-zinc-500 text-xs">
                           ยังไม่มีการแจ้งเตือนใหม่
                         </div>
@@ -293,19 +385,34 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
                           {notifications.map((notif) => (
                             <div 
                               key={notif.id}
-                              className={`p-2.5 rounded-xl text-xs border ${
+                              className={`p-2.5 rounded-xl text-xs border transition-colors ${
                                 notif.isRead ? 'bg-[#0E0E16] border-[#1C1C2A] text-zinc-400' : 'bg-[#181329] border-purple-500/30 text-zinc-200'
                               }`}
                             >
-                              <p className="font-bold text-white text-xs">{notif.title}</p>
+                              <div className="flex items-start justify-between gap-1">
+                                <p className="font-bold text-white text-xs">{notif.title}</p>
+                                {!notif.isRead && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 mt-1" />
+                                )}
+                              </div>
                               <p className="mt-0.5 text-[11px] leading-relaxed">{notif.message}</p>
                               <span className="text-[10px] text-zinc-500 mt-1 block">
-                                {new Date(notif.createdAt).toLocaleDateString('th-TH')}
+                                {new Date(notif.createdAt).toLocaleDateString('th-TH', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  day: 'numeric',
+                                  month: 'short'
+                                })}
                               </span>
                             </div>
                           ))}
                         </div>
                       )}
+
+                      <div className="mt-2.5 pt-2 border-t border-[#1F1F2F] flex items-center justify-between text-[10px] text-zinc-500">
+                        <span>โหลดแบบ On-Demand</span>
+                        <span>{notifications.length} รายการ</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -652,6 +759,36 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onSearc
                         </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                  )}
+
+                  {/* Mobile Notifications Trigger */}
+                  {user && (
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleToggleNotifDropdown();
+                      }}
+                      className="w-full flex items-center justify-between p-3 rounded-2xl bg-[#11111A] border border-[#1F1F2F] text-zinc-300 hover:text-white text-left transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-[#181826] text-purple-400 flex items-center justify-center shrink-0">
+                          <Bell className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold">
+                            การแจ้งเตือน {unreadNotifs > 0 ? `(${unreadNotifs} ใหม่)` : ''}
+                          </div>
+                          <div className="text-[10px] text-zinc-400">คลิกเพื่อดูการแจ้งเตือน (On-Demand)</div>
+                        </div>
+                      </div>
+                      {unreadNotifs > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                          {unreadNotifs} ใหม่
+                        </span>
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-zinc-600" />
+                      )}
                     </button>
                   )}
 

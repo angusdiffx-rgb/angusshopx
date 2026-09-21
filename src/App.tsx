@@ -75,14 +75,13 @@ function MainShop() {
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [hideQuotaNotice, setHideQuotaNotice] = useState(false);
 
-  // Keep-alive Ping to prevent Render from sleeping
+  // Keep-alive Ping to prevent server from sleeping (slowed down by 2 minutes: 6 minutes = 360000ms)
   useEffect(() => {
-    // Ping every 4 minutes (4 * 60 * 1000 = 240000ms)
     const interval = setInterval(() => {
       fetch('/api/health')
         .then(res => res.json())
         .catch(() => {});
-    }, 240000);
+    }, 360000);
 
     return () => clearInterval(interval);
   }, []);
