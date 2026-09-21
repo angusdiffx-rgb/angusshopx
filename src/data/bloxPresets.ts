@@ -73,6 +73,14 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       rarity: 'Mythical'
     },
     {
+      id: 'trend-gas',
+      name: 'Gas Fruit',
+      th: 'ผลแก๊ส',
+      price: '฿35',
+      img: '/images/blox/gas.png',
+      rarity: 'Mythical'
+    },
+    {
       id: 'trend-darkblade',
       name: 'Dark Blade',
       th: 'ดาบโยรุ',
@@ -146,6 +154,14 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     rarity: 'Mythical',
     subType: 'Fruit',
     url: '/images/blox/trex.png',
+  },
+  {
+    name: 'Gas Fruit',
+    th: 'ผลแก๊ส (Gas)',
+    category: 'ผลปีศาจ',
+    rarity: 'Mythical',
+    subType: 'Fruit',
+    url: '/images/blox/gas.png',
   },
   {
     name: 'Mammoth Fruit',
@@ -765,6 +781,14 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/race_v4.png',
   },
+  {
+    name: 'Island Quests + Combat V2 Service',
+    th: 'บริการ เควสเกาะทั้งหมด + หมัด Combat V2 (350 บาท)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/combat_v2_island.png',
+  },
 
   // --------------------------------------------------------------------------
   // สกินผลปีศาจล่าสุด (Fruit Skins / Chromatic Fruit Skins)
@@ -1015,6 +1039,7 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('dragon_trident') || target.includes('ตรีศูลมังกร')) return '/images/blox/dragon_trident.png';
   if (target.includes('dragon') || target.includes('มังกร')) return '/images/blox/dragon.png';
   if (target.includes('leopard') || target.includes('เสือ')) return '/images/blox/leopard.png';
+  if (target.includes('gas') || target.includes('แก๊ส')) return '/images/blox/gas.png';
   if (target.includes('dough') || target.includes('โมจิ')) return '/images/blox/dough.png';
   if (target.includes('trex') || target.includes('t-rex') || target.includes('ทีเร็กซ์')) return '/images/blox/trex.png';
   if (target.includes('mammoth') || target.includes('ช้าง') || target.includes('แมมมอธ')) return '/images/blox/mammoth.png';
@@ -1086,6 +1111,7 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('kabucha') || target.includes('คาบูชา')) return '/images/blox/kabucha.png';
 
   // Fighting Styles
+  if (target.includes('combat') || target.includes('คอมแบท') || target.includes('เควสเกาะ')) return '/images/blox/combat_v2_island.png';
   if (target.includes('godhuman') || target.includes('ก็อดฮิวแมน')) return '/images/blox/godhuman.png';
   if (target.includes('sanguine') || target.includes('ซังกวิน')) return '/images/blox/sanguine_art.png';
   if (target.includes('dragon_talon') || target.includes('กรงเล็บมังกร')) return '/images/blox/dragon_talon.png';

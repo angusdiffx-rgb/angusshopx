@@ -123,6 +123,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     product.category === 'บริการ' &&
     (product.name.includes('เผ่ามังกร') || product.name.includes('V4T10') || product.productId === 'prod_race_v4_dragon_t10');
 
+  // Island Quests + Combat V2 service detection
+  const isIslandCombatV2 =
+    product.category === 'บริการ' &&
+    (product.name.includes('เควสเกาะ') || product.name.includes('Combat') || product.name.includes('คอมแบท') || product.productId === 'prod_island_combat_v2');
+
   const handleAddToCart = () => {
     if (product.stock <= 0) return;
     const finalQty = Math.min(quantity, maxAllowedQty);
@@ -399,6 +404,36 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   </div>
                   <p className="text-[11px] text-zinc-400 leading-relaxed pt-1">
                     ทีมงานเข้าทำเควส Trial เผ่ามังกรและอัปเกรดเกียร์ V4 จนเต็ม T10 ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน ตรวจสอบคิวงานและสถานะได้ในคลังสินค้า
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Island Quests + Combat V2 Highlight Card */}
+            {isIslandCombatV2 && (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-purple-950/40 via-[#140c24] to-[#1d1130] border border-purple-500/40 shadow-lg shadow-purple-950/30 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-black text-purple-300 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    👑 เควสเกาะทั้งหมด + หมัด Combat V2 (All Island Quests & Combat V2)
+                  </span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/25 text-purple-200 font-black border border-purple-500/40">
+                    ราคา 350 บาท
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-300 space-y-1.5 pt-0.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-200 font-bold text-xs">
+                      <span className="text-base">🏝️</span>
+                      <span>เคลียร์เควสเกาะทั้งหมด ครบทุกเกาะ</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-200 font-bold text-xs">
+                      <span className="text-base">🥊</span>
+                      <span>ปลดล็อกหมัด Combat V2 พร้อมใช้ทันที</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed pt-1">
+                    ทีมงานเข้าดำเนินการเควสเกาะทั้งหมดและปลดล็อกหมัด Combat V2 ให้ครบถ้วน ปลอดภัย 100% ดูแลโดยทีมงานมืออาชีพ ไม่ใช้โปรแกรมเสี่ยงแบน ตรวจสอบคิวงานได้ตลอด 24 ชั่วโมง
                   </p>
                 </div>
               </div>

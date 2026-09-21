@@ -690,7 +690,12 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         it.name?.includes('CDK') ||
         it.name?.includes('โอเด้ง') ||
         it.name?.includes('ฮาคิ') ||
-        it.name?.includes('Haki')
+        it.name?.includes('Haki') ||
+        it.name?.includes('เผ่า') ||
+        it.name?.includes('V4') ||
+        it.name?.includes('Combat') ||
+        it.name?.includes('คอมแบท') ||
+        it.name?.includes('เควส')
       );
 
       // 5. Create Order Record

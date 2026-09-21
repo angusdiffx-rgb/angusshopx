@@ -69,6 +69,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     item.name?.includes('เผ่ามังกร') || item.name?.includes('V4T10')
   );
 
+  const hasIslandCombatV2Item = items.some(item => 
+    item.name?.includes('เควสเกาะ') || item.name?.includes('Combat') || item.name?.includes('คอมแบท') || item.productId === 'prod_island_combat_v2'
+  );
+
   const hasMasteryItem = items.some(item => 
     item.productId === 'prod_farm_mastery_100' ||
     item.name?.includes('มาสเตอร์') ||
@@ -264,6 +268,16 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   <span className="text-sm">🐉</span>
                   <div>
                     <strong className="text-red-300 font-bold">บริการทำเผ่ามังกร V4T10:</strong> ทีมงานจะดำเนินการทำเควสและหมุนเกียร์จนเต็ม Tier 10 ปลดล็อกพลังสูงสุด ปลอดภัย 100%
+                  </div>
+                </div>
+              )}
+
+              {/* Island Quests + Combat V2 Info Banner */}
+              {hasIslandCombatV2Item && (
+                <div className="p-3 rounded-2xl bg-purple-950/40 border border-purple-500/40 flex items-start gap-2.5 text-[11px] text-purple-200 leading-relaxed shadow-lg shadow-purple-950/20">
+                  <span className="text-sm">⚡</span>
+                  <div>
+                    <strong className="text-purple-300 font-bold">บริการเควสเกาะทั้งหมด + หมัด Combat V2:</strong> ทีมงานจะเข้าดำเนินการทำเควสเกาะทั้งหมดและปลดล็อกหมัด Combat V2 ให้ครบถ้วน ปลอดภัย 100% ปิด 2-Step ชั่วคราวเพื่อความรวดเร็ว
                   </div>
                 </div>
               )}
