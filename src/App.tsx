@@ -24,19 +24,45 @@ import { AlertTriangle, ExternalLink, X } from 'lucide-react';
 
 const PRODUCTS_CACHE_KEY = 'angus_cached_products';
 
+/**
+ * Deduplicate products by normalized name and productId.
+ * Ensures that if multiple entries of a product exist (e.g. Phoenix Fruit), only 1 clean item remains.
+ */
+export const deduplicateProducts = (list: Product[]): Product[] => {
+  if (!Array.isArray(list)) return [];
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
+  const result: Product[] = [];
+
+  for (const item of list) {
+    if (!item || !item.productId) continue;
+    const idKey = item.productId.trim().toLowerCase();
+    const nameKey = (item.name || '').trim().toLowerCase();
+
+    if (seenIds.has(idKey)) continue;
+    if (nameKey && seenNames.has(nameKey)) continue;
+
+    seenIds.add(idKey);
+    if (nameKey) seenNames.add(nameKey);
+    result.push(item);
+  }
+
+  return result;
+};
+
 const getInitialProducts = (): Product[] => {
   try {
     const cached = localStorage.getItem(PRODUCTS_CACHE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return deduplicateProducts(parsed);
       }
     }
   } catch (e) {
     // ignore
   }
-  return initialProducts || [];
+  return deduplicateProducts(initialProducts || []);
 };
 
 function MainShop() {
@@ -75,12 +101,13 @@ function MainShop() {
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+            const cleanList = deduplicateProducts(data.products);
             if (isMounted) {
-              setProducts(data.products);
+              setProducts(cleanList);
               setQuotaExceeded(false);
             }
             try {
-              localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(data.products));
+              localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
             } catch {}
             return;
           }
@@ -99,10 +126,11 @@ function MainShop() {
             list.push({ ...item, productId: item.productId || d.id });
           });
           list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-          setProducts(list);
+          const cleanList = deduplicateProducts(list);
+          setProducts(cleanList);
           setQuotaExceeded(false);
           try {
-            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(list));
+            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
           } catch {}
         }
       } catch (fbErr: any) {

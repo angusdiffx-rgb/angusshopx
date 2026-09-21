@@ -1018,6 +1018,66 @@ apiRouter.post('/admin/delete-product', async (req: Request, res: Response): Pro
   }
 });
 
+// Deduplicate Products Endpoint (removes duplicate products keeping only 1 canonical/best item per name)
+apiRouter.post('/admin/deduplicate-products', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const productsColl = collection(db, 'products');
+    const existing = await getDocs(productsColl);
+    
+    // Group products by normalized name (trimmed & lowercased)
+    const grouped: Record<string, any[]> = {};
+    for (const d of existing.docs) {
+      const data = d.data();
+      const normName = (data.name || '').trim().toLowerCase();
+      if (!normName) continue;
+      if (!grouped[normName]) grouped[normName] = [];
+      grouped[normName].push({ docId: d.id, ...data });
+    }
+
+    let deletedCount = 0;
+    const removedNames: string[] = [];
+
+    for (const [normName, items] of Object.entries(grouped)) {
+      if (items.length > 1) {
+        // Prioritize keeping canonical ID (e.g. prod_phoenix_fruit over prod_1789...) or newest
+        items.sort((a, b) => {
+          const aIsCanonical = !a.docId.startsWith('prod_1');
+          const bIsCanonical = !b.docId.startsWith('prod_1');
+          if (aIsCanonical && !bIsCanonical) return -1;
+          if (!aIsCanonical && bIsCanonical) return 1;
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+        // Keep items[0], delete items[1..n]
+        for (let i = 1; i < items.length; i++) {
+          await deleteDoc(doc(db, 'products', items[i].docId));
+          deletedCount++;
+          if (!removedNames.includes(items[i].name)) {
+            removedNames.push(items[i].name);
+          }
+        }
+      }
+    }
+
+    invalidateServerProductsCache();
+    res.json({
+      success: true,
+      message: deletedCount > 0 
+        ? `ลบรายการสินค้าที่ซ้ำกันเรียบร้อยแล้ว (${deletedCount} รายการ: ${removedNames.join(', ')})`
+        : 'ไม่พบสินค้าที่มีชื่อซ้ำกัน ทุกรายการในระบบมีเพียง 1 รายการแล้ว',
+      deletedCount,
+      removedNames
+    });
+  } catch (error: any) {
+    console.error('Deduplicate Products Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'DEDUPLICATE_ERROR',
+      message: error.message || 'ไม่สามารถลบรายการสินค้าที่ซ้ำกันได้'
+    });
+  }
+});
+
 // Clear All Products Endpoint (to start clean with manual entry only)
 apiRouter.post('/admin/clear-all-products', async (req: Request, res: Response): Promise<void> => {
   try {

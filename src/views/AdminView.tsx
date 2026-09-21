@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -130,6 +130,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [productStockFilter, setProductStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
   const [productViewMode, setProductViewMode] = useState<'grouped' | 'list'>('grouped');
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const [isDeduplicating, setIsDeduplicating] = useState(false);
+
+  // Compute duplicate products statistics (same name or same ID)
+  const duplicateInfo = useMemo(() => {
+    const nameMap: Record<string, Product[]> = {};
+    products.forEach(p => {
+      const key = (p.name || '').trim().toLowerCase();
+      if (!key) return;
+      if (!nameMap[key]) nameMap[key] = [];
+      nameMap[key].push(p);
+    });
+    const dupes = Object.entries(nameMap).filter(([_, items]) => items.length > 1);
+    const totalExtra = dupes.reduce((acc, [_, items]) => acc + (items.length - 1), 0);
+    return {
+      hasDuplicates: dupes.length > 0,
+      duplicatedNamesCount: dupes.length,
+      extraItemsCount: totalExtra,
+      sampleNames: dupes.slice(0, 3).map(([_, items]) => items[0].name || '')
+    };
+  }, [products]);
 
   const toggleCategoryCollapse = (cat: string) => {
     setCollapsedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -311,12 +331,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
         snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSystemUsers(list);
-      } else if (tab === 'products' && !initialProductsFromProps) {
+      } else if (tab === 'products') {
         const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.products)) {
             setProducts(data.products);
+            try {
+              localStorage.setItem('angus_cached_products', JSON.stringify(data.products));
+            } catch {}
           }
         }
       }
@@ -998,7 +1021,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setProductToDelete(p);
   };
 
-  // Confirm and execute product deletion (supports client SDK & server API fallback)
+  // Confirm and execute product deletion (reliable two-tier server + client deletion with local cache sync)
   const confirmDeleteProduct = async () => {
     if (!productToDelete) return;
     setIsDeleting(true);
@@ -1006,29 +1029,43 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const targetName = productToDelete.name;
 
     try {
-      let deleted = false;
+      // 1. Delete on server first to guarantee Cloud Firestore doc is deleted & server cache invalidated
+      let serverSuccess = false;
       try {
-        await deleteDoc(doc(db, 'products', targetId));
-        deleted = true;
-      } catch (clientErr) {
-        console.warn('Client deleteDoc failed, calling server fallback:', clientErr);
-      }
-
-      if (!deleted) {
         const res = await fetch('/api/admin/delete-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productId: targetId }),
         });
         const data = await res.json();
-        if (!data.success) {
-          throw new Error(data.message || 'ไม่สามารถลบสินค้าได้');
+        if (data.success) {
+          serverSuccess = true;
+        }
+      } catch (srvErr) {
+        console.warn('Server delete error, trying client SDK deleteDoc:', srvErr);
+      }
+
+      // 2. Also delete from client Firestore SDK (clears IndexedDB local cache)
+      try {
+        await deleteDoc(doc(db, 'products', targetId));
+      } catch (clientErr) {
+        if (!serverSuccess) {
+          throw clientErr;
         }
       }
 
-      setProducts((prev) => prev.filter((item) => item.productId !== targetId));
+      // 3. Update React state immediately and sync localStorage
+      setProducts((prev) => {
+        const updated = prev.filter((item) => item.productId !== targetId);
+        try {
+          localStorage.setItem('angus_cached_products', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // 4. Invalidate cache on server and notify app
+      await fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       window.dispatchEvent(new CustomEvent('productsUpdated'));
-      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       success('ลบสินค้าสำเร็จ', `ลบ "${targetName}" ออกจากระบบเรียบร้อยแล้ว`);
       setProductToDelete(null);
     } catch (err: any) {
@@ -1036,6 +1073,36 @@ export const AdminView: React.FC<AdminViewProps> = ({
       toastError('ลบสินค้าไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการลบสินค้า');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Deduplicate products (keeps 1 per name, removes extra duplicates)
+  const handleDeduplicateProducts = async () => {
+    setIsDeduplicating(true);
+    try {
+      const res = await fetch('/api/admin/deduplicate-products', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh products list
+        const pRes = await fetch('/api/products?force=true');
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData.success && Array.isArray(pData.products)) {
+            setProducts(pData.products);
+            try {
+              localStorage.setItem('angus_cached_products', JSON.stringify(pData.products));
+            } catch {}
+          }
+        }
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+        success('ล้างรายการซ้ำสำเร็จ', data.message);
+      } else {
+        toastError('ข้อผิดพลาด', data.message || 'ไม่สามารถลบสินค้าที่ซ้ำได้');
+      }
+    } catch (err: any) {
+      toastError('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์');
+    } finally {
+      setIsDeduplicating(false);
     }
   };
 
@@ -1600,6 +1667,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {duplicateInfo.hasDuplicates && (
+                  <button
+                    onClick={handleDeduplicateProducts}
+                    disabled={isDeduplicating}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="ลบสินค้าที่ชื่อซ้ำกันให้เหลือเพียง 1 รายการ"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>{isDeduplicating ? 'กำลังล้างรายการซ้ำ...' : `ลบรายการซ้ำ (${duplicateInfo.extraItemsCount})`}</span>
+                  </button>
+                )}
                 {products.length > 0 && (
                   <button
                     onClick={() => setIsConfirmClearModalOpen(true)}
@@ -1620,6 +1698,27 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Banner แจ้งเตือนสินค้าซ้ำกัน */}
+            {duplicateInfo.hasDuplicates && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-bold">ตรวจพบสินค้าที่มีชื่อซ้ำกัน {duplicateInfo.duplicatedNamesCount} รายการ ({duplicateInfo.sampleNames.join(', ')})</span>
+                    <span className="block text-zinc-400 text-[11px] mt-0.5">มีรายการที่ซ้ำซ้อน {duplicateInfo.extraItemsCount} ชิ้น สามารถกดล้างเพื่อให้เหลือเพียง 1 รายการต่อชื่อสินค้าได้ทันที</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDeduplicateProducts}
+                  disabled={isDeduplicating}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{isDeduplicating ? 'กำลังลบ...' : 'ลบรายการซ้ำให้เหลือรายการเดียว'}</span>
+                </button>
+              </div>
+            )}
 
             {/* กล่องสรุปสถิติตามหมวดหมู่ (Category Metric Cards) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
