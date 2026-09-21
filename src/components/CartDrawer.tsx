@@ -82,7 +82,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
             ) : (
               items.map((item) => (
                 <div 
-                  key={item.productId}
+                  key={item.cartItemId || item.productId}
                   className="flex gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-2xl bg-[#13131F] border border-[#212133] relative group"
                 >
                   <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[#0B0B14] border border-[#2A2A3E] shrink-0 p-1 flex items-center justify-center overflow-hidden">

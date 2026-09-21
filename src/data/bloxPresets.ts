@@ -789,6 +789,30 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     subType: 'Material',
     url: '/images/blox/combat_v2_island.png',
   },
+  {
+    name: 'Bounty Hunting 10M Service',
+    th: 'บริการล่าค่าหัว 10M (500 บาท)',
+    category: 'บริการ',
+    rarity: 'Legendary',
+    subType: 'Material',
+    url: '/images/blox/bounty_hunt_10m.png',
+  },
+  {
+    name: 'Bounty Hunting 20M Service',
+    th: 'บริการล่าค่าหัว 20M (1,000 บาท)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/bounty_hunt_20m.png',
+  },
+  {
+    name: 'Bounty Hunting 30M Max Cap Service',
+    th: 'บริการล่าค่าหัว 30M (1,500 บาท)',
+    category: 'บริการ',
+    rarity: 'Mythical',
+    subType: 'Material',
+    url: '/images/blox/bounty_hunt_30m.png',
+  },
 
   // --------------------------------------------------------------------------
   // สกินผลปีศาจล่าสุด (Fruit Skins / Chromatic Fruit Skins)
@@ -1120,6 +1144,10 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('sharkman') || target.includes('หมัดมนุษย์เงือก') || target.includes('คาราเต้')) return '/images/blox/sharkman_karate.png';
 
   // Materials & Services
+  if (target.includes('30m') && (target.includes('ค่าหัว') || target.includes('bounty') || target.includes('honor') || target.includes('เกียรติยศ'))) return '/images/blox/bounty_hunt_30m.png';
+  if (target.includes('20m') && (target.includes('ค่าหัว') || target.includes('bounty') || target.includes('honor') || target.includes('เกียรติยศ'))) return '/images/blox/bounty_hunt_20m.png';
+  if (target.includes('10m') && (target.includes('ค่าหัว') || target.includes('bounty') || target.includes('honor') || target.includes('เกียรติยศ'))) return '/images/blox/bounty_hunt_10m.png';
+  if (target.includes('ล่าค่าหัว') || target.includes('ค่าหัว') || target.includes('bounty hunt')) return '/images/blox/bounty_hunt_30m.png';
   if (target.includes('mirror_fractal') || target.includes('กระจก')) return '/images/blox/mirror_fractal.png';
   if (target.includes('leviathan') || target.includes('หัวใจ')) return '/images/blox/leviathan_heart.png';
   if (target.includes('valkyrie') || target.includes('วาลคิรี')) return '/images/blox/valkyrie_helm.png';

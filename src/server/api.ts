@@ -634,7 +634,35 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           throw new Error(`สินค้า "${prodData.name}" มีสินค้าเหลือเพียง ${currentStock} ชิ้น (ไม่พอสำหรับการสั่งซื้อ)`);
         }
 
-        const serverPrice = Number(prodData.price);
+        let serverPrice = Number(prodData.price);
+
+        // Tiered service pricing for Bounty Hunting (10M: 500, 20M: 1000, 30M: 1500)
+        if (
+          item.productId === 'prod_bounty_hunt' ||
+          item.productId?.includes('bounty') ||
+          item.name?.includes('ค่าหัว') ||
+          item.name?.includes('Bounty') ||
+          item.name?.includes('Honor')
+        ) {
+          if (
+            item.selectedOption?.includes('30M') ||
+            item.targetNote?.includes('30M') ||
+            item.name?.includes('30M') ||
+            item.name?.includes('30,000,000')
+          ) {
+            serverPrice = 1500;
+          } else if (
+            item.selectedOption?.includes('20M') ||
+            item.targetNote?.includes('20M') ||
+            item.name?.includes('20M') ||
+            item.name?.includes('20,000,000')
+          ) {
+            serverPrice = 1000;
+          } else {
+            serverPrice = 500;
+          }
+        }
+
         calculatedSubtotal += serverPrice * reqQty;
 
         const finalItemName = item.selectedOption 
@@ -649,7 +677,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           slug: prodData.slug || '',
           price: serverPrice || 0,
           quantity: reqQty,
-          image: prodData.image || '',
+          image: item.image || prodData.image || '',
           deliveryType: prodData.deliveryType || 'fruit',
           deliveryInstructions: prodData.deliveryInstructions || prodData.instructions || '',
           instructionsTitle: prodData.instructionsTitle || '',
@@ -695,7 +723,10 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         it.name?.includes('V4') ||
         it.name?.includes('Combat') ||
         it.name?.includes('คอมแบท') ||
-        it.name?.includes('เควส')
+        it.name?.includes('เควส') ||
+        it.name?.includes('ค่าหัว') ||
+        it.name?.includes('Bounty') ||
+        it.name?.includes('Honor')
       );
 
       // 5. Create Order Record

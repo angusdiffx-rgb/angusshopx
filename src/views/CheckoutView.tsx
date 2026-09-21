@@ -80,6 +80,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     item.name?.includes('Mastery')
   );
 
+  const hasBountyItem = items.some(item => 
+    item.name?.includes('ค่าหัว') || item.name?.includes('Bounty') || item.productId?.includes('bounty')
+  );
+
   if (!user) {
     return (
       <div className="max-w-md mx-auto py-16 sm:py-20 px-4 text-center">
@@ -288,6 +292,16 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   <span className="text-sm">🥊</span>
                   <div>
                     <strong className="text-amber-300 font-bold">บริการฟาร์มมาสเตอร์รี่:</strong> ทีมงานจะเข้าดำเนินการฟาร์มมาสเตอร์รี่ตามประเภทที่ท่านเลือกไว้ (ผล / หมัด / ปืน) อย่างแม่นยำ
+                  </div>
+                </div>
+              )}
+
+              {/* Bounty Hunting Service Banner */}
+              {hasBountyItem && (
+                <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-2.5 text-[11px] text-amber-200 leading-relaxed shadow-lg shadow-amber-950/20">
+                  <span className="text-base">🏴‍☠️</span>
+                  <div>
+                    <strong className="text-amber-300 font-bold">บริการล่าค่าหัว Blox Fruits:</strong> ทีมงานมืออาชีพจะเข้าดำเนินการฟาร์มค่าหัวตามระดับที่ท่านเลือก (10M / 20M / 30M) อย่างปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน ตรวจสอบคิวงานและความคืบหน้าได้ในประวัติการสั่งซื้อ
                   </div>
                 </div>
               )}

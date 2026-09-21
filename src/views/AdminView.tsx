@@ -94,7 +94,27 @@ export const AdminView: React.FC<AdminViewProps> = ({
   
   // Blox Fruits preset picker modal state
   const [isPresetPickerOpen, setIsPresetPickerOpen] = useState(false);
-  const [presetPickerTarget, setPresetPickerTarget] = useState<'new' | 'edit'>('new');
+  const [presetPickerTarget, setPresetPickerTarget] = useState<'new' | 'edit' | 'quick'>('new');
+  
+  // Quick Image Edit Modal State
+  const [isQuickImageModalOpen, setIsQuickImageModalOpen] = useState(false);
+  const [quickImageProduct, setQuickImageProduct] = useState<Product | null>(null);
+  const [quickImageUrl, setQuickImageUrl] = useState<string>('');
+  const [quickImageTierUrls, setQuickImageTierUrls] = useState<Record<string, string>>({});
+  const [quickActiveTierTab, setQuickActiveTierTab] = useState<'main' | '10M' | '20M' | '30M'>('main');
+  const [isSavingQuickImage, setIsSavingQuickImage] = useState(false);
+
+  // Helper for detecting bounty/multi-tier products
+  const isBountyProduct = (p?: Product | null) => {
+    if (!p) return false;
+    return (
+      p.productId === 'prod_bounty_hunt' ||
+      p.productId?.toLowerCase().includes('bounty') ||
+      p.name?.includes('ค่าหัว') ||
+      p.name?.toLowerCase().includes('bounty') ||
+      Boolean(p.tierImages && Object.keys(p.tierImages).length > 0)
+    );
+  };
   
   // Data states
   const [internalProducts, setInternalProducts] = useState<Product[]>([]);
@@ -348,20 +368,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
       setNewProduct((prev) => ({
         ...prev,
         image: preset.url,
-        name: preset.th,
+        name: prev.name.trim() ? prev.name : preset.th,
         rarity: preset.rarity || prev.rarity,
         category: (preset.category as any) || prev.category,
       }));
-      success(`เลือกรูปและใส่ชื่อ ${preset.th} เรียบร้อยแล้ว`);
+      success(`เลือกรูป ${preset.th} เรียบร้อยแล้ว`);
+      setIsPresetPickerOpen(false);
     } else if (presetPickerTarget === 'edit' && selectedProduct) {
-      setSelectedProduct({
-        ...selectedProduct,
+      setSelectedProduct((prev) => prev ? {
+        ...prev,
         image: preset.url,
-        name: preset.th,
-        category: (preset.category as any) || selectedProduct.category,
-        rarity: preset.rarity || selectedProduct.rarity,
-      });
-      success(`เลือกรูปและใส่ชื่อ ${preset.th} เรียบร้อยแล้ว`);
+      } : null);
+      success(`เลือกรูป ${preset.th} เรียบร้อยแล้ว`);
+      setIsPresetPickerOpen(false);
+    } else if (presetPickerTarget === 'quick') {
+      if (quickActiveTierTab === 'main') {
+        setQuickImageUrl(preset.url);
+      } else {
+        setQuickImageTierUrls((prev) => ({
+          ...prev,
+          [quickActiveTierTab]: preset.url,
+        }));
+      }
+      success(`เลือกรูป ${preset.th} เรียบร้อยแล้ว`);
+      setIsPresetPickerOpen(false);
     }
   };
 
@@ -560,6 +590,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         oldPrice: selectedProduct.oldPrice ? Number(selectedProduct.oldPrice) : null,
         stock: Number(selectedProduct.stock),
         image: selectedProduct.image || '',
+        tierImages: selectedProduct.tierImages || {},
         description: selectedProduct.description || '',
         shortDescription: selectedProduct.shortDescription || '',
         rarity: selectedProduct.rarity || 'Mythical',
@@ -613,6 +644,113 @@ export const AdminView: React.FC<AdminViewProps> = ({
     } catch (err: any) {
       console.error('Update error:', err);
       toastError('อัปเดตไม่สำเร็จ', err.message);
+    }
+  };
+
+  // Open Quick Image Editor Modal
+  const handleOpenQuickImageEdit = (p: Product) => {
+    setQuickImageProduct(p);
+    setQuickImageUrl(p.image || '');
+    setQuickImageTierUrls({
+      '10M': p.tierImages?.['10M'] || (p.image?.includes('10m') ? p.image : '/images/blox/bounty_hunt_10m.png'),
+      '20M': p.tierImages?.['20M'] || (p.image?.includes('20m') ? p.image : '/images/blox/bounty_hunt_20m.png'),
+      '30M': p.tierImages?.['30M'] || (p.image?.includes('30m') ? p.image : '/images/blox/bounty_hunt_30m.png'),
+    });
+    setQuickActiveTierTab('main');
+    setIsQuickImageModalOpen(true);
+  };
+
+  // Quick Image File Upload with canvas compression
+  const handleQuickImageUpload = async (file: File | null | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toastError('ไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, WEBP, GIF)');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toastError('ไฟล์ใหญ่เกินไป', 'กรุณาเลือกไฟล์ขนาดไม่เกิน 10MB');
+      return;
+    }
+    try {
+      const compressedBase64 = await compressImageFile(file);
+      if (quickActiveTierTab === 'main') {
+        setQuickImageUrl(compressedBase64);
+      } else {
+        setQuickImageTierUrls((prev) => ({
+          ...prev,
+          [quickActiveTierTab]: compressedBase64,
+        }));
+      }
+      success('อัปโหลดรูปภาพสำเร็จ', 'ปรับขนาดและบีบอัดพร้อมบันทึกเรียบร้อย');
+    } catch (err: any) {
+      console.error('Quick image upload error:', err);
+      toastError('เกิดข้อผิดพลาด', err?.message || 'ไม่สามารถประมวลผลรูปภาพได้');
+    }
+  };
+
+  // Save Quick Image updates
+  const handleSaveQuickImage = async () => {
+    if (!quickImageProduct) return;
+    setIsSavingQuickImage(true);
+    try {
+      const isBounty = isBountyProduct(quickImageProduct);
+
+      const updateData: any = {
+        image: quickImageUrl || '',
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (isBounty) {
+        updateData.tierImages = quickImageTierUrls;
+      }
+
+      let updatedOnClient = false;
+      try {
+        const prodRef = doc(db, 'products', quickImageProduct.productId);
+        await updateDoc(prodRef, updateData);
+        updatedOnClient = true;
+      } catch (clientErr) {
+        console.warn('Client updateDoc failed, fallback to server API:', clientErr);
+      }
+
+      if (!updatedOnClient) {
+        const res = await fetch('/api/admin/update-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: quickImageProduct.productId,
+            ...updateData,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.message || 'ไม่สามารถบันทึกรูปภาพได้');
+        }
+      }
+
+      // Update local state
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.productId === quickImageProduct.productId
+            ? { ...item, ...updateData }
+            : item
+        )
+      );
+
+      if (selectedProduct && selectedProduct.productId === quickImageProduct.productId) {
+        setSelectedProduct((prev) => prev ? { ...prev, ...updateData } : null);
+      }
+
+      window.dispatchEvent(new CustomEvent('productsUpdated'));
+      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+
+      success('บันทึกรูปภาพสำเร็จ', `อัปเดตรูปภาพของ "${quickImageProduct.name}" เรียบร้อยแล้ว`);
+      setIsQuickImageModalOpen(false);
+    } catch (err: any) {
+      console.error('Save quick image error:', err);
+      toastError('บันทึกรูปภาพไม่สำเร็จ', err.message);
+    } finally {
+      setIsSavingQuickImage(false);
     }
   };
 
@@ -1329,14 +1467,23 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <tr key={p.productId} className="hover:bg-[#141422] transition-colors">
                         <td className="p-3.5 sm:p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-black/50 p-1.5 border border-purple-500/20 flex items-center justify-center shrink-0 shadow-inner">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenQuickImageEdit(p)}
+                              className="relative w-11 h-11 rounded-xl bg-black/50 p-1.5 border border-purple-500/20 hover:border-purple-400 flex items-center justify-center shrink-0 shadow-inner group/thumb cursor-pointer transition-all hover:scale-105"
+                              title="คลิกเพื่อแก้ไขรูปภาพสินค้านี้"
+                            >
                               <BloxImage 
                                 src={p.image} 
                                 alt={p.name} 
                                 productName={p.name}
                                 className="w-full h-full object-contain" 
                               />
-                            </div>
+                              <div className="absolute inset-0 bg-purple-950/85 backdrop-blur-[1px] rounded-xl opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center transition-opacity text-purple-200">
+                                <ImageIcon className="w-3.5 h-3.5" />
+                                <span className="text-[7px] font-bold mt-0.5">แก้รูป</span>
+                              </div>
+                            </button>
                             <div className="min-w-0">
                               <div className="font-bold text-white truncate max-w-[220px] sm:max-w-xs">{p.name}</div>
                               <div className="flex items-center gap-1.5 mt-0.5">
@@ -1400,6 +1547,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         <td className="p-3.5 sm:p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
+                              type="button"
+                              onClick={() => handleOpenQuickImageEdit(p)}
+                              className="p-1.5 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                              title="แก้ไขรูปภาพสินค้า"
+                            >
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline text-[10px] font-semibold">แก้รูป</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => {
                                 setSelectedProduct(p);
                                 setIsEditModalOpen(true);
@@ -1411,6 +1568,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             </button>
                             <button
                               id={`delete-product-${p.productId}`}
+                              type="button"
                               onClick={() => handleRequestDeleteProduct(p)}
                               className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
                               title="ลบสินค้า"
@@ -3094,9 +3252,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           setSelectedProduct({
                             ...selectedProduct,
                             image: preset.url,
-                            name: preset.th,
-                            category: (preset.category as any) || selectedProduct.category,
-                            rarity: preset.rarity || selectedProduct.rarity,
                           });
                         }}
                         className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] transition-all cursor-pointer ${
@@ -3117,6 +3272,76 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* SECTION 1.5: รูปภาพแยกตามระดับ (Bounty Hunt Tiers 10M / 20M / 30M) */}
+              {isBountyProduct(selectedProduct) && (
+                <div className="p-4 rounded-2xl bg-[#141422] border border-amber-500/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                      <Layers className="w-4 h-4 text-amber-400" />
+                      <span>รูปภาพแยกตามระดับค่าหัว (10M / 20M / 30M Wanted Posters)</span>
+                    </div>
+                    <span className="text-[10px] text-amber-400/80 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium">
+                      สำหรับบริการล่าค่าหัว
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(['10M', '20M', '30M'] as const).map((tierKey) => {
+                      const tierImg = selectedProduct.tierImages?.[tierKey] || (tierKey === '10M' ? '/images/blox/bounty_hunt_10m.png' : tierKey === '20M' ? '/images/blox/bounty_hunt_20m.png' : '/images/blox/bounty_hunt_30m.png');
+                      return (
+                        <div key={tierKey} className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white">แพ็กเกจ {tierKey}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const defaultUrl = `/images/blox/bounty_hunt_${tierKey.toLowerCase()}.png`;
+                                setSelectedProduct((prev) => prev ? {
+                                  ...prev,
+                                  tierImages: {
+                                    ...(prev.tierImages || {}),
+                                    [tierKey]: defaultUrl
+                                  }
+                                } : null);
+                              }}
+                              className="text-[10px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                            >
+                              ใช้โปสเตอร์ทางการ
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-11 h-11 rounded-lg bg-black/70 border border-amber-500/30 p-1 flex items-center justify-center shrink-0">
+                              <BloxImage
+                                src={tierImg}
+                                alt={`Bounty ${tierKey}`}
+                                productName={`Bounty ${tierKey}`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              placeholder={`URL รูป ${tierKey}`}
+                              value={selectedProduct.tierImages?.[tierKey] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedProduct((prev) => prev ? {
+                                  ...prev,
+                                  tierImages: {
+                                    ...(prev.tierImages || {}),
+                                    [tierKey]: val
+                                  }
+                                } : null);
+                              }}
+                              className="w-full bg-[#0A0A10] border border-[#262638] focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-white text-[11px] placeholder:text-zinc-600 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* SECTION 2: ข้อมูลสินค้าทั่วไป (Basic Info) */}
               <div className="space-y-3.5">
@@ -4313,8 +4538,350 @@ export const AdminView: React.FC<AdminViewProps> = ({
         isOpen={isPresetPickerOpen}
         onClose={() => setIsPresetPickerOpen(false)}
         onSelect={handleSelectPresetForProduct}
-        selectedUrl={presetPickerTarget === 'new' ? newProduct.image : selectedProduct?.image}
+        selectedUrl={
+          presetPickerTarget === 'new' 
+            ? newProduct.image 
+            : presetPickerTarget === 'quick'
+            ? (quickActiveTierTab === 'main' ? quickImageUrl : (quickImageTierUrls[quickActiveTierTab] || ''))
+            : selectedProduct?.image
+        }
       />
+
+      {/* QUICK IMAGE EDIT MODAL */}
+      {isQuickImageModalOpen && quickImageProduct && (
+        <div 
+          id="quick-image-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+          onClick={() => !isSavingQuickImage && setIsQuickImageModalOpen(false)}
+        >
+          <div 
+            id="quick-image-modal"
+            className="bg-[#12121E] border border-purple-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl shadow-purple-950/60 relative overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-24 -right-24 w-60 h-60 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#212133] relative z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600/30 to-purple-900/30 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-inner shrink-0">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 truncate">
+                    <span>แก้ไขรูปภาพสินค้า</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 font-normal">
+                      {quickImageProduct.category}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400 truncate mt-0.5">
+                    {quickImageProduct.name} <span className="text-zinc-600 font-mono">({quickImageProduct.productId})</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSavingQuickImage && setIsQuickImageModalOpen(false)}
+                className="p-2 rounded-xl bg-[#1B1B2A] hover:bg-[#25253C] text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Multi-tier Switcher (For Bounty Hunter Service or Multi-Tier items) */}
+            {isBountyProduct(quickImageProduct) && (
+              <div className="space-y-2 relative z-10">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-amber-400" />
+                    <span>เลือกระดับที่ต้องการแก้ไขรูปภาพ:</span>
+                  </span>
+                  <span className="text-[10px] text-amber-400 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium">
+                    บริการล่าค่าหัว (Multi-Tier)
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'main', label: 'หน้าปกหลัก', badge: 'Cover Image' },
+                    { id: '10M', label: 'แพ็กเกจ 10M', badge: '10M Bounty' },
+                    { id: '20M', label: 'แพ็กเกจ 20M', badge: '20M Bounty' },
+                    { id: '30M', label: 'แพ็กเกจ 30M', badge: '30M Max' },
+                  ].map((tab) => {
+                    const isActive = quickActiveTierTab === tab.id;
+                    const tierImg = tab.id === 'main' ? quickImageUrl : quickImageTierUrls[tab.id];
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setQuickActiveTierTab(tab.id as any)}
+                        className={`p-2 rounded-xl border flex items-center gap-2 transition-all cursor-pointer text-left ${
+                          isActive 
+                            ? 'bg-purple-600/30 border-purple-400 text-white shadow-md shadow-purple-900/40' 
+                            : 'bg-black/30 border-white/5 hover:border-purple-500/30 text-zinc-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-black/60 border border-white/10 p-0.5 flex items-center justify-center shrink-0">
+                          {tierImg ? (
+                            <BloxImage
+                              src={tierImg}
+                              alt={tab.label}
+                              productName={tab.label}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <ImageIcon className="w-3.5 h-3.5 text-zinc-600" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">{tab.label}</div>
+                          <div className="text-[9px] text-zinc-500 truncate">{tab.badge}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Current Active Image Info & Quick Official Presets */}
+            {isBountyProduct(quickImageProduct) && quickActiveTierTab !== 'main' && (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
+                <span className="text-amber-200 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span>กำลังแก้ไขรูป: <strong>แพ็กเกจ {quickActiveTierTab} Bounty / Honor</strong></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const defaultUrl = `/images/blox/bounty_hunt_${quickActiveTierTab.toLowerCase()}.png`;
+                    setQuickImageTierUrls((prev) => ({
+                      ...prev,
+                      [quickActiveTierTab]: defaultUrl
+                    }));
+                    success(`เปลี่ยนเป็นรูปโปสเตอร์ทางการ ${quickActiveTierTab} เรียบร้อย`);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-bold text-[10px] cursor-pointer transition-colors"
+                >
+                  ใช้โปสเตอร์ {quickActiveTierTab} ทางการ
+                </button>
+              </div>
+            )}
+
+            {/* Main Image Editor Body */}
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center relative z-10">
+              {/* Left Column: Live Preview Frame */}
+              <div className="sm:col-span-4 flex flex-col items-center justify-center p-3 rounded-2xl bg-black/40 border border-[#212133]">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">ตัวอย่างรูปภาพ (Preview)</div>
+                <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-2xl bg-[#090910] border-2 border-purple-500/40 p-2 flex items-center justify-center overflow-hidden shadow-inner group">
+                  {(() => {
+                    const currentImg = quickActiveTierTab === 'main' ? quickImageUrl : quickImageTierUrls[quickActiveTierTab];
+                    if (currentImg) {
+                      return (
+                        <BloxImage
+                          src={currentImg}
+                          alt={quickImageProduct.name}
+                          productName={quickImageProduct.name}
+                          className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(168,85,247,0.4)] transition-transform duration-300 group-hover:scale-105"
+                        />
+                      );
+                    }
+                    return (
+                      <div className="text-center text-zinc-500 p-2">
+                        <ImageIcon className="w-10 h-10 mx-auto mb-1.5 text-zinc-700" />
+                        <span className="text-[11px] font-medium">ยังไม่มีรูปภาพ</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+                {(() => {
+                  const currentImg = quickActiveTierTab === 'main' ? quickImageUrl : quickImageTierUrls[quickActiveTierTab];
+                  if (currentImg) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (quickActiveTierTab === 'main') {
+                            setQuickImageUrl('');
+                          } else {
+                            setQuickImageTierUrls((prev) => ({
+                              ...prev,
+                              [quickActiveTierTab]: '',
+                            }));
+                          }
+                        }}
+                        className="mt-2.5 text-[11px] text-rose-400 hover:text-rose-300 underline cursor-pointer transition-colors"
+                      >
+                        ล้างรูปภาพนี้
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
+              {/* Right Column: Editing Inputs */}
+              <div className="sm:col-span-8 space-y-3.5">
+                {/* 1. Direct URL Input */}
+                <div>
+                  <label className="text-zinc-200 text-xs font-semibold block mb-1">
+                    1. วาง URL รูปภาพ (Direct Image Link)
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+                      <LinkIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="https://example.com/image.png หรือ /images/..."
+                      value={quickActiveTierTab === 'main' ? quickImageUrl : (quickImageTierUrls[quickActiveTierTab] || '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (quickActiveTierTab === 'main') {
+                          setQuickImageUrl(val);
+                        } else {
+                          setQuickImageTierUrls((prev) => ({
+                            ...prev,
+                            [quickActiveTierTab]: val,
+                          }));
+                        }
+                      }}
+                      className="w-full bg-[#0A0A12] border border-[#2B2B40] focus:border-purple-500 rounded-xl pl-9 pr-8 py-2.5 text-white text-xs placeholder:text-zinc-600 focus:outline-none transition-colors"
+                    />
+                    {Boolean(quickActiveTierTab === 'main' ? quickImageUrl : quickImageTierUrls[quickActiveTierTab]) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (quickActiveTierTab === 'main') {
+                            setQuickImageUrl('');
+                          } else {
+                            setQuickImageTierUrls((prev) => ({ ...prev, [quickActiveTierTab]: '' }));
+                          }
+                        }}
+                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. File Upload */}
+                <div>
+                  <label className="text-zinc-200 text-xs font-semibold block mb-1">
+                    2. หรือ อัปโหลดจากคอมฯ/มือถือ (PNG, JPG, WEBP)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1D1D2F] hover:bg-[#282842] border border-purple-500/30 text-purple-200 text-xs font-semibold cursor-pointer transition-all active:scale-95 shadow-sm">
+                      <Upload className="w-3.5 h-3.5 text-purple-400" />
+                      <span>เลือกไฟล์รูปภาพ</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleQuickImageUpload(e.target.files[0]);
+                          }
+                        }}
+                      />
+                    </label>
+                    <span className="text-[10px] text-zinc-500">บีบอัดอัตโนมัติ โหลดไวทันใจ</span>
+                  </div>
+                </div>
+
+                {/* 3. Blox Fruits Presets */}
+                <div className="pt-2 border-t border-white/5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-zinc-300 text-xs font-semibold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>3. หรือ เลือกจากคลัง Blox Fruits:</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPresetPickerTarget('quick');
+                        setIsPresetPickerOpen(true);
+                      }}
+                      className="px-2 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Search className="w-3 h-3" />
+                      <span>เปิดค้นหาคลังทั้งหมด ({BLOX_FRUITS_PRESETS.length})</span>
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                    {BLOX_FRUITS_PRESETS.slice(0, 15).map((preset) => {
+                      const currentVal = quickActiveTierTab === 'main' ? quickImageUrl : quickImageTierUrls[quickActiveTierTab];
+                      const isSelected = currentVal === preset.url;
+                      return (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() => {
+                            if (quickActiveTierTab === 'main') {
+                              setQuickImageUrl(preset.url);
+                            } else {
+                              setQuickImageTierUrls((prev) => ({
+                                ...prev,
+                                [quickActiveTierTab]: preset.url,
+                              }));
+                            }
+                            success(`เลือกรูป ${preset.th}`);
+                          }}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-purple-600 text-white border-purple-400 shadow-sm shadow-purple-600/40'
+                              : 'bg-[#181828] hover:bg-[#222238] text-zinc-300 border-white/5 hover:border-purple-500/40'
+                          }`}
+                        >
+                          <BloxImage
+                            src={preset.url}
+                            alt={preset.name}
+                            productName={preset.th || preset.name}
+                            className="w-3.5 h-3.5 object-contain shrink-0"
+                          />
+                          <span>{preset.th}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[#212133] relative z-10">
+              <button
+                type="button"
+                disabled={isSavingQuickImage}
+                onClick={() => setIsQuickImageModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={isSavingQuickImage}
+                onClick={handleSaveQuickImage}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition-all cursor-pointer active:scale-95 flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSavingQuickImage ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>กำลังบันทึกรูปภาพ...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>บันทึกรูปภาพทันที</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

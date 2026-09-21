@@ -28,6 +28,7 @@ export interface Product {
   oldPrice?: number;
   image: string;
   images?: string[];
+  tierImages?: Record<string, string>;
   stock: number;
   isActive: boolean;
   isFeatured?: boolean;

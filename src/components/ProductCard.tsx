@@ -15,9 +15,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
   const { addToCart } = useCart();
   const { success } = useToast();
 
+  const isBountyService = 
+    product.productId === 'prod_bounty_hunt' || 
+    product.productId?.includes('bounty') ||
+    product.name.includes('ค่าหัว');
+
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (product.stock <= 0) return;
+    if (isBountyService) {
+      onSelect(product);
+      return;
+    }
     addToCart(product, 1);
     success('เพิ่มลงตะกร้าแล้ว', `${product.name} ถูกเพิ่มในตะกร้าเรียบร้อย`);
   };
@@ -25,6 +34,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
   const handleBuy = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (product.stock <= 0) return;
+    if (isBountyService) {
+      onSelect(product);
+      return;
+    }
     addToCart(product, 1);
     if (onBuyNow) {
       onBuyNow(product);
@@ -110,18 +123,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
         <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[#1F1F30] flex items-center justify-between gap-1.5 sm:gap-2">
           <div className="min-w-0">
             <div className="flex items-baseline gap-1 sm:gap-1.5 truncate">
-              <span className="text-sm sm:text-base font-black text-purple-300">฿{(product.price || 0).toLocaleString()}</span>
-              {product.name.includes('เลเวล') || product.name.includes('Level') ? (
-                <span className="text-[10px] sm:text-xs text-cyan-400 font-bold">/ 100 Lv</span>
-              ) : product.name.includes('เงินม่วง') || product.name.includes('Fragment') ? (
-                <span className="text-[10px] sm:text-xs text-purple-400 font-bold">/ 10k</span>
-              ) : product.name.includes('เงินเขียว') || product.name.includes('Beli') ? (
-                <span className="text-[10px] sm:text-xs text-emerald-400 font-bold">/ 1M</span>
-              ) : product.name.includes('มาสเตอร์') || product.name.includes('มาส') || product.name.includes('Mastery') ? (
-                <span className="text-[10px] sm:text-xs text-amber-400 font-bold">/ 100 มาส</span>
-              ) : Boolean(product.oldPrice && product.oldPrice > product.price) ? (
-                <span className="text-[10px] sm:text-xs text-zinc-500 line-through">฿{(product.oldPrice || 0).toLocaleString()}</span>
-              ) : null}
+              {isBountyService ? (
+                <>
+                  <span className="text-sm sm:text-base font-black text-amber-300">฿500 - ฿1,500</span>
+                  <span className="text-[10px] sm:text-xs text-amber-400 font-bold">10M-30M</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm sm:text-base font-black text-purple-300">฿{(product.price || 0).toLocaleString()}</span>
+                  {product.name.includes('เลเวล') || product.name.includes('Level') ? (
+                    <span className="text-[10px] sm:text-xs text-cyan-400 font-bold">/ 100 Lv</span>
+                  ) : product.name.includes('เงินม่วง') || product.name.includes('Fragment') ? (
+                    <span className="text-[10px] sm:text-xs text-purple-400 font-bold">/ 10k</span>
+                  ) : product.name.includes('เงินเขียว') || product.name.includes('Beli') ? (
+                    <span className="text-[10px] sm:text-xs text-emerald-400 font-bold">/ 1M</span>
+                  ) : product.name.includes('มาสเตอร์') || product.name.includes('มาส') || product.name.includes('Mastery') ? (
+                    <span className="text-[10px] sm:text-xs text-amber-400 font-bold">/ 100 มาส</span>
+                  ) : Boolean(product.oldPrice && product.oldPrice > product.price) ? (
+                    <span className="text-[10px] sm:text-xs text-zinc-500 line-through">฿{(product.oldPrice || 0).toLocaleString()}</span>
+                  ) : null}
+                </>
+              )}
             </div>
             <span className="text-[9px] sm:text-[10px] text-zinc-500 hidden sm:block truncate">
               {product.category === 'บริการ' || product.deliveryType === 'service' || product.deliveryType === 'manual_service'

@@ -8,7 +8,14 @@ export interface CartItem extends OrderItem {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedOption?: string, targetNote?: string) => void;
+  addToCart: (
+    product: Product, 
+    quantity?: number, 
+    selectedOption?: string, 
+    targetNote?: string,
+    customPrice?: number,
+    customImage?: string
+  ) => void;
   removeFromCart: (cartItemIdOrProductId: string) => void;
   updateQuantity: (cartItemIdOrProductId: string, quantity: number) => void;
   clearCart: () => void;
@@ -58,7 +65,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return stock;
   };
 
-  const addToCart = (product: Product, quantity = 1, selectedOption?: string, targetNote?: string) => {
+  const addToCart = (
+    product: Product, 
+    quantity = 1, 
+    selectedOption?: string, 
+    targetNote?: string,
+    customPrice?: number,
+    customImage?: string
+  ) => {
     setItems((prev) => {
       const cartItemId = selectedOption 
         ? `${product.productId}_${selectedOption}` 
@@ -70,12 +84,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const maxLimit = getItemMaxQty(product.stock, product.name, product.productId);
       const existingIndex = prev.findIndex((item) => item.cartItemId === cartItemId || (!item.cartItemId && item.productId === cartItemId));
       
+      const finalPrice = customPrice !== undefined ? customPrice : product.price;
+      const finalImage = customImage || product.image;
+
       if (existingIndex > -1) {
         const updated = [...prev];
         const newQty = Math.min(maxLimit, updated[existingIndex].quantity + quantity);
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: newQty,
+          price: finalPrice,
+          image: finalImage,
           targetNote: targetNote || updated[existingIndex].targetNote,
         };
         return updated;
@@ -88,9 +107,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             productId: product.productId,
             name: displayName,
             slug: product.slug,
-            price: product.price,
+            price: finalPrice,
             quantity: initialQty,
-            image: product.image,
+            image: finalImage,
             deliveryType: product.deliveryType,
             stock: product.stock,
             selectedOption: selectedOption || undefined,

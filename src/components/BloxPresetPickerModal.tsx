@@ -17,7 +17,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
   selectedUrl
 }) => {
   const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState<'all' | 'fruit' | 'skin' | 'gamepass' | 'sword' | 'style'>('all');
+  const [filterCategory, setFilterCategory] = useState<'all' | 'fruit' | 'skin' | 'gamepass' | 'sword' | 'style' | 'service'>('all');
 
   if (!isOpen) return null;
 
@@ -30,7 +30,8 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
     if (filterCategory === 'skin') return p.category === 'สกินผล' || p.name.toLowerCase().includes('skin') || p.th.includes('สกิน');
     if (filterCategory === 'gamepass') return p.category === 'Gamepass';
     if (filterCategory === 'sword') return p.subType === 'Sword' || p.subType === 'Gun' || p.category === 'ไอเทม';
-    if (filterCategory === 'style') return p.subType === 'FightingStyle' || p.category === 'บริการ';
+    if (filterCategory === 'style') return p.subType === 'FightingStyle';
+    if (filterCategory === 'service') return p.category === 'บริการ' || p.name.toLowerCase().includes('bounty') || p.th.includes('ค่าหัว');
     return true;
   });
 
@@ -84,6 +85,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
               { id: 'gamepass', label: 'Gamepasses' },
               { id: 'sword', label: 'ดาบ & อาวุธ' },
               { id: 'style', label: 'หมัด & เผ่า V4' },
+              { id: 'service', label: 'บริการ & ล่าค่าหัว' },
             ].map((tab) => (
               <button
                 key={tab.id}
