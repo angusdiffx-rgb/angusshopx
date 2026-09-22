@@ -1,4 +1,5 @@
 import { Product } from '../types';
+import { fallbackProducts } from './fallbackProducts';
 
-// Initial products is empty: Products must be created manually by the admin in the Admin view
-export const initialProducts: Product[] = [];
+// Initial products catalog with fallbacks for zero-read and offline/quota resilience
+export const initialProducts: Product[] = fallbackProducts;

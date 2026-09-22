@@ -987,7 +987,8 @@ apiRouter.post('/admin/refresh-cache', (req: Request, res: Response) => {
 apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promise<void> => {
   const auditResult: any = {
     timestamp: new Date().toISOString(),
-    overallStatus: 'healthy',
+    overallStatus: 'operational',
+    message: 'ทุกระบบทำงานสมบูรณ์ 100% พร้อมให้บริการ',
     systems: {}
   };
 
@@ -1001,9 +1002,11 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
       const slipokData = await slipokRes.json();
       auditResult.systems.slipok = {
         name: 'ระบบตรวจสลิป SlipOK (QR พร้อมเพย์)',
-        status: 'online',
+        status: 'ready',
+        configured: Boolean(SLIPOK_KEY && SLIPOK_KEY.length > 5),
         quotaRemaining: slipokData?.data?.quota ?? 'N/A',
         endDate: slipokData?.data?.endDate ?? 'N/A',
+        promptpayNumber: PROMPTPAY_ACCOUNT,
         promptpayAccount: PROMPTPAY_ACCOUNT,
         promptpayName: PROMPTPAY_NAME,
         message: `SlipOK ใช้งานได้ปกติ (โควต้าคงเหลือ: ${slipokData?.data?.quota ?? 0} ครั้ง)`,
@@ -1012,7 +1015,9 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
       auditResult.systems.slipok = {
         name: 'ระบบตรวจสลิป SlipOK (QR พร้อมเพย์)',
         status: 'warning',
+        configured: Boolean(SLIPOK_KEY && SLIPOK_KEY.length > 5),
         statusCode: slipokRes.status,
+        promptpayNumber: PROMPTPAY_ACCOUNT,
         message: 'SlipOK API ตอบกลับสถานะไม่สำเร็จ ตรวจสอบคีย์ API',
       };
     }
@@ -1020,6 +1025,8 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
     auditResult.systems.slipok = {
       name: 'ระบบตรวจสลิป SlipOK (QR พร้อมเพย์)',
       status: 'offline',
+      configured: Boolean(SLIPOK_KEY && SLIPOK_KEY.length > 5),
+      promptpayNumber: PROMPTPAY_ACCOUNT,
       error: err.message,
       message: 'ไม่สามารถติดต่อ SlipOK API ได้',
     };
@@ -1028,7 +1035,7 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
   // 2. TrueMoney Angpao System
   auditResult.systems.truemoney = {
     name: 'ระบบเติมเงินซองอั่งเปา TrueMoney Wallet',
-    status: 'online',
+    status: 'ready',
     recipientPhone: '0829848852',
     mode: 'auto_redeem',
     message: 'ระบบซองอั่งเปา TrueMoney พร้อมทำงาน (เบอร์รับเงิน: 0829848852)',
@@ -1044,7 +1051,7 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
 
     auditResult.systems.firestore = {
       name: 'ฐานข้อมูล Google Cloud Firestore',
-      status: 'online',
+      status: 'ready',
       message: 'เชื่อมต่อฐานข้อมูลได้ปกติ โควต้าการอ่านยังไม่เต็ม',
       quotaExceeded: false,
     };
@@ -1054,7 +1061,6 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
       String(err?.message || '').includes('RESOURCE_EXHAUSTED');
 
     if (isQuota) {
-      auditResult.overallStatus = 'degraded';
       auditResult.systems.firestore = {
         name: 'ฐานข้อมูล Google Cloud Firestore',
         status: 'quota_exceeded',
@@ -1073,16 +1079,46 @@ apiRouter.get('/system/health-audit', async (req: Request, res: Response): Promi
     }
   }
 
-  // 4. Products Catalog Cache
-  auditResult.systems.products = {
-    name: 'แคตตาล็อกสินค้า',
-    status: 'online',
-    cachedCount: serverProductsCache ? serverProductsCache.data.length : 0,
+  // 4. Products & Cache Catalog
+  const cachedProductsLength = serverProductsCache ? serverProductsCache.data.length : 0;
+  auditResult.systems.cache = {
+    name: 'ระบบ Server Cache & Fallback',
+    status: 'ready',
+    cachedProductsCount: cachedProductsLength,
     hasServerCache: Boolean(serverProductsCache),
     message: serverProductsCache 
-      ? `แคชสินค้าพร้อมใช้งาน (${serverProductsCache.data.length} รายการ)` 
+      ? `แคชสินค้าพร้อมใช้งาน (${cachedProductsLength} รายการ)` 
       : 'ยังไม่ได้โหลดเข้าหน่วยความจำเซิร์ฟเวอร์',
   };
+
+  auditResult.systems.products = {
+    name: 'แคตตาล็อกสินค้า',
+    status: 'ready',
+    cachedCount: cachedProductsLength,
+    hasServerCache: Boolean(serverProductsCache),
+    message: serverProductsCache 
+      ? `แคชสินค้าพร้อมใช้งาน (${cachedProductsLength} รายการ)` 
+      : 'ยังไม่ได้โหลดเข้าหน่วยความจำเซิร์ฟเวอร์',
+  };
+
+  // Evaluate overall status dynamically
+  const isSlipokHealthy = auditResult.systems.slipok?.status === 'ready';
+  const isTruemoneyHealthy = auditResult.systems.truemoney?.status === 'ready';
+  const isFirestoreQuota = Boolean(auditResult.systems.firestore?.quotaExceeded);
+  const isFirestoreError = auditResult.systems.firestore?.status === 'error';
+
+  if (!isSlipokHealthy && !isTruemoneyHealthy) {
+    auditResult.overallStatus = 'outage';
+    auditResult.message = 'ระบบรับชำระเงินขัดข้อง กรุณาตรวจสอบ SlipOK และ TrueMoney';
+  } else if (isFirestoreQuota || !isSlipokHealthy || !isTruemoneyHealthy || isFirestoreError) {
+    auditResult.overallStatus = 'degraded';
+    auditResult.message = isFirestoreQuota 
+      ? 'โควต้า Firestore เต็มชั่วคราว (ระบบทำงานต่อด้วยแคชสำรอง)'
+      : 'มีบางระบบย่อยที่ทำงานได้ไม่สมบูรณ์';
+  } else {
+    auditResult.overallStatus = 'operational';
+    auditResult.message = 'ทุกระบบทำงานสมบูรณ์ 100% พร้อมให้บริการ';
+  }
 
   res.json(auditResult);
 });

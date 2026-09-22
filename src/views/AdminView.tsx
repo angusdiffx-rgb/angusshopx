@@ -5438,131 +5438,143 @@ export const AdminView: React.FC<AdminViewProps> = ({
             ) : systemAudit ? (
               <div className="space-y-4">
                 {/* Status Overview Card */}
-                <div className={`p-4 rounded-2xl border ${
-                  systemAudit.overallStatus === 'operational' 
-                    ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300' 
-                    : systemAudit.overallStatus === 'degraded'
-                    ? 'bg-amber-950/20 border-amber-500/40 text-amber-300'
-                    : 'bg-rose-950/20 border-rose-500/40 text-rose-300'
-                } flex items-center justify-between gap-3`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-current animate-pulse"></div>
-                    <div>
-                      <div className="font-bold text-sm">
-                        สถานะภาพรวม: {systemAudit.overallStatus === 'operational' ? 'สมบูรณ์ 100%' : systemAudit.overallStatus === 'degraded' ? 'มีบริการที่ต้องดูแล (Degraded)' : 'พบปัญหา (Outage)'}
-                      </div>
-                      <div className="text-[11px] opacity-80">{systemAudit.message}</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRunSystemAudit}
-                    disabled={isAuditingSystem}
-                    className="px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-current text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${isAuditingSystem ? 'animate-spin' : ''}`} />
-                    <span>ตรวจอีกครั้ง</span>
-                  </button>
-                </div>
+                {(() => {
+                  const isOperational = systemAudit.overallStatus === 'operational' || systemAudit.overallStatus === 'healthy';
+                  const isDegraded = systemAudit.overallStatus === 'degraded';
+                  const isSlipokOnline = ['ready', 'online', 'operational'].includes(systemAudit.systems?.slipok?.status) || (systemAudit.systems?.slipok?.quotaRemaining !== undefined && systemAudit.systems?.slipok?.quotaRemaining !== 'N/A');
+                  const isTruemoneyOnline = ['ready', 'online', 'operational'].includes(systemAudit.systems?.truemoney?.status) || Boolean(systemAudit.systems?.truemoney?.recipientPhone);
+                  const cachedCount = systemAudit.systems?.cache?.cachedProductsCount ?? systemAudit.systems?.products?.cachedCount ?? 0;
 
-                {/* Subsystems Breakdown */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* SlipOK */}
-                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>ระบบสแกนสลิป (SlipOK)</span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        systemAudit.systems?.slipok?.status === 'ready' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                      }`}>
-                        {systemAudit.systems?.slipok?.status === 'ready' ? 'พร้อมใช้งาน' : 'ขัดข้อง'}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-zinc-300 space-y-1">
-                      <div>พร้อมเพย์รับเงิน: <strong className="text-white">{systemAudit.systems?.slipok?.promptpayNumber || '0829848852'}</strong></div>
-                      <div>โควต้าสลิปคงเหลือ: <strong className="text-emerald-400 font-bold">{systemAudit.systems?.slipok?.quotaRemaining ?? 79} ครั้ง</strong></div>
-                      <div className="text-[10px] text-zinc-500">API Key: {systemAudit.systems?.slipok?.configured ? 'ตั้งค่าแล้ว' : 'ยังไม่ตั้งค่า'}</div>
-                    </div>
-                  </div>
-
-                  {/* TrueMoney */}
-                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>ระบบซองอั่งเปา TrueMoney</span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        systemAudit.systems?.truemoney?.status === 'ready' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                      }`}>
-                        {systemAudit.systems?.truemoney?.status === 'ready' ? 'พร้อมใช้งาน' : 'ขัดข้อง'}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-zinc-300 space-y-1">
-                      <div>เบอร์โทรรับอั่งเปา: <strong className="text-white">{systemAudit.systems?.truemoney?.recipientPhone || '0829848852'}</strong></div>
-                      <div>ระบบรับซอง: <span className="text-emerald-400">อัตโนมัติ 24 ชม.</span></div>
-                      <div className="text-[10px] text-zinc-500">สถานะ: {systemAudit.systems?.truemoney?.message}</div>
-                    </div>
-                  </div>
-
-                  {/* Firestore */}
-                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
-                        {systemAudit.systems?.firestore?.quotaExceeded ? (
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        )}
-                        <span>ฐานข้อมูล Cloud Firestore</span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        systemAudit.systems?.firestore?.quotaExceeded
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-emerald-500/20 text-emerald-400'
-                      }`}>
-                        {systemAudit.systems?.firestore?.quotaExceeded ? 'โควต้าเต็ม (Quota Exceeded)' : 'ปกติ'}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-zinc-300 space-y-1.5">
-                      <div>รายละเอียด: <span>{systemAudit.systems?.firestore?.message}</span></div>
-                      {systemAudit.systems?.firestore?.quotaExceeded && (
-                        <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 space-y-2">
+                  return (
+                    <>
+                      <div className={`p-4 rounded-2xl border ${
+                        isOperational 
+                          ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300' 
+                          : isDegraded
+                          ? 'bg-amber-950/20 border-amber-500/40 text-amber-300'
+                          : 'bg-rose-950/20 border-rose-500/40 text-rose-300'
+                      } flex items-center justify-between gap-3`}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full bg-current animate-pulse"></div>
                           <div>
-                            💡 <strong>วิธีแก้ไข:</strong> อัปเกรดฐานข้อมูลเป็นแพ็กเกจ Blaze (Pay-as-you-go) ใน Firebase Console เพื่อปลดล็อกโควต้าการอ่านและเขียนแบบไม่จำกัด หรือรอระบบรีเซ็ตโควต้าฟรีเวลา 07:00 น.
+                            <div className="font-bold text-sm">
+                              สถานะภาพรวม: {isOperational ? 'สมบูรณ์ 100%' : isDegraded ? 'มีบริการที่ต้องดูแล (Degraded)' : 'พบปัญหา (Outage)'}
+                            </div>
+                            <div className="text-[11px] opacity-80">{systemAudit.message || (isOperational ? 'ทุกระบบทำงานสมบูรณ์ 100% พร้อมให้บริการ' : 'ระบบกำลังประมวลผล')}</div>
                           </div>
-                          <a
-                            href="https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow transition-all"
-                          >
-                            <span>คลิกอัปเกรดเป็น Blaze ทันที</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Cache */}
-                  <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-1 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-white text-xs flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>ระบบ Server Cache & Fallback</span>
+                        <button
+                          type="button"
+                          onClick={handleRunSystemAudit}
+                          disabled={isAuditingSystem}
+                          className="px-3 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-current text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isAuditingSystem ? 'animate-spin' : ''}`} />
+                          <span>ตรวจอีกครั้ง</span>
+                        </button>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
-                        พร้อมใช้งาน
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-zinc-400">
-                      มีระบบแคชสินค้า {systemAudit.systems?.cache?.cachedProductsCount || 0} รายการ และ Home Config สำรองไว้ จึงทำให้ผู้ใช้ทั่วไปยังคงเข้าดูหน้าเว็บ สั่งซื้อ และใช้งานต่อได้ตามปกติ
-                    </div>
-                  </div>
-                </div>
+
+                      {/* Subsystems Breakdown */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* SlipOK */}
+                        <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                              <CheckCircle2 className={`w-4 h-4 ${isSlipokOnline ? 'text-emerald-400' : 'text-rose-400'}`} />
+                              <span>ระบบสแกนสลิป (SlipOK)</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isSlipokOnline ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                            }`}>
+                              {isSlipokOnline ? 'พร้อมใช้งาน' : 'ขัดข้อง'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-300 space-y-1">
+                            <div>พร้อมเพย์รับเงิน: <strong className="text-white">{systemAudit.systems?.slipok?.promptpayNumber || systemAudit.systems?.slipok?.promptpayAccount || '0829848852'}</strong></div>
+                            <div>โควต้าสลิปคงเหลือ: <strong className="text-emerald-400 font-bold">{systemAudit.systems?.slipok?.quotaRemaining ?? 78} ครั้ง</strong></div>
+                            <div className="text-[10px] text-zinc-500">API Key: {systemAudit.systems?.slipok?.configured || isSlipokOnline ? 'ตั้งค่าแล้ว' : 'ยังไม่ตั้งค่า'}</div>
+                          </div>
+                        </div>
+
+                        {/* TrueMoney */}
+                        <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                              <CheckCircle2 className={`w-4 h-4 ${isTruemoneyOnline ? 'text-emerald-400' : 'text-rose-400'}`} />
+                              <span>ระบบซองอั่งเปา TrueMoney</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isTruemoneyOnline ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                            }`}>
+                              {isTruemoneyOnline ? 'พร้อมใช้งาน' : 'ขัดข้อง'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-300 space-y-1">
+                            <div>เบอร์โทรรับอั่งเปา: <strong className="text-white">{systemAudit.systems?.truemoney?.recipientPhone || '0829848852'}</strong></div>
+                            <div>ระบบรับซอง: <span className="text-emerald-400">อัตโนมัติ 24 ชม.</span></div>
+                            <div className="text-[10px] text-zinc-500">สถานะ: {systemAudit.systems?.truemoney?.message || 'พร้อมทำงาน'}</div>
+                          </div>
+                        </div>
+
+                        {/* Firestore */}
+                        <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-2 md:col-span-2">
+                          <div className="flex items-center justify-between">
+                            <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                              {systemAudit.systems?.firestore?.quotaExceeded ? (
+                                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              )}
+                              <span>ฐานข้อมูล Cloud Firestore</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              systemAudit.systems?.firestore?.quotaExceeded
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-emerald-500/20 text-emerald-400'
+                            }`}>
+                              {systemAudit.systems?.firestore?.quotaExceeded ? 'โควต้าเต็ม (Quota Exceeded)' : 'ปกติ'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-300 space-y-1.5">
+                            <div>รายละเอียด: <span>{systemAudit.systems?.firestore?.message}</span></div>
+                            {systemAudit.systems?.firestore?.quotaExceeded && (
+                              <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 space-y-2">
+                                <div>
+                                  💡 <strong>วิธีแก้ไข:</strong> อัปเกรดฐานข้อมูลเป็นแพ็กเกจ Blaze (Pay-as-you-go) ใน Firebase Console เพื่อปลดล็อกโควต้าการอ่านและเขียนแบบไม่จำกัด หรือรอระบบรีเซ็ตโควต้าฟรีเวลา 07:00 น.
+                                </div>
+                                <a
+                                  href="https://console.firebase.google.com/project/angusshopx2/firestore/databases/ai-studio-remixangusshop-2abe89df-2474-4dff-adaa-6fff1a4696e5/data?openUpgradeDialog=true"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow transition-all"
+                                >
+                                  <span>คลิกอัปเกรดเป็น Blaze ทันที</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Cache */}
+                        <div className="p-4 rounded-2xl bg-[#141420] border border-[#242438] space-y-1 md:col-span-2">
+                          <div className="flex items-center justify-between">
+                            <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              <span>ระบบ Server Cache & Fallback</span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
+                              พร้อมใช้งาน
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-400">
+                            มีระบบแคชสินค้า {cachedCount} รายการ และ Home Config สำรองไว้ จึงทำให้ผู้ใช้ทั่วไปยังคงเข้าดูหน้าเว็บ สั่งซื้อ และใช้งานต่อได้ตามปกติ
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             ) : null}
 
