@@ -183,20 +183,29 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     product.category === 'บริการ' &&
     (product.name.includes('เควสเกาะ') || product.name.includes('Combat') || product.name.includes('คอมแบท') || product.productId === 'prod_island_combat_v2');
 
-  // Bounty Hunting service detection
+  // Multi-tier Bounty Hunting service detection (10M / 20M / 30M package bundle)
+  const isMultiTierBounty = 
+    product.productId === 'prod_bounty_hunt' ||
+    (product.category === 'บริการ' && (
+      product.name.includes('10M / 20M / 30M') || 
+      product.name.includes('10M-30M') ||
+      product.name.includes('(2.5M - 30M)')
+    ));
+
+  // Any bounty service (including standalone custom bounty products like "รับแค่ 1คน ล่าค่าหัว 30M")
   const isBountyService = 
     product.category === 'บริการ' &&
     (product.name.includes('ค่าหัว') || product.name.includes('Bounty') || product.productId.includes('bounty'));
 
-  const activeProductPrice = isBountyService 
+  const activeProductPrice = isMultiTierBounty 
     ? BOUNTY_TIERS[selectedBountyTier].price 
     : product.price;
 
-  const activeProductOldPrice = isBountyService 
+  const activeProductOldPrice = isMultiTierBounty 
     ? BOUNTY_TIERS[selectedBountyTier].oldPrice 
     : product.oldPrice;
 
-  const activeProductImage = isBountyService 
+  const activeProductImage = isMultiTierBounty 
     ? (product.tierImages?.[selectedBountyTier] || BOUNTY_TIERS[selectedBountyTier].image || product.image)
     : product.image;
 
@@ -204,7 +213,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     if (product.stock <= 0) return;
     const finalQty = Math.min(quantity, maxAllowedQty);
 
-    if (isBountyService) {
+    if (isMultiTierBounty) {
       const tierData = BOUNTY_TIERS[selectedBountyTier];
       const factionText = bountyFaction === 'pirate' ? 'ฝ่ายโจรสลัด (Pirate Bounty 🏴‍☠️)' : 'ฝ่ายทหารเรือ (Marine Honor ⚓)';
       const selectedOption = `แพ็กเกจ ${selectedBountyTier} - ${factionText}`;
@@ -223,6 +232,26 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       success(
         'เพิ่มลงตะกร้าแล้ว',
         `เพิ่มบริการล่าค่าหัว [แพ็กเกจ ${selectedBountyTier} - ${bountyFaction === 'pirate' ? 'โจรสลัด' : 'ทหารเรือ'}] ฿${tierData.price.toLocaleString()} เรียบร้อย`
+      );
+      return;
+    }
+
+    if (isBountyService) {
+      const factionText = bountyFaction === 'pirate' ? 'ฝ่ายโจรสลัด (Pirate Bounty 🏴‍☠️)' : 'ฝ่ายทหารเรือ (Marine Honor ⚓)';
+      const selectedOption = factionText;
+      const targetNote = `ฝ่าย: ${bountyFaction === 'pirate' ? 'โจรสลัด' : 'ทหารเรือ'}`;
+
+      addToCart(
+        product,
+        finalQty,
+        selectedOption,
+        targetNote,
+        product.price,
+        product.image
+      );
+      success(
+        'เพิ่มลงตะกร้าแล้ว',
+        `เพิ่ม ${product.name} [${factionText}] ฿${(product.price * finalQty).toLocaleString()} เรียบร้อย`
       );
       return;
     }
@@ -248,7 +277,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     if (product.stock <= 0) return;
     const finalQty = Math.min(quantity, maxAllowedQty);
 
-    if (isBountyService) {
+    if (isMultiTierBounty) {
       const tierData = BOUNTY_TIERS[selectedBountyTier];
       const factionText = bountyFaction === 'pirate' ? 'ฝ่ายโจรสลัด (Pirate Bounty 🏴‍☠️)' : 'ฝ่ายทหารเรือ (Marine Honor ⚓)';
       const selectedOption = `แพ็กเกจ ${selectedBountyTier} - ${factionText}`;
@@ -263,6 +292,16 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
       addToCart(customProd, finalQty, selectedOption, targetNote, tierData.price, tierData.image);
       onBuyNow(customProd, finalQty);
+      return;
+    }
+
+    if (isBountyService) {
+      const factionText = bountyFaction === 'pirate' ? 'ฝ่ายโจรสลัด (Pirate Bounty 🏴‍☠️)' : 'ฝ่ายทหารเรือ (Marine Honor ⚓)';
+      const selectedOption = factionText;
+      const targetNote = `ฝ่าย: ${bountyFaction === 'pirate' ? 'โจรสลัด' : 'ทหารเรือ'}`;
+
+      addToCart(product, finalQty, selectedOption, targetNote, product.price, product.image);
+      onBuyNow(product, finalQty);
       return;
     }
 
@@ -573,8 +612,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
             )}
 
-            {/* Bounty Hunting Service (บริการล่าค่าหัว 10M / 20M / 30M) */}
-            {isBountyService && (
+            {/* Multi-Tier Bounty Hunting Service (บริการล่าค่าหัว 10M / 20M / 30M) */}
+            {isMultiTierBounty && (
               <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-[#160f1e] to-[#221017] border border-amber-500/35 shadow-xl shadow-amber-950/20 space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -636,6 +675,72 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Faction Choice (โจรสลัด vs ทหารเรือ) */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                    <Swords className="w-3.5 h-3.5 text-amber-400" />
+                    <span>เลือกฝ่ายที่ต้องการฟาร์ม (Select Faction):</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBountyFaction('pirate')}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 cursor-pointer ${
+                        bountyFaction === 'pirate'
+                          ? 'bg-red-500/25 border-red-500 text-red-200 ring-2 ring-red-500/30'
+                          : 'bg-[#11111a] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="text-sm">🏴‍☠️</span>
+                      <span>ฝ่ายโจรสลัด (Pirate Bounty)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBountyFaction('marine')}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 cursor-pointer ${
+                        bountyFaction === 'marine'
+                          ? 'bg-blue-500/25 border-blue-500 text-blue-200 ring-2 ring-blue-500/30'
+                          : 'bg-[#11111a] border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="text-sm">⚓</span>
+                      <span>ฝ่ายทหารเรือ (Marine Honor)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Highlights Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 font-bold text-xs">
+                    <span className="text-base">⚔️</span>
+                    <span>โบนัสดาเมจ & เกราะป้องกัน PvP สูงสุด</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 font-bold text-xs">
+                    <span className="text-base">🌊</span>
+                    <span>สกิลเรียกเรือรบ & จ้าวทะเล (Sea Beast)</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  ทีมงานระดับมืออาชีพดำเนินการฟาร์มให้ตามคิวงานอย่างรวดเร็ว ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน ตรวจสอบสถานะและคิวงานได้ตลอด 24 ชม.
+                </p>
+              </div>
+            )}
+
+            {/* Standalone Bounty Service (เช่น รับแค่ 1คน ล่าค่าหัว 30M) */}
+            {!isMultiTierBounty && isBountyService && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-[#160f1e] to-[#221017] border border-amber-500/35 shadow-xl shadow-amber-950/20 space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    บริการล่าค่าหัว Blox Fruits (Bounty & Honor Hunt)
+                  </span>
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black border border-emerald-500/40">
+                    ราคาพิเศษ ฿{product.price.toLocaleString()} บาท
+                  </span>
                 </div>
 
                 {/* Faction Choice (โจรสลัด vs ทหารเรือ) */}
@@ -1153,8 +1258,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           )}
         </div>
         <p className="text-[11px] text-zinc-400 leading-relaxed">
-          {isBountyService
+          {isMultiTierBounty
             ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มล่าค่าหัวให้ครบตามแพ็กเกจ ${selectedBountyTier} (${bountyFaction === 'pirate' ? 'ฝ่ายโจรสลัด' : 'ฝ่ายทหารเรือ'}) ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน`
+            : isBountyService
+            ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มล่าค่าหัวให้ครบ (${bountyFaction === 'pirate' ? 'ฝ่ายโจรสลัด' : 'ฝ่ายทหารเรือ'}) ปลอดภัย 100% ไม่ใช้โปรแกรมเสี่ยงแบน`
             : isMasteryService
             ? `หลังชำระเงิน ไปที่เมนู "คลังสินค้า" เพื่อดูสถานะคำสั่งซื้อ ทีมงานจะดำเนินการฟาร์มมาสเตอร์รี่ให้ครบ ${(quantity * 100).toLocaleString()} มาส ปลอดภัย 100%`
             : isLevelService 
@@ -1174,8 +1281,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <div className="flex items-center justify-between gap-3">
           <div>
             <span className="text-[10px] text-zinc-400 block">
-              ราคารวม ({quantity} {isBountyService ? 'แพ็กเกจ' : isMasteryService ? 'ชุด' : isLevelService ? 'ชุด' : isFragmentService ? 'ชุด' : isBeliService ? 'M' : 'ชิ้น'})
-              {isBountyService && <span className="text-amber-400 font-bold ml-1">({selectedBountyTier})</span>}
+              ราคารวม ({quantity} {isMultiTierBounty ? 'แพ็กเกจ' : isMasteryService ? 'ชุด' : isLevelService ? 'ชุด' : isFragmentService ? 'ชุด' : isBeliService ? 'M' : 'ชิ้น'})
+              {isMultiTierBounty && <span className="text-amber-400 font-bold ml-1">({selectedBountyTier})</span>}
               {isMasteryService && <span className="text-amber-400 font-bold ml-1">({(quantity * 100).toLocaleString()} มาส)</span>}
               {isFragmentService && <span className="text-purple-400 font-bold ml-1">({(quantity * 10000).toLocaleString()} ม่วง)</span>}
             </span>

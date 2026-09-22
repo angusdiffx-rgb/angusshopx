@@ -661,25 +661,16 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         let serverPrice = Number(prodData.price);
 
         // Tiered service pricing for Bounty Hunting (10M: 500, 20M: 1000, 30M: 1500)
-        if (
-          item.productId === 'prod_bounty_hunt' ||
-          item.productId?.includes('bounty') ||
-          item.name?.includes('ค่าหัว') ||
-          item.name?.includes('Bounty') ||
-          item.name?.includes('Honor')
-        ) {
+        // Applies ONLY to the official multi-tier package product 'prod_bounty_hunt'
+        if (item.productId === 'prod_bounty_hunt') {
           if (
             item.selectedOption?.includes('30M') ||
-            item.targetNote?.includes('30M') ||
-            item.name?.includes('30M') ||
-            item.name?.includes('30,000,000')
+            item.targetNote?.includes('30M')
           ) {
             serverPrice = 1500;
           } else if (
             item.selectedOption?.includes('20M') ||
-            item.targetNote?.includes('20M') ||
-            item.name?.includes('20M') ||
-            item.name?.includes('20,000,000')
+            item.targetNote?.includes('20M')
           ) {
             serverPrice = 1000;
           } else {

@@ -15,15 +15,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
   const { addToCart } = useCart();
   const { success } = useToast();
 
-  const isBountyService = 
+  // Only the multi-tier bundle (prod_bounty_hunt / 10M-30M) displays a price range ฿500 - ฿1,500
+  const isMultiTierBountyService = 
     product.productId === 'prod_bounty_hunt' || 
-    product.productId?.includes('bounty') ||
-    product.name.includes('ค่าหัว');
+    (product.category === 'บริการ' && (
+      product.name.includes('10M / 20M / 30M') || 
+      product.name.includes('10M-30M') ||
+      product.name.includes('(2.5M - 30M)')
+    ));
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (product.stock <= 0) return;
-    if (isBountyService) {
+    if (isMultiTierBountyService) {
       onSelect(product);
       return;
     }
@@ -34,7 +38,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
   const handleBuy = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (product.stock <= 0) return;
-    if (isBountyService) {
+    if (isMultiTierBountyService) {
       onSelect(product);
       return;
     }
@@ -123,7 +127,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
         <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[#1F1F30] flex items-center justify-between gap-1.5 sm:gap-2">
           <div className="min-w-0">
             <div className="flex items-baseline gap-1 sm:gap-1.5 truncate">
-              {isBountyService ? (
+              {isMultiTierBountyService ? (
                 <>
                   <span className="text-sm sm:text-base font-black text-amber-300">฿500 - ฿1,500</span>
                   <span className="text-[10px] sm:text-xs text-amber-400 font-bold">10M-30M</span>
