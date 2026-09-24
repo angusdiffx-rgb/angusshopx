@@ -122,7 +122,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [internalProducts, setInternalProducts] = useState<Product[]>([]);
   const products = initialProductsFromProps || internalProducts;
   const setProducts = setProductsFromProps || setInternalProducts;
-  const [adminDataLimit, setAdminDataLimit] = useState<number>(20);
+  const [adminDataLimit, setAdminDataLimit] = useState<number>(100);
   const [tabLastLoaded, setTabLastLoaded] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -300,17 +300,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (!isAdmin) return;
     const now = Date.now();
     const lastLoaded = tabLastLoaded[tab] || 0;
-    // Cache for 5 minutes per tab unless force refreshed (slowed down by 2 minutes to protect Firestore quota)
-    if (!force && now - lastLoaded < 300000) {
+    // Cache for 10 seconds per tab unless force refreshed so admin gets fresh updates quickly
+    if (!force && now - lastLoaded < 10000) {
       return;
     }
 
     try {
       if (tab === 'dashboard') {
-        const [ordersSnap, depositsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'orders'), limit(adminDataLimit))),
-          getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)))
-        ]);
+        let ordersSnap;
+        let depositsSnap;
+        try {
+          [ordersSnap, depositsSnap] = await Promise.all([
+            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(adminDataLimit))),
+            getDocs(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(adminDataLimit)))
+          ]);
+        } catch {
+          [ordersSnap, depositsSnap] = await Promise.all([
+            getDocs(query(collection(db, 'orders'), limit(adminDataLimit))),
+            getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)))
+          ]);
+        }
 
         const oList: Order[] = [];
         ordersSnap.forEach((d) => oList.push(d.data() as Order));
@@ -341,35 +350,55 @@ export const AdminView: React.FC<AdminViewProps> = ({
           }).catch(() => {});
         }
       } else if (tab === 'orders') {
-        const snap = await getDocs(query(collection(db, 'orders'), limit(adminDataLimit)));
+        let snap;
+        try {
+          snap = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+        } catch {
+          snap = await getDocs(query(collection(db, 'orders'), limit(adminDataLimit)));
+        }
         const list: Order[] = [];
         snap.forEach((d) => list.push(d.data() as Order));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(list);
         try { localStorage.setItem('angus_admin_orders', JSON.stringify(list)); } catch {}
       } else if (tab === 'deposits') {
-        const snap = await getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)));
+        let snap;
+        try {
+          snap = await getDocs(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+        } catch {
+          snap = await getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)));
+        }
         const list: Deposit[] = [];
         snap.forEach((d) => list.push(d.data() as Deposit));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDeposits(list);
         try { localStorage.setItem('angus_admin_deposits', JSON.stringify(list)); } catch {}
       } else if (tab === 'inventory') {
-        const snap = await getDocs(query(collection(db, 'inventory'), limit(adminDataLimit)));
+        let snap;
+        try {
+          snap = await getDocs(query(collection(db, 'inventory'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+        } catch {
+          snap = await getDocs(query(collection(db, 'inventory'), limit(adminDataLimit)));
+        }
         const list: InventoryItem[] = [];
         snap.forEach((d) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setInventoryItems(list);
         try { localStorage.setItem('angus_admin_inventory', JSON.stringify(list)); } catch {}
       } else if (tab === 'users') {
-        const snap = await getDocs(query(collection(db, 'users'), limit(adminDataLimit)));
+        let snap;
+        try {
+          snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+        } catch {
+          snap = await getDocs(query(collection(db, 'users'), limit(adminDataLimit)));
+        }
         const list: UserProfile[] = [];
         snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         setSystemUsers(list);
         try { localStorage.setItem('angus_admin_users', JSON.stringify(list)); } catch {}
       } else if (tab === 'products') {
-        const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
+        const res = await fetch(`/api/products?force=true`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.products)) {
@@ -410,6 +439,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
   useEffect(() => {
     if (!isAdmin) return;
     loadTabData(activeTab);
+  }, [isAdmin, activeTab, adminDataLimit]);
+
+  // Listen to application events to auto-reload admin views when orders or inventory change
+  useEffect(() => {
+    if (!isAdmin) return;
+    const handleRemoteUpdate = () => {
+      setTabLastLoaded({});
+      loadTabData(activeTab, true);
+    };
+    window.addEventListener('ordersUpdated', handleRemoteUpdate);
+    window.addEventListener('inventoryUpdated', handleRemoteUpdate);
+    window.addEventListener('productsUpdated', handleRemoteUpdate);
+    window.addEventListener('walletUpdated', handleRemoteUpdate);
+    return () => {
+      window.removeEventListener('ordersUpdated', handleRemoteUpdate);
+      window.removeEventListener('inventoryUpdated', handleRemoteUpdate);
+      window.removeEventListener('productsUpdated', handleRemoteUpdate);
+      window.removeEventListener('walletUpdated', handleRemoteUpdate);
+    };
   }, [isAdmin, activeTab, adminDataLimit]);
 
   const handleManualRefresh = async () => {
@@ -1264,6 +1312,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
         orderStatus: status,
         updatedAt: new Date().toISOString(),
       });
+      setOrders((prev) => {
+        const updated = prev.map((o) => (o.orderId === orderId ? { ...o, status, orderStatus: status } : o));
+        try { localStorage.setItem('angus_admin_orders', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
       success('อัปเดตสถานะคำสั่งซื้อ', `เปลี่ยนสถานะเป็น ${status} สำเร็จ`);
     } catch (err: any) {
       toastError('อัปเดตสถานะไม่สำเร็จ', err.message);
@@ -1359,13 +1412,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <span className="text-zinc-500">จำกัด:</span>
             <select
               value={adminDataLimit}
-              onChange={(e) => setAdminDataLimit(Number(e.target.value))}
+              onChange={(e) => {
+                setAdminDataLimit(Number(e.target.value));
+                setTabLastLoaded({});
+              }}
               className="bg-transparent text-purple-300 font-bold outline-none cursor-pointer"
             >
-              <option value={15} className="bg-[#141420] text-white">15 รายการ (ประหยัดสูงสุด)</option>
-              <option value={20} className="bg-[#141420] text-white">20 รายการ (แนะนำ)</option>
+              <option value={30} className="bg-[#141420] text-white">30 รายการ</option>
               <option value={50} className="bg-[#141420] text-white">50 รายการ</option>
-              <option value={100} className="bg-[#141420] text-white">100 รายการ</option>
+              <option value={100} className="bg-[#141420] text-white">100 รายการ (แนะนำ)</option>
+              <option value={200} className="bg-[#141420] text-white">200 รายการ</option>
+              <option value={500} className="bg-[#141420] text-white">500 รายการ (ทั้งหมด)</option>
             </select>
           </div>
 

@@ -874,6 +874,17 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       }));
     });
 
+    // Invalidate and update server cache immediately so newly purchased products reflect reduced stock
+    if (serverProductsCache && Array.isArray(serverProductsCache.data)) {
+      for (const it of items) {
+        const cachedItem = serverProductsCache.data.find(p => p.productId === it.productId);
+        if (cachedItem) {
+          cachedItem.stock = Math.max(0, (Number(cachedItem.stock) || 0) - (Number(it.quantity) || 1));
+        }
+      }
+    }
+    invalidateServerProductsCache();
+
     res.json({
       success: true,
       message: 'สั่งซื้อสินค้าและส่งมอบเข้าคลังเรียบร้อยแล้ว',
@@ -908,7 +919,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     const now = Date.now();
 
     if (!force && serverProductsCache && (now - serverProductsCache.timestamp < SERVER_PRODUCTS_TTL_MS)) {
-      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.setHeader('Cache-Control', 'no-cache, private, must-revalidate');
       res.json({
         success: true,
         products: serverProductsCache.data,
@@ -917,6 +928,12 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
         count: serverProductsCache.data.length
       });
       return;
+    }
+
+    if (force) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache, private, must-revalidate');
     }
 
     const productsColl = collection(db, 'products');
@@ -937,7 +954,11 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
       timestamp: now
     };
 
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    if (force) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache, private, must-revalidate');
+    }
     res.json({
       success: true,
       products: list,

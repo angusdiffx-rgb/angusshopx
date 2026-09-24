@@ -180,8 +180,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           origin: { y: 0.6 }
         });
         clearCart();
-        if (refreshUserProfile) refreshUserProfile();
+        if (refreshUserProfile) {
+          try {
+            await refreshUserProfile();
+          } catch {}
+        }
         try {
+          // Invalidate user caches
           sessionStorage.removeItem(`user_orders_${user.uid}`);
           sessionStorage.removeItem(`user_orders_time_${user.uid}`);
           sessionStorage.removeItem(`user_inventory_${user.uid}`);
@@ -190,7 +195,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           sessionStorage.removeItem(`user_tx_time_${user.uid}`);
           sessionStorage.removeItem(`user_stats_${user.uid}`);
           sessionStorage.removeItem(`user_stats_time_${user.uid}`);
+          // Invalidate admin and catalog caches so all views update immediately
+          localStorage.removeItem('angus_admin_orders');
+          localStorage.removeItem('angus_admin_inventory');
+          localStorage.removeItem('angus_admin_deposits');
+          localStorage.removeItem('angus_products_cache');
+          localStorage.removeItem('angus_cached_products');
         } catch {}
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
         window.dispatchEvent(new CustomEvent('ordersUpdated'));
         window.dispatchEvent(new CustomEvent('inventoryUpdated'));
         window.dispatchEvent(new CustomEvent('walletUpdated'));
