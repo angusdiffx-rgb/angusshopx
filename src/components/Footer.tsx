@@ -11,44 +11,44 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { homeConfig } = useHomeConfig();
 
   return (
-    <footer className="w-full bg-[#08080C] border-t border-[#1E1E2E] mt-24">
-      {/* Top Banner / Trust factors */}
-      <div className="border-b border-[#1E1E2E]/60 py-8 bg-[#0D0D15]/50">
-        <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#11111A] border border-[#212130]">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[#A855F7] shrink-0">
-              <Zap className="w-6 h-6" />
+    <footer className="w-full max-w-[100vw] overflow-x-hidden bg-[#08080C] border-t border-[#1E1E2E] mt-16 sm:mt-24 [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
+      {/* Top Banner / Trust factors (แถบสถิติความปลอดภัย) */}
+      <div className="border-b border-[#1E1E2E]/60 py-6 sm:py-8 bg-[#0D0D15]/50 w-full overflow-hidden">
+        <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212130] min-w-0 overflow-hidden">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[#A855F7] shrink-0">
+              <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">ระบบเติมเงิน SlipOK อัตโนมัติ</h4>
-              <p className="text-xs text-zinc-400 mt-0.5">ตรวจสอบสลิปแม่นยำ ปรับยอดไวใน 3 วินาที ตลอด 24 ชม.</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#11111A] border border-[#212130]">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-              <Shield className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">ปลอดภัย 100% ไม่โดนแบน</h4>
-              <p className="text-xs text-zinc-400 mt-0.5">ส่งผลปีศาจผ่านระบบ Trade VIP Server ปลอดภัยไร้ความเสี่ยง</p>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs sm:text-sm font-bold text-white truncate">ระบบเติมเงิน SlipOK อัตโนมัติ</h4>
+              <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">ตรวจสอบสลิปแม่นยำ ปรับยอดไวใน 3 วินาที ตลอด 24 ชม.</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#11111A] border border-[#212130]">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-              <MessageSquare className="w-6 h-6" />
+          <div className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212130] min-w-0 overflow-hidden">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">บริการและซัพพอร์ตมืออาชีพ</h4>
-              <p className="text-xs text-zinc-400 mt-0.5">มีแอดมินคอยดูแลคำสั่งซื้อและให้คำแนะนำทุกขั้นตอน</p>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs sm:text-sm font-bold text-white truncate">ปลอดภัย 100% ไม่โดนแบน</h4>
+              <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">ส่งผลปีศาจผ่านระบบ Trade VIP Server ปลอดภัยไร้ความเสี่ยง</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212130] min-w-0 overflow-hidden">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs sm:text-sm font-bold text-white truncate">บริการและซัพพอร์ตมืออาชีพ</h4>
+              <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">มีแอดมินคอยดูแลคำสั่งซื้อและให้คำแนะนำทุกขั้นตอน</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Footer Links */}
-      <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-10 sm:py-14">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
           
           {/* Brand Col */}

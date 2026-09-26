@@ -752,6 +752,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         items: verifiedItems,
         subtotal: calculatedSubtotal,
         discount: 0,
+        couponCode: '',
         total: orderTotal,
         totalAmount: orderTotal,
         paymentMethod: 'wallet',
@@ -981,6 +982,138 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
       success: false,
       error: 'GET_PRODUCTS_ERROR',
       message: error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้'
+    });
+  }
+});
+
+// AI Promotional Banner Generator Endpoint
+apiRouter.post('/admin/generate-banner', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { itemName, category, style, prompt } = req.body || {};
+    
+    // Check if GEMINI_API_KEY is available
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (apiKey) {
+      try {
+        const { GoogleGenAI } = await import('@google/genai');
+        const ai = new GoogleGenAI({ apiKey });
+        const systemPrompt = `You are a high-converting Blox Fruits gaming e-commerce marketing expert for AngusShop.
+Create compelling promotional banner metadata in Thai and English for Blox Fruits item: "${itemName}" (category: "${category}").
+Style/Mood requested: "${style}".
+Custom instructions: "${prompt || 'Highlight fast automated delivery in VIP Server and 100% guarantee'}".
+
+Respond strictly with a single JSON object (no markdown, no backticks, no code block) with these exact keys:
+{
+  "title": "Thai & English catchy title, e.g. Kitsune Fruit (ผลคิตสึเนะ)",
+  "highlightText": "Punchy benefit in Thai, e.g. สปีดเร็วที่สุด ดาเมจมหาศาล",
+  "badge": "Short eye-catching badge, e.g. 🔥 MYTHICAL อันดับ 1",
+  "badgeColor": "purple",
+  "description": "2-line engaging product description in Thai explaining why to buy and that it trades safely in VIP server",
+  "priceText": "฿299",
+  "originalPriceText": "฿350",
+  "discountBadge": "-15%",
+  "themeGradient": "from-[#1E0D36] via-[#140A26] to-[#0A0614]",
+  "accentColor": "purple",
+  "ctaText": "สั่งซื้อทันที",
+  "secondaryCtaText": "ดูรายละเอียด"
+}`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [{ role: 'user', parts: [{ text: systemPrompt }] }]
+        });
+
+        const rawText = response.text?.trim() || '';
+        const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+
+        res.json({
+          success: true,
+          banner: parsed
+        });
+        return;
+      } catch (genAiErr) {
+        console.warn('Gemini generate banner error, using procedural fallback:', genAiErr);
+      }
+    }
+
+    // Procedural Fallback
+    const baseNames: Record<string, any> = {
+      'Kitsune Fruit': {
+        title: 'Kitsune Fruit (ผลคิตสึเนะ)',
+        highlightText: 'จิ้งจอกเก้าหาง สปีดเร็วที่สุด ดาเมจมหาศาล',
+        badge: '🔥 MYTHICAL อันดับ 1',
+        badgeColor: 'purple',
+        description: 'ผลคิตสึเนะของแท้ 100% เทรดผ่านระบบ VIP Server ด่วนใน 3 นาที สกิลแปลงร่างทรงพลังที่สุด',
+        priceText: '฿299',
+        originalPriceText: '฿350',
+        discountBadge: '-15%',
+        themeGradient: 'from-[#1E0D36] via-[#140A26] to-[#0A0614]',
+        accentColor: 'purple',
+        imageUrl: '/images/blox/kitsune.png'
+      },
+      'Dragon Fruit': {
+        title: 'Dragon Fruit (ผลมังกร รีเวิร์ค)',
+        highlightText: 'มังกรเกล็ดอสูร ทรงพลังที่สุด ดาเมจทะลุหลอด',
+        badge: '⚡ REWORK HYPE',
+        badgeColor: 'rose',
+        description: 'ผลมังกรแท้ 100% สกิลกว้าง ล็อคเป้าแม่นยำ พร้อมส่งมอบในเซิร์ฟเวอร์ VIP การันตีสต็อกพร้อมส่ง',
+        priceText: '฿249',
+        originalPriceText: '฿290',
+        discountBadge: '-14%',
+        themeGradient: 'from-[#2A0E18] via-[#1B0A11] to-[#0D0509]',
+        accentColor: 'rose',
+        imageUrl: '/images/blox/dragon.png'
+      },
+      'Bounty 30M': {
+        title: 'บริการล่าค่าหัว (Bounty 30M)',
+        highlightText: 'ปลดล็อกฉายาจักรพรรดิ & บัฟ PvP สูงสุด',
+        badge: '👑 PVP RANK #1',
+        badgeColor: 'amber',
+        description: 'บริการล่าค่าหัว 10M / 20M / 30M Max Cap ปลดล็อกโบนัสดาเมจและเกราะป้องกันสูงสุดในเกม โดยทีมนักล่ามืออาชีพ',
+        priceText: '฿500 - ฿1,500',
+        originalPriceText: '฿650 - ฿1,900',
+        discountBadge: 'HOT DEAL',
+        themeGradient: 'from-[#281A08] via-[#191005] to-[#0E0903]',
+        accentColor: 'amber',
+        imageUrl: '/images/blox/bounty_hunt_30m.png'
+      },
+      'Dark Blade Yoru': {
+        title: 'Dark Blade Yoru & Gamepass 2x',
+        highlightText: 'ดาบดำโยรุ + บัฟคูณสองเงิน/มาส',
+        badge: '💎 GAMEPASS & WEAPONS',
+        badgeColor: 'cyan',
+        description: 'ดาบดำโยรุระดับ Mythical และ Gamepass ถาวร ช่วยให้ฟาร์มเลเวลเร็วขึ้น 2 เท่า ส่งมอบผ่านระบบของขวัญในเกมรวดเร็วใน 3 นาที',
+        priceText: '฿150 - ฿490',
+        originalPriceText: '฿200 - ฿550',
+        discountBadge: 'แท้ 100%',
+        themeGradient: 'from-[#0B202D] via-[#07151E] to-[#040B10]',
+        accentColor: 'cyan',
+        imageUrl: '/images/blox/dark_blade.png'
+      }
+    };
+
+    const fallback = baseNames[itemName] || {
+      title: `${itemName || 'Blox Fruits Item'} โปรโมชั่นพิเศษ`,
+      highlightText: 'ส่งมอบไวใน 3 นาที ของแท้ 100%',
+      badge: '✨ DEAL พิเศษ',
+      badgeColor: 'purple',
+      description: `ไอเทม ${itemName || 'Blox Fruits'} ยอดนิยม เทรดรับของในเซิร์ฟเวอร์ VIP รวดเร็ว ปลอดภัย ไร้กังวล`,
+      priceText: '฿199',
+      originalPriceText: '฿250',
+      discountBadge: '-20%',
+      themeGradient: 'from-[#1A0F2E] via-[#120B20] to-[#0A0714]',
+      accentColor: 'purple'
+    };
+
+    res.json({
+      success: true,
+      banner: fallback
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate banner'
     });
   }
 });

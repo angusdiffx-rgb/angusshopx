@@ -3,6 +3,7 @@ import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { BloxImage } from './BloxImage';
+import { playClickSound } from '../lib/sound';
 
 interface CartDrawerProps {
   onNavigate: (view: string) => void;

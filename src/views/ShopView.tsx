@@ -68,7 +68,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
   }, [products, selectedCategory, searchTerm, maxPrice, inStockOnly, sortBy]);
 
   return (
-    <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8">
+    <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8 overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-white">ร้านค้า AngusShop</h1>
@@ -78,12 +78,12 @@ export const ShopView: React.FC<ShopViewProps> = ({
       </div>
 
       {/* Category Pills Bar (Horizontal Scrollable on Mobile) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 no-scrollbar w-full max-w-full touch-pan-x">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
               selectedCategory === cat
                 ? 'bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white shadow-md shadow-purple-500/30 ring-1 ring-purple-400/50'
                 : 'bg-[#11111A] text-zinc-400 hover:text-white hover:bg-[#181826] border border-[#212133]'
@@ -95,7 +95,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212133] space-y-3 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-3 items-center">
+      <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212133] space-y-3 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-3 items-center w-full max-w-full">
         {/* Search input */}
         <div className="sm:col-span-6 relative">
           <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3 pointer-events-none" />
@@ -175,7 +175,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-4 md:gap-6 w-full max-w-full">
           {filteredProducts.map((product) => (
             <ProductCard
               key={product.productId}

@@ -256,7 +256,32 @@ export interface CategoryCardConfig {
   colorClass: string;
 }
 
+export interface HeroBannerConfig {
+  id: string;
+  badge: string;
+  badgeColor?: 'purple' | 'rose' | 'amber' | 'cyan' | 'emerald' | string;
+  title: string;
+  highlightText?: string;
+  description: string;
+  priceText?: string;
+  originalPriceText?: string;
+  discountBadge?: string;
+  imageUrl: string;
+  imageAlt?: string;
+  aspectRatio?: string;
+  themeGradient?: string;
+  accentColor?: string;
+  targetProductId?: string;
+  targetCategory?: string;
+  customLink?: string;
+  ctaText?: string;
+  secondaryCtaText?: string;
+  isActive?: boolean;
+  order?: number;
+}
+
 export interface HomeConfig {
+  heroBanners?: HeroBannerConfig[];
   siteLogo?: string;
   heroBadgeText?: string;
   heroStatusText?: string;
@@ -282,6 +307,15 @@ export interface HomeConfig {
   promoCard2: PromoShowcaseCard;
   promoFooterText: string;
   promoFooterTag: string;
+  desktopBannerType?: 'music' | 'image';
+  desktopBannerTitle?: string;
+  desktopBannerSubtitle?: string;
+  desktopBannerBadge?: string;
+  desktopBannerYoutubeUrl?: string;
+  desktopBannerStartTime?: number;
+  desktopBannerAutoplay?: boolean;
+  desktopBannerImageUrl?: string;
+  desktopBannerImageLink?: string;
   updatedAt?: string;
   updatedBy?: string;
 }

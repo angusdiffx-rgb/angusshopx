@@ -6,20 +6,33 @@ import { BloxImage } from './BloxImage';
 interface BloxPresetPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (preset: BloxPreset) => void;
+  onSelect?: (preset: BloxPreset) => void;
+  onSelectPreset?: (preset: BloxPreset) => void;
   selectedUrl?: string;
+  title?: string;
 }
 
 export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
   isOpen,
   onClose,
   onSelect,
-  selectedUrl
+  onSelectPreset,
+  selectedUrl,
+  title
 }) => {
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<'all' | 'fruit' | 'skin' | 'gamepass' | 'sword' | 'style' | 'service'>('all');
 
   if (!isOpen) return null;
+
+  const handleSelectInternal = (preset: BloxPreset) => {
+    if (typeof onSelect === 'function') {
+      onSelect(preset);
+    } else if (typeof onSelectPreset === 'function') {
+      onSelectPreset(preset);
+    }
+    onClose();
+  };
 
   const filtered = BLOX_FRUITS_PRESETS.filter((p) => {
     const q = search.trim().toLowerCase();
@@ -49,7 +62,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
           <div>
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span>คลังรูปผลไม้และไอเทม Blox Fruits ในเกมทั้งหมด</span>
+              <span>{title || 'คลังรูปผลไม้และไอเทม Blox Fruits ในเกมทั้งหมด'}</span>
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
               เลือกเพื่อนำรูป ชื่อ หมวดหมู่ และระดับความหายากไปกรอกในฟอร์มอัตโนมัติ
@@ -117,10 +130,7 @@ export const BloxPresetPickerModal: React.FC<BloxPresetPickerModalProps> = ({
                   <button
                     key={preset.name}
                     type="button"
-                    onClick={() => {
-                      onSelect(preset);
-                      onClose();
-                    }}
+                    onClick={() => handleSelectInternal(preset)}
                     className={`p-2.5 rounded-xl border text-left group flex items-center gap-2.5 cursor-pointer transition-all active:scale-95 ${
                       isSelected
                         ? 'bg-purple-900/50 border-purple-400 shadow-md shadow-purple-500/20'

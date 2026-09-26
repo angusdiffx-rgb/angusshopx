@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  ShieldAlert
+  ShieldAlert,
+  Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +23,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import type { Order } from '../types';
 import { BloxImage } from '../components/BloxImage';
+import { playClickSound, playSuccessSound } from '../lib/sound';
 
 interface CheckoutViewProps {
   onNavigate: (view: string, param?: string) => void;
@@ -124,9 +126,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     );
   }
 
+  const payableTotal = total;
   const currentBalance = user.balance || 0;
-  const isBalanceSufficient = currentBalance >= total;
-  const remainingBalance = currentBalance - total;
+  const isBalanceSufficient = currentBalance >= payableTotal;
+  const remainingBalance = currentBalance - payableTotal;
 
   const handleConfirmOrder = async () => {
     // Regular Roblox username validation
@@ -223,7 +226,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8">
+    <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8 overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-white">ชำระเงินและสั่งซื้อ</h1>
         <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">
@@ -495,7 +498,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               </div>
               <div className="flex justify-between text-sm sm:text-base font-black text-white pt-2 border-t border-[#212133]">
                 <span>ยอดชำระทั้งหมด</span>
-                <span className="text-purple-400 font-black">฿{(total || 0).toLocaleString()}</span>
+                <span className="text-purple-400 font-black">฿{payableTotal.toLocaleString()}</span>
               </div>
             </div>
 
@@ -523,9 +526,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   </>
                 ) : (
                   <>
-                    <span className="text-rose-400 font-medium">ขาดอีก ฿{(total - currentBalance).toLocaleString()}</span>
+                    <span className="text-rose-400 font-medium">ขาดอีก ฿{(payableTotal - currentBalance).toLocaleString()}</span>
                     <button
-                      onClick={() => onNavigate('topup')}
+                      onClick={() => onNavigate('wallet')}
                       className="text-purple-400 hover:text-purple-300 font-bold underline flex items-center gap-0.5 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" /> เติมเงินทันที
@@ -560,7 +563,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               ) : isBalanceSufficient ? (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>ยืนยันชำระเงิน ฿{(total || 0).toLocaleString()}</span>
+                  <span>ยืนยันชำระเงิน ฿{payableTotal.toLocaleString()}</span>
                 </>
               ) : (
                 <>

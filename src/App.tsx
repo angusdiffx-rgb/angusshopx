@@ -7,6 +7,9 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
 import { AuthModal } from './components/AuthModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { QuickSearchModal } from './components/QuickSearchModal';
+import { BloxValueCalculatorModal } from './components/BloxValueCalculatorModal';
 import { HomeView } from './views/HomeView';
 import { ShopView } from './views/ShopView';
 import { ProductDetailView } from './views/ProductDetailView';
@@ -75,6 +78,20 @@ function MainShop() {
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [hideQuotaNotice, setHideQuotaNotice] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isCalculatorModalOpen, setIsCalculatorModalOpen] = useState(false);
+
+  // Global Ctrl+K / Cmd+K hotkey for search palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Keep-alive Ping to prevent server from sleeping (slowed down by 2 minutes: 6 minutes = 360000ms)
   useEffect(() => {
@@ -170,10 +187,79 @@ function MainShop() {
   }, []);
 
   const handleNavigate = (view: string, param?: string) => {
+    if (view !== 'product') {
+      setSelectedProduct(null);
+    }
     setCurrentView(view);
     setNavParam(param);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Deep-linking: Load product if URL has ?product=...
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const prodParam = searchParams.get('product');
+      if (prodParam && products.length > 0) {
+        const found = products.find(p => 
+          p.productId.toLowerCase() === prodParam.toLowerCase() ||
+          p.slug?.toLowerCase() === prodParam.toLowerCase()
+        );
+        if (found) {
+          setSelectedProduct(found);
+          setCurrentView('product');
+        }
+      }
+    } catch {}
+
+    const handlePopState = () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const prodParam = searchParams.get('product');
+        if (prodParam) {
+          const found = products.find(p => 
+            p.productId.toLowerCase() === prodParam.toLowerCase() ||
+            p.slug?.toLowerCase() === prodParam.toLowerCase()
+          );
+          if (found) {
+            setSelectedProduct(found);
+            setCurrentView('product');
+            return;
+          }
+        }
+        const viewParam = searchParams.get('view') || 'home';
+        setCurrentView(viewParam);
+        setSelectedProduct(null);
+      } catch {}
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [products]);
+
+  // Keep browser address bar URL in sync with active product view
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (currentView === 'product' && selectedProduct) {
+        if (url.searchParams.get('product') !== selectedProduct.productId) {
+          url.searchParams.set('product', selectedProduct.productId);
+          url.searchParams.delete('view');
+          window.history.pushState({ productId: selectedProduct.productId }, '', url.toString());
+        }
+      } else {
+        if (url.searchParams.has('product')) {
+          url.searchParams.delete('product');
+          if (currentView !== 'home') {
+            url.searchParams.set('view', currentView);
+          } else {
+            url.searchParams.delete('view');
+          }
+          window.history.pushState({}, '', url.toString());
+        }
+      }
+    } catch {}
+  }, [currentView, selectedProduct]);
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -195,10 +281,10 @@ function MainShop() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#08080C] text-white selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#08080C] text-white selection:bg-purple-600 selection:text-white w-full max-w-[100vw] overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom] relative">
       {/* Quota Exceeded Notice Banner (Visible to Admin ONLY) */}
       {isAdmin && quotaExceeded && !hideQuotaNotice && (
-        <div id="quota-exceeded-banner" className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-200">
+        <div id="quota-exceeded-banner" className="bg-amber-500/15 border-b border-amber-500/30 px-3 sm:px-6 py-2.5 text-xs text-amber-200 w-full max-w-[100vw] overflow-x-hidden">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
@@ -236,18 +322,22 @@ function MainShop() {
         currentView={currentView}
         onNavigate={handleNavigate}
         onSearch={(term) => handleNavigate('shop', term)}
+        onOpenQuickSearch={() => setIsSearchModalOpen(true)}
+        onOpenCalculator={() => setIsCalculatorModalOpen(true)}
       />
 
       {/* Main Content View Switcher */}
-      <main className="flex-1">
-        {currentView === 'home' && (
+      <main className="flex-1 pb-16 lg:pb-0 w-full max-w-[100vw] overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
+        {/* HomeView is kept mounted at full dimension with opacity-0 and -z-50 when on other views so YouTube music playback NEVER stops! */}
+        <div className={currentView === 'home' ? 'block w-full' : 'fixed inset-0 pointer-events-none opacity-0 -z-50 overflow-hidden select-none'}>
           <HomeView
             products={products}
             onNavigate={handleNavigate}
             onSelectProduct={handleSelectProduct}
             onBuyNow={handleBuyNow}
+            onOpenCalculator={() => setIsCalculatorModalOpen(true)}
           />
-        )}
+        </div>
 
         {currentView === 'shop' && (
           <ShopView
@@ -297,6 +387,29 @@ function MainShop() {
 
       {/* Auth Modal (Login / Register) */}
       <AuthModal />
+
+      {/* Quick Search & Command Palette Modal (Ctrl+K) */}
+      <QuickSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        products={products}
+        onSelectProduct={handleSelectProduct}
+        onNavigate={handleNavigate}
+        onOpenCalculator={() => setIsCalculatorModalOpen(true)}
+      />
+
+      {/* Blox Fruits Trade & Value Calculator Modal */}
+      <BloxValueCalculatorModal
+        isOpen={isCalculatorModalOpen}
+        onClose={() => setIsCalculatorModalOpen(false)}
+        onShopSearch={(kw) => handleNavigate('shop', kw)}
+      />
+
+      {/* Mobile Floating Bottom Navigation */}
+      <MobileBottomNav
+        currentView={currentView}
+        onNavigate={handleNavigate}
+      />
 
       {/* Footer */}
       <Footer onNavigate={handleNavigate} />

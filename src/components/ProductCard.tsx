@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { BloxImage } from './BloxImage';
+import { playCartSound, playClickSound } from '../lib/sound';
 
 interface ProductCardProps {
   product: Product;
@@ -24,13 +25,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
       product.name.includes('(2.5M - 30M)')
     ));
 
+  const handleCardClick = () => {
+    playClickSound();
+    onSelect(product);
+  };
+
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (product.stock <= 0) return;
     if (isMultiTierBountyService) {
+      playClickSound();
       onSelect(product);
       return;
     }
+    playCartSound();
     addToCart(product, 1);
     success('เพิ่มลงตะกร้าแล้ว', `${product.name} ถูกเพิ่มในตะกร้าเรียบร้อย`);
   };
@@ -39,9 +47,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
     e.stopPropagation();
     if (product.stock <= 0) return;
     if (isMultiTierBountyService) {
+      playClickSound();
       onSelect(product);
       return;
     }
+    playClickSound();
     addToCart(product, 1);
     if (onBuyNow) {
       onBuyNow(product);
@@ -54,11 +64,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
 
   return (
     <div 
-      onClick={() => onSelect(product)}
-      className="group relative bg-[#11111A] hover:bg-[#151522] border border-[#212133] hover:border-[#7C3AED]/60 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-purple-950/30 hover:-translate-y-1 active:scale-[0.98]"
+      onClick={handleCardClick}
+      className="group relative bg-[#11111A] hover:bg-[#151522] border border-[#212133] hover:border-[#7C3AED]/60 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-purple-950/30 hover:-translate-y-1 active:scale-[0.98] w-full min-w-0"
     >
       {/* Image Container */}
-      <div className="relative aspect-square sm:aspect-4/3 w-full bg-[#0A0A10] overflow-hidden flex items-center justify-center p-3">
+      <div className="relative aspect-square sm:aspect-4/3 w-full bg-[#0A0A10] overflow-hidden flex items-center justify-center p-2.5 sm:p-3">
         <BloxImage
           src={product.image}
           alt={product.name}
@@ -68,27 +78,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
         />
 
         {/* Badges Overlay */}
-        <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10">
+        <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10 max-w-[calc(100%-4rem)]">
           {product.isBestSeller && (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/95 backdrop-blur-md text-amber-950 text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm">
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/95 backdrop-blur-md text-amber-950 text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm truncate">
               ขายดี
             </span>
           )}
           {product.isFeatured && (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-purple-600/95 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold tracking-wider shadow-sm">
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-purple-600/95 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold tracking-wider shadow-sm truncate">
               แนะนำ
             </span>
           )}
           {discountPercent > 0 && (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-600/95 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-black tracking-wider shadow-sm">
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-600/95 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-black tracking-wider shadow-sm truncate">
               -{discountPercent}%
             </span>
           )}
         </div>
 
         {/* Category Badge Right */}
-        <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10">
-          <span className={`px-1.5 sm:px-2 py-0.5 rounded-md backdrop-blur-md text-[9px] sm:text-[10px] font-semibold border ${
+        <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 max-w-[50%]">
+          <span className={`px-1.5 sm:px-2 py-0.5 rounded-md backdrop-blur-md text-[9px] sm:text-[10px] font-semibold border block truncate ${
             product.category === 'สกินผล'
               ? 'bg-gradient-to-r from-fuchsia-600/80 to-purple-600/80 border-fuchsia-400/40 text-fuchsia-100 shadow-sm shadow-fuchsia-500/20'
               : 'bg-black/70 border-white/10 text-zinc-300'
@@ -113,18 +123,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
       </div>
 
       {/* Card Content */}
-      <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+      <div className="p-2.5 sm:p-4 flex-1 flex flex-col justify-between min-w-0">
         <div>
           <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
             {product.name}
           </h3>
-          <p className="text-[11px] sm:text-xs text-zinc-400 line-clamp-1 sm:line-clamp-2 mt-0.5 sm:mt-1 leading-relaxed">
+          <p className="text-[10px] sm:text-xs text-zinc-400 line-clamp-1 sm:line-clamp-2 mt-0.5 sm:mt-1 leading-relaxed">
             {product.shortDescription}
           </p>
         </div>
 
         {/* Price & Actions */}
-        <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[#1F1F30] flex items-center justify-between gap-1.5 sm:gap-2">
+        <div className="mt-2.5 sm:mt-4 pt-2 sm:pt-3 border-t border-[#1F1F30] flex items-center justify-between gap-1 sm:gap-2 min-w-0">
           <div className="min-w-0">
             <div className="flex items-baseline gap-1 sm:gap-1.5 truncate">
               {isMultiTierBountyService ? (

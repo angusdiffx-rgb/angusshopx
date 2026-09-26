@@ -109,7 +109,18 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
     keyword: 'มังกร'
   },
   promoFooterText: 'มีผลสต็อกพร้อมส่งในเซิร์ฟ VIP',
-  promoFooterTag: '100% แท้'
+  promoFooterTag: '100% แท้',
+
+  // 3. แบนเนอร์พิเศษบนคอมพิวเตอร์ (เลือกเป็นเพลงหรือรูปภาพ)
+  desktopBannerType: 'music',
+  desktopBannerTitle: 'เปิดเพลงฟังชิลๆ ระหว่างช้อปปิ้งผลปีศาจ',
+  desktopBannerSubtitle: 'สัมผัสประสบการณ์เสียงเพลงสุดมันส์ธีม Blox Fruits พร้อมเทรดและสั่งซื้อไอเทมได้เพลิดเพลินไม่มีสะดุด',
+  desktopBannerBadge: 'ANGUSSHOP OFFICIAL SOUND',
+  desktopBannerYoutubeUrl: 'https://www.youtube.com/embed/SAKOqeeRpj4?si=aiE7k-hMCtDUt8bA&start=27',
+  desktopBannerStartTime: 27,
+  desktopBannerAutoplay: true,
+  desktopBannerImageUrl: '',
+  desktopBannerImageLink: ''
 };
 
 // ฐานข้อมูลผลไม้ ไอเทม Gamepass ดาบ และหมัด ทั้งหมดในเกม Blox Fruits

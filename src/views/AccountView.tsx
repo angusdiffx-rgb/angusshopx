@@ -114,7 +114,7 @@ export const AccountView: React.FC<AccountViewProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8 pb-24 sm:pb-8">
+    <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8 pb-24 sm:pb-8 overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
       {/* Profile Card */}
       <div className="p-5 sm:p-8 rounded-3xl bg-gradient-to-br from-[#181228] via-[#11111A] to-[#0A0A10] border border-purple-500/30 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative z-10">

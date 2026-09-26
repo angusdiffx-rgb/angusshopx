@@ -31,8 +31,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, o
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-[#090910]/95 backdrop-blur-2xl border-t border-[#1F1F30] pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
-      <div className="max-w-md mx-auto grid grid-cols-5 items-center px-1 py-1">
+    <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-[#090910]/95 backdrop-blur-2xl border-t border-[#1F1F30] pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.6)] w-full max-w-[100vw] overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
+      <div className="max-w-md mx-auto grid grid-cols-5 items-center px-1 py-1 w-full">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;

@@ -15,12 +15,15 @@ import {
   Flame,
   Crown,
   Swords,
-  Skull
+  Skull,
+  Share2
 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { BloxImage } from '../components/BloxImage';
+import { useProductSEO } from '../lib/seo';
+import { ProductShareModal } from '../components/ProductShareModal';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -38,6 +41,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onBuyNow 
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Dynamic OpenGraph, Twitter Cards, and Schema.org Product JSON-LD
+  useProductSEO(product);
+
   const [masteryTarget, setMasteryTarget] = useState<'ผล' | 'หมัด' | 'ปืน'>('ผล');
   const [masteryItemName, setMasteryItemName] = useState('');
   const [bountyFaction, setBountyFaction] = useState<'pirate' | 'marine'>('pirate');
@@ -322,15 +330,26 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     : 0;
 
   return (
-    <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8">
-      {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer bg-[#11111A] px-3 py-1.5 rounded-xl border border-[#212133]"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        กลับไปที่ร้านค้า
-      </button>
+    <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8 overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
+      {/* Top Header Bar: Back Button & Social Share Button */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer bg-[#11111A] px-3.5 py-2 rounded-xl border border-[#212133]"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>กลับไปที่ร้านค้า</span>
+        </button>
+
+        <button
+          onClick={() => setIsShareModalOpen(true)}
+          className="inline-flex items-center gap-2 text-xs font-bold text-purple-300 hover:text-white transition-all cursor-pointer bg-purple-950/40 hover:bg-purple-900/60 px-3.5 py-2 rounded-xl border border-purple-500/30 hover:border-purple-500/60 shadow-lg shadow-purple-950/30"
+          title="แชร์สินค้านี้ไปยัง Facebook, X, LINE หรือคัดลอกลิงก์"
+        >
+          <Share2 className="w-4 h-4 text-purple-400" />
+          <span>แชร์สินค้า (Social Share)</span>
+        </button>
+      </div>
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10">
@@ -1167,7 +1186,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           </div>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden sm:block space-y-4 pt-4 border-t border-[#1E1E2E]">
+          <div className="hidden sm:block space-y-3 pt-4 border-t border-[#1E1E2E]">
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleAddToCart}
@@ -1187,6 +1206,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 <span>ซื้อทันที</span>
               </button>
             </div>
+
+            {/* Quick Share Button */}
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="w-full py-2.5 px-3 rounded-xl bg-[#141422] hover:bg-[#1A1A2C] border border-[#252538] hover:border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+            >
+              <Share2 className="w-3.5 h-3.5 text-purple-400" />
+              <span>แชร์สินค้านี้ (OpenGraph / Twitter / LINE)</span>
+            </button>
 
             {/* Delivery Instructions Box */}
             <div className="p-4 rounded-2xl bg-[#0D0D16] border border-[#212130] space-y-2">
@@ -1291,6 +1319,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="p-2.5 rounded-xl bg-[#1C1C2C] border border-[#2F2F44] text-purple-400 hover:text-white active:scale-95 cursor-pointer"
+              title="แชร์สินค้านี้"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+            <button
               onClick={handleAddToCart}
               disabled={product.stock <= 0}
               className="p-2.5 rounded-xl bg-[#1C1C2C] border border-[#2F2F44] text-zinc-200 active:scale-95 disabled:opacity-30"
@@ -1310,6 +1345,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         </div>
       </div>
 
+      {/* Social Media Share Modal */}
+      <ProductShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        product={product}
+      />
     </div>
   );
 };
