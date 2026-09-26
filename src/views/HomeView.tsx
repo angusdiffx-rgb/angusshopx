@@ -313,7 +313,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </span>
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold">
                       <Sparkles className="w-3 h-3 text-emerald-400" />
-                      เล่นต่อเนื่องทุกหน้า
+                      <span>{homeConfig.desktopBannerTag || (isMusicBanner ? 'เล่นต่อเนื่องทุกหน้า' : 'โปรโมชั่นพิเศษ')}</span>
                     </span>
                   </div>
 
@@ -341,49 +341,51 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       <div className="text-xs">
                         <div className="text-white font-bold flex items-center gap-1.5">
                           <Headphones className="w-3.5 h-3.5 text-purple-400" />
-                          <span>Official Soundtrack & Beat</span>
+                          <span>{homeConfig.desktopBannerSoundtrackTitle || 'Official Soundtrack & Beat'}</span>
                         </div>
-                        <div className="text-zinc-400 text-[11px]">Timestamp: {parsedYoutube.startTime}s • High Quality Stereo</div>
+                        <div className="text-zinc-400 text-[11px]">
+                          {homeConfig.desktopBannerSoundtrackDetail || `Timestamp: ${parsedYoutube.startTime}s • High Quality Stereo`}
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 p-3 rounded-2xl bg-black/40 border border-emerald-500/20 backdrop-blur-md">
                       <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
                       <div className="text-xs">
-                        <div className="text-white font-bold">แบนเนอร์ทางการ AngusShop</div>
-                        <div className="text-zinc-400 text-[11px]">อัปเดตแบบเรียลไทม์จากระบบแอดมิน</div>
+                        <div className="text-white font-bold">{homeConfig.desktopBannerSoundtrackTitle || 'แบนเนอร์ทางการ AngusShop'}</div>
+                        <div className="text-zinc-400 text-[11px]">{homeConfig.desktopBannerSoundtrackDetail || 'อัปเดตแบบเรียลไทม์จากระบบแอดมิน'}</div>
                       </div>
                     </div>
                   )}
 
                   {/* Quick Action */}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {homeConfig.desktopBannerImageLink && !isMusicBanner ? (
-                      <a
-                        href={homeConfig.desktopBannerImageLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white font-bold text-xs shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>เปิดดูรายละเอียด</span>
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => onNavigate('shop')}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs shadow-md shadow-purple-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                      >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>เลือกซื้อสินค้าในร้าน</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = homeConfig.desktopBannerButtonLink || 'shop';
+                        if (target.startsWith('http://') || target.startsWith('https://')) {
+                          window.open(target, '_blank');
+                        } else {
+                          onNavigate(target);
+                        }
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs shadow-md shadow-purple-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>{homeConfig.desktopBannerButtonText || 'เลือกซื้อสินค้าในร้าน'}</span>
+                    </button>
 
-                    {isMusicBanner && (
-                      <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
-                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
-                        <span>{homeConfig.desktopBannerAutoplay !== false ? 'ระบบเล่นเพลงอัตโนมัติ (Autoplay On)' : 'กด Play เพื่อฟังเพลง'}</span>
-                      </div>
-                    )}
+                    <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
+                      <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
+                      <span>
+                        {homeConfig.desktopBannerFooterNote || (
+                          isMusicBanner 
+                            ? (homeConfig.desktopBannerAutoplay !== false ? 'ระบบเล่นเพลงอัตโนมัติ (Autoplay On)' : 'กด Play เพื่อฟังเพลง')
+                            : 'โปรโมชั่นพิเศษพร้อมให้บริการ'
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

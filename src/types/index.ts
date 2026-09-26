@@ -307,10 +307,17 @@ export interface HomeConfig {
   promoCard2: PromoShowcaseCard;
   promoFooterText: string;
   promoFooterTag: string;
+  // Desktop/Universal Media Banner (เพลง หรือ รูปภาพ)
   desktopBannerType?: 'music' | 'image';
   desktopBannerTitle?: string;
   desktopBannerSubtitle?: string;
   desktopBannerBadge?: string;
+  desktopBannerTag?: string;
+  desktopBannerSoundtrackTitle?: string;
+  desktopBannerSoundtrackDetail?: string;
+  desktopBannerButtonText?: string;
+  desktopBannerButtonLink?: string;
+  desktopBannerFooterNote?: string;
   desktopBannerYoutubeUrl?: string;
   desktopBannerStartTime?: number;
   desktopBannerAutoplay?: boolean;

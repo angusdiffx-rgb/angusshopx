@@ -11,7 +11,13 @@ export interface ParsedYoutube {
 
 export const POPULAR_MUSIC_PRESETS = [
   {
-    title: 'AngusShop Official Beat (เริ่มต้นที่ 0:27)',
+    title: 'YAWIP.N - อยู่โบแล๊ะ (Official MV)',
+    videoId: 'SAKOqeeRpj4',
+    startTime: 27,
+    url: 'https://www.youtube.com/watch?v=SAKOqeeRpj4&t=27s'
+  },
+  {
+    title: 'AngusShop Official Beat (0:27)',
     videoId: 'SAKOqeeRpj4',
     startTime: 27,
     url: 'https://www.youtube.com/embed/SAKOqeeRpj4?si=aiE7k-hMCtDUt8bA&start=27'
@@ -27,6 +33,18 @@ export const POPULAR_MUSIC_PRESETS = [
     videoId: 'jfKfPfyJRdk',
     startTime: 0,
     url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk'
+  },
+  {
+    title: 'Blox Fruits Sea 3 Epic Battle Theme',
+    videoId: 'rQ3tI0FmG6M',
+    startTime: 0,
+    url: 'https://www.youtube.com/watch?v=rQ3tI0FmG6M'
+  },
+  {
+    title: 'Phonk Gaming DRIFT Beats',
+    videoId: 'h8qfT-N0m9o',
+    startTime: 0,
+    url: 'https://www.youtube.com/watch?v=h8qfT-N0m9o'
   }
 ];
 

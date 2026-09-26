@@ -323,6 +323,20 @@ export const HomeConfigManager: React.FC = () => {
       {/* Sub Tabs Selection */}
       <div className="flex items-center gap-2 border-b border-[#212133] pb-2 overflow-x-auto no-scrollbar">
         <button
+          onClick={() => setActiveSubTab('desktop_banner')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeSubTab === 'desktop_banner'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 ring-1 ring-purple-400/50'
+              : 'text-purple-300 hover:text-white bg-purple-950/30 border border-purple-500/30'
+          }`}
+        >
+          <Music className="w-4 h-4 text-cyan-400 animate-pulse" />
+          <span>แบนเนอร์เพลง & รูปภาพ (Banner & Music)</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/30 text-purple-200 font-bold uppercase">
+            {(config.desktopBannerType || 'music') === 'music' ? 'โหมดเพลง' : 'โหมดรูปภาพ'}
+          </span>
+        </button>
+        <button
           onClick={() => setActiveSubTab('banners')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeSubTab === 'banners'
@@ -403,17 +417,6 @@ export const HomeConfigManager: React.FC = () => {
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
           <span>แบนเนอร์ไฮไลท์ส่งมอบไว (Hero Promo)</span>
         </button>
-        <button
-          onClick={() => setActiveSubTab('desktop_banner')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeSubTab === 'desktop_banner'
-              ? 'bg-[#1C1C2C] text-purple-300 border border-purple-500/40'
-              : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Monitor className="w-3.5 h-3.5 text-emerald-400" />
-          <span>แบนเนอร์คอมพิวเตอร์ (เพลง / รูปภาพ)</span>
-        </button>
       </div>
 
       {/* ======================================================== */}
@@ -427,97 +430,202 @@ export const HomeConfigManager: React.FC = () => {
       )}
 
       {/* ======================================================== */}
-      {/* SECTION 0.7: แบนเนอร์พิเศษบนคอมพิวเตอร์ (Desktop Banner: เพลง YouTube หรือ รูปภาพ) */}
+      {/* SECTION 0.7: แบนเนอร์พิเศษ (Desktop Banner: เพลง YouTube หรือ รูปภาพ) */}
       {/* ======================================================== */}
       {(activeSubTab === 'all' || activeSubTab === 'desktop_banner') && (
         <div className="p-5 sm:p-6 rounded-2xl bg-[#11111A] border border-[#212133] space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#1E1E2E]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Monitor className="w-4 h-4" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1E1E2E]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/30 to-cyan-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center shrink-0 shadow-lg">
+                <Music className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>แบนเนอร์พิเศษบนคอมพิวเตอร์ (Desktop Banner)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    แสดงเฉพาะบน PC / คอมพิวเตอร์
+                  <span>ปรับเปลี่ยนแบนเนอร์ (เลือกเพลง YouTube หรือ รูปภาพ)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
+                    {(config.desktopBannerType || 'music') === 'music' ? 'โหมดเพลง YouTube' : 'โหมดรูปภาพ'}
                   </span>
                 </h3>
-                <p className="text-xs text-zinc-400">
-                  เลือกได้ว่าจะให้แสดงเป็น <strong>เครื่องเล่นเพลง (YouTube Video)</strong> หรือ <strong>รูปภาพโปรโมชั่น (Image Banner)</strong>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  ปรับแต่งเพลง ข้อความ และรูปภาพแบนเนอร์ด้านบนของหน้าแรกได้อย่างอิสระ แสดงผลทันที
                 </p>
               </div>
             </div>
 
             {/* Mode Switcher Segmented Control */}
-            <div className="flex items-center gap-1.5 bg-[#0B0B14] p-1.5 rounded-xl border border-[#262638] shrink-0">
+            <div className="flex items-center gap-1.5 bg-[#0B0B14] p-1.5 rounded-2xl border border-[#262638] shrink-0">
               <button
                 type="button"
                 onClick={() => setConfig(prev => ({ ...prev, desktopBannerType: 'music' }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                   (config.desktopBannerType || 'music') === 'music'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <Music className="w-3.5 h-3.5" />
-                <span>โหมดเล่นเพลง (YouTube)</span>
+                <Music className="w-4 h-4 text-cyan-300" />
+                <span>โหมดเพลง (YouTube Player)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setConfig(prev => ({ ...prev, desktopBannerType: 'image' }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                   config.desktopBannerType === 'image'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <ImageIcon className="w-3.5 h-3.5" />
+                <ImageIcon className="w-4 h-4 text-emerald-300" />
                 <span>โหมดรูปภาพ (Image Banner)</span>
               </button>
             </div>
           </div>
 
-          {/* Common Text Fields: Title & Subtitle & Badge */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                ป้ายกำกับด้านบน (Badge)
-              </label>
-              <input
-                type="text"
-                value={config.desktopBannerBadge || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerBadge: e.target.value }))}
-                placeholder="เช่น ANGUSSHOP OFFICIAL SOUND"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
-              />
+          {/* SECTION 1: ข้อความทั้งหมดบนแบนเนอร์ (Customize All Texts) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#141422] border border-[#26263B] space-y-4">
+            <div className="flex items-center gap-2 text-white font-bold text-sm pb-2 border-b border-[#212136]">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>แก้ไขข้อความทั้งหมดบนแบนเนอร์ (Text Customizer)</span>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                หัวข้อแบนเนอร์ (Banner Title)
-              </label>
-              <input
-                type="text"
-                value={config.desktopBannerTitle || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerTitle: e.target.value }))}
-                placeholder="เช่น เปิดเพลงฟังชิลๆ ระหว่างช้อปปิ้งผลปีศาจ"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  ป้ายกำกับบนซ้าย (Top Badge)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerBadge ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerBadge: e.target.value }))}
+                  placeholder="ANGUSSHOP OFFICIAL SOUND"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  ป้ายกำกับบนขวา (Sub-tag / Pill)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerTag ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerTag: e.target.value }))}
+                  placeholder="เล่นต่อเนื่องทุกหน้า"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  ข้อความบนปุ่มกด (Button Text)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerButtonText ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerButtonText: e.target.value }))}
+                  placeholder="เลือกซื้อสินค้าในร้าน"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  ปลายทางของปุ่ม (Button Target Link)
+                </label>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={config.desktopBannerButtonLink ?? ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerButtonLink: e.target.value }))}
+                    placeholder="shop หรือ https://..."
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, desktopBannerButtonLink: 'shop' }))}
+                    className="px-2.5 py-1 text-[11px] rounded-lg bg-[#1B1B2B] text-purple-300 hover:text-white font-semibold"
+                    title="ไปหน้าร้านค้า"
+                  >
+                    shop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, desktopBannerButtonLink: 'wallet' }))}
+                    className="px-2.5 py-1 text-[11px] rounded-lg bg-[#1B1B2B] text-emerald-300 hover:text-white font-semibold"
+                    title="ไปหน้าเติมเงิน"
+                  >
+                    wallet
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="sm:col-span-3">
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                คำอธิบายแบนเนอร์ (Subtitle / Description)
-              </label>
-              <textarea
-                rows={2}
-                value={config.desktopBannerSubtitle || ''}
-                onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerSubtitle: e.target.value }))}
-                placeholder="ข้อความอธิบายที่แสดงใต้หัวข้อแบนเนอร์"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#161624] border border-[#25253A] text-white text-xs focus:outline-none focus:border-purple-500 leading-relaxed"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+              <div className="sm:col-span-12">
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  หัวข้อใหญ่แบนเนอร์ (Main Title)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerTitle ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerTitle: e.target.value }))}
+                  placeholder="เช่น เปิดเพลงฟังชิลๆ ระหว่างช้อปปิ้งผลปีศาจ"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500 font-bold"
+                />
+              </div>
+
+              <div className="sm:col-span-12">
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  คำอธิบาย / รายละเอียด (Description & Subtitle)
+                </label>
+                <textarea
+                  rows={2}
+                  value={config.desktopBannerSubtitle ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerSubtitle: e.target.value }))}
+                  placeholder="ข้อความอธิบายที่แสดงใต้หัวข้อแบนเนอร์"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="sm:col-span-4">
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  หัวข้อกล่องคลื่นเสียง (Soundtrack Title)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerSoundtrackTitle ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerSoundtrackTitle: e.target.value }))}
+                  placeholder="Official Soundtrack & Beat"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="sm:col-span-4">
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  รายละเอียดกล่องคลื่นเสียง (Soundtrack Detail)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerSoundtrackDetail ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerSoundtrackDetail: e.target.value }))}
+                  placeholder="Timestamp: 27s • High Quality Stereo"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="sm:col-span-4">
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  ข้อความหมายเหตุด้านล่าง (Footer Note)
+                </label>
+                <input
+                  type="text"
+                  value={config.desktopBannerFooterNote ?? ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerFooterNote: e.target.value }))}
+                  placeholder="ระบบเล่นเพลงอัตโนมัติ (Autoplay On)"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#0B0B14] border border-[#27273C] text-white text-xs focus:outline-none focus:border-purple-500"
+                />
+              </div>
             </div>
           </div>
 
@@ -527,9 +635,9 @@ export const HomeConfigManager: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-300 font-bold text-xs sm:text-sm">
                   <Music className="w-4 h-4 text-cyan-400" />
-                  <span>ตั้งค่าเพลงและวิดีโอ YouTube (YouTube Music Player Settings)</span>
+                  <span>เปลี่ยนเพลงและวิดีโอ YouTube (Change YouTube Music & Settings)</span>
                 </div>
-                <span className="text-[10px] text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-full font-semibold">
+                <span className="text-[10px] text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 px-2.5 py-0.5 rounded-full font-semibold">
                   รองรับทุกรูปแบบ URL ของ YouTube
                 </span>
               </div>
@@ -537,9 +645,9 @@ export const HomeConfigManager: React.FC = () => {
               {/* Preset Track Quick Buttons */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-zinc-300">
-                  เพลงแนะนำด่วน (คลิกเพื่อเลือกทันที):
+                  เพลงฮิตยอดนิยม (คลิกเพื่อเปลี่ยนเพลงทันที):
                 </label>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {POPULAR_MUSIC_PRESETS.map((preset, idx) => (
                     <button
                       key={idx}
@@ -548,14 +656,20 @@ export const HomeConfigManager: React.FC = () => {
                         setConfig(prev => ({
                           ...prev,
                           desktopBannerYoutubeUrl: preset.url,
-                          desktopBannerStartTime: preset.startTime
+                          desktopBannerStartTime: preset.startTime,
+                          desktopBannerSoundtrackDetail: `Timestamp: ${preset.startTime}s • High Quality Stereo`
                         }));
                         success(`เปลี่ยนเป็นเพลง "${preset.title}" เรียบร้อยแล้ว`);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-[#1A1A2E] hover:bg-[#252542] border border-purple-500/30 text-purple-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+                      className="px-3 py-2 rounded-xl bg-[#1A1A2E] hover:bg-[#252542] border border-purple-500/30 text-purple-200 text-xs font-bold flex items-center justify-between gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm group"
                     >
-                      <Play className="w-3 h-3 text-cyan-400 fill-current" />
-                      <span>{preset.title}</span>
+                      <div className="flex items-center gap-2 truncate">
+                        <Play className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform fill-current shrink-0" />
+                        <span className="truncate">{preset.title}</span>
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 font-mono shrink-0">
+                        {preset.startTime}s
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -572,46 +686,68 @@ export const HomeConfigManager: React.FC = () => {
                       type="text"
                       value={config.desktopBannerYoutubeUrl || ''}
                       onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerYoutubeUrl: e.target.value }))}
-                      placeholder="เช่น https://www.youtube.com/watch?v=... หรือ SAKOqeeRpj4"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#292942] focus:border-purple-500 text-white text-xs focus:outline-none pr-8"
+                      placeholder="เช่น https://www.youtube.com/watch?v=... หรือ youtu.be/..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#292942] focus:border-purple-500 text-white text-xs focus:outline-none pr-8 font-mono"
                     />
                     {config.desktopBannerYoutubeUrl && (
                       <button
                         type="button"
                         onClick={() => setConfig(prev => ({ ...prev, desktopBannerYoutubeUrl: '' }))}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                        title="ล้างลิงก์"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                   <p className="text-[10px] text-zinc-400 mt-1">
-                    รองรับทั้งลิงก์แบบเต็ม, ลิงก์ย่อ youtu.be, embed URL หรือรหัสวิดีโอ 11 หลัก
+                    รองรับทุกลิงก์ของ YouTube (รวมลิงก์ที่มี &t=... หรือ ?start=...)
                   </p>
                 </div>
 
                 <div className="sm:col-span-4">
                   <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                    เวลาเริ่มต้นเล่น (วินาที / Start Second)
+                    เวลาเริ่มต้นเล่น (Start Second)
                   </label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setConfig(prev => ({ ...prev, desktopBannerStartTime: Math.max(0, (prev.desktopBannerStartTime || 0) - 5) }))}
+                      className="px-2 py-2 rounded-lg bg-[#1F1F35] hover:bg-[#2B2B4A] text-zinc-300 text-xs font-bold"
+                    >
+                      -5s
+                    </button>
                     <input
                       type="number"
                       min={0}
                       value={config.desktopBannerStartTime ?? 27}
                       onChange={(e) => setConfig(prev => ({ ...prev, desktopBannerStartTime: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0B14] border border-[#292942] focus:border-purple-500 text-amber-300 font-mono font-bold text-xs focus:outline-none"
+                      className="flex-1 px-3 py-2 rounded-xl bg-[#0B0B14] border border-[#292942] focus:border-purple-500 text-amber-300 font-mono font-bold text-xs focus:outline-none text-center"
                     />
-                    <span className="text-xs text-zinc-400 shrink-0 font-medium">วินาที</span>
+                    <button
+                      type="button"
+                      onClick={() => setConfig(prev => ({ ...prev, desktopBannerStartTime: (prev.desktopBannerStartTime || 0) + 5 }))}
+                      className="px-2 py-2 rounded-lg bg-[#1F1F35] hover:bg-[#2B2B4A] text-zinc-300 text-xs font-bold"
+                    >
+                      +5s
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig(prev => ({ ...prev, desktopBannerStartTime: 27 }))}
+                      className="px-2 py-2 rounded-lg bg-purple-900/40 hover:bg-purple-800/50 text-purple-200 text-xs font-bold"
+                      title="ตั้งค่าเริ่มต้น 27s"
+                    >
+                      27s
+                    </button>
                   </div>
                   <p className="text-[10px] text-zinc-400 mt-1">
-                    เช่น 27 วินาที (เริ่มที่ท่อนฮุค) หรือ 0 เริ่มต้นคลิป
+                    วินาทีที่เริ่มเล่น (เช่น 0 เริ่มต้นคลิป หรือ 27s เริ่มท่อนฮุค)
                   </p>
                 </div>
               </div>
 
               {/* Autoplay Checkbox */}
-              <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 flex items-center justify-between gap-3">
+              <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/20 flex items-center justify-between gap-3">
                 <label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -631,7 +767,7 @@ export const HomeConfigManager: React.FC = () => {
                 <label className="block text-xs font-semibold text-zinc-300 mb-2">
                   ตัวอย่างการแสดงผลเครื่องเล่นเพลง (Live Preview):
                 </label>
-                <div className="p-3 rounded-2xl bg-black/60 border border-purple-500/30 flex flex-col items-center justify-center">
+                <div className="p-3 sm:p-4 rounded-2xl bg-black/60 border border-purple-500/30 flex flex-col items-center justify-center">
                   {(() => {
                     const parsed = parseYoutubeUrl(
                       config.desktopBannerYoutubeUrl, 
@@ -639,7 +775,7 @@ export const HomeConfigManager: React.FC = () => {
                       false
                     );
                     return (
-                      <div className="w-full max-w-lg aspect-video rounded-xl overflow-hidden border border-purple-500/40 shadow-xl bg-black">
+                      <div className="w-full max-w-xl aspect-video rounded-xl overflow-hidden border border-purple-500/40 shadow-xl bg-black">
                         <iframe
                           width="100%"
                           height="100%"
@@ -669,9 +805,63 @@ export const HomeConfigManager: React.FC = () => {
                   <ImageIcon className="w-4 h-4 text-emerald-400" />
                   <span>ตั้งค่ารูปภาพแบนเนอร์ (Image Banner Settings)</span>
                 </div>
-                <span className="text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">
+                <span className="text-[10px] text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-semibold">
                   สัดส่วนแนะนำ 16:9 (เช่น 1920x1080 หรือ 1280x720)
                 </span>
+              </div>
+
+              {/* Quick Image Presets */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  รูปภาพธีม Blox Fruits แนะนำ (คลิกเพื่อเลือกทันที):
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        desktopBannerImageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1600&q=80',
+                        desktopBannerTitle: 'Blox Fruits Mythical Shop',
+                        desktopBannerSubtitle: 'ศูนย์รวมผลปีศาจแท้ 100% ส่งมอบทันใจในเซิร์ฟเวอร์ VIP'
+                      }));
+                      success('เลือกรูปภาพ Cyber Gaming เรียบร้อยแล้ว');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#142320] border border-emerald-500/30 text-emerald-200 text-xs font-bold hover:bg-[#1D332E] transition-all cursor-pointer"
+                  >
+                    Cyber Gaming Hub
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        desktopBannerImageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1600&q=80',
+                        desktopBannerTitle: 'โปรโมชั่นพิเศษ Blox Fruits ถาวร',
+                        desktopBannerSubtitle: 'รับผลปีศาจและ Gamepass แท้ ส่งมอบไว 3 วินาที'
+                      }));
+                      success('เลือกรูปภาพ Neon Arcade เรียบร้อยแล้ว');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#142320] border border-emerald-500/30 text-emerald-200 text-xs font-bold hover:bg-[#1D332E] transition-all cursor-pointer"
+                  >
+                    Neon Arcade
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        desktopBannerImageUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1600&q=80',
+                        desktopBannerTitle: 'AngusShop VIP Store',
+                        desktopBannerSubtitle: 'ระบบออโต้เทรด 24 ชั่วโมง การันตีปลอดภัย'
+                      }));
+                      success('เลือกรูปภาพ Epic Controller เรียบร้อยแล้ว');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#142320] border border-emerald-500/30 text-emerald-200 text-xs font-bold hover:bg-[#1D332E] transition-all cursor-pointer"
+                  >
+                    Epic Controller
+                  </button>
+                </div>
               </div>
 
               {/* Image URL & Upload */}
@@ -689,7 +879,7 @@ export const HomeConfigManager: React.FC = () => {
                   />
                   <label className="shrink-0 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center justify-center gap-2 transition-all shadow-md">
                     <Upload className="w-4 h-4" />
-                    <span>อัปโหลดรูปภาพ</span>
+                    <span>อัปโหลดรูปภาพจากเครื่อง</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -728,9 +918,9 @@ export const HomeConfigManager: React.FC = () => {
                 <label className="block text-xs font-semibold text-zinc-300 mb-2">
                   ตัวอย่างรูปภาพแบนเนอร์ (Image Preview):
                 </label>
-                <div className="p-3 rounded-2xl bg-black/60 border border-emerald-500/30 flex flex-col items-center justify-center">
+                <div className="p-3 sm:p-4 rounded-2xl bg-black/60 border border-emerald-500/30 flex flex-col items-center justify-center">
                   {config.desktopBannerImageUrl ? (
-                    <div className="w-full max-w-lg aspect-video rounded-xl overflow-hidden border border-emerald-500/40 shadow-xl bg-black">
+                    <div className="w-full max-w-xl aspect-video rounded-xl overflow-hidden border border-emerald-500/40 shadow-xl bg-black">
                       <img
                         src={config.desktopBannerImageUrl}
                         alt="Desktop Banner Preview"
@@ -738,7 +928,7 @@ export const HomeConfigManager: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <div className="w-full max-w-lg aspect-video rounded-xl bg-[#0A0A14] border border-zinc-800 flex flex-col items-center justify-center text-zinc-500 p-6 text-center">
+                    <div className="w-full max-w-xl aspect-video rounded-xl bg-[#0A0A14] border border-zinc-800 flex flex-col items-center justify-center text-zinc-500 p-6 text-center">
                       <ImageIcon className="w-12 h-12 text-zinc-700 mb-2" />
                       <span className="text-xs font-bold">ยังไม่มีรูปภาพแบนเนอร์</span>
                       <span className="text-[11px] text-zinc-600 mt-0.5">กรุณาใส่ URL หรือกดปุ่มอัปโหลดรูปภาพด้านบน</span>
@@ -749,19 +939,31 @@ export const HomeConfigManager: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Save Prompt */}
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-[11px] text-zinc-400">
-              💡 เมื่อปรับแต่งเพลงหรือเปลี่ยนโหมดแบนเนอร์แล้ว อย่าลืมกด <strong>"บันทึกการตั้งค่าหน้าแรก"</strong> ด้านบน
-            </span>
+          {/* Quick Save Action Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-[#131024] to-purple-950/40 border border-purple-500/30 shadow-lg">
+            <div className="flex items-center gap-2 text-xs text-purple-200">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                เมื่อปรับแต่งเพลง ข้อความ หรือรูปภาพแล้ว กด <strong>"บันทึกและอัปเดตหน้าเว็บทันที"</strong> เพื่อเปิดใช้งาน
+              </span>
+            </div>
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white text-xs font-bold shadow-lg shadow-purple-600/40 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <Save className="w-3.5 h-3.5" />
-              <span>บันทึกทันที</span>
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>บันทึกและอัปเดตหน้าเว็บทันที</span>
+                </>
+              )}
             </button>
           </div>
         </div>
