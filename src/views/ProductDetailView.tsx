@@ -30,7 +30,17 @@ interface ProductDetailViewProps {
   allProducts?: Product[];
   onSelectProduct?: (product: Product) => void;
   onBack: () => void;
-  onBuyNow: (product: Product, quantity: number) => void;
+  onBuyNow: (
+    product: Product, 
+    quantity?: number, 
+    options?: {
+      selectedOption?: string;
+      targetNote?: string;
+      customPrice?: number;
+      customImage?: string;
+      alreadyAdded?: boolean;
+    }
+  ) => void;
 }
 
 export const ProductDetailView: React.FC<ProductDetailViewProps> = ({ 
@@ -299,7 +309,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       };
 
       addToCart(customProd, finalQty, selectedOption, targetNote, tierData.price, tierData.image);
-      onBuyNow(customProd, finalQty);
+      onBuyNow(customProd, finalQty, { alreadyAdded: true });
       return;
     }
 
@@ -309,7 +319,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       const targetNote = `ฝ่าย: ${bountyFaction === 'pirate' ? 'โจรสลัด' : 'ทหารเรือ'}`;
 
       addToCart(product, finalQty, selectedOption, targetNote, product.price, product.image);
-      onBuyNow(product, finalQty);
+      onBuyNow(product, finalQty, { alreadyAdded: true });
       return;
     }
 
@@ -322,7 +332,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       : undefined;
 
     addToCart(product, finalQty, selectedOption, targetNote);
-    onBuyNow(product, finalQty);
+    onBuyNow(product, finalQty, { alreadyAdded: true });
   };
 
   const discountPercent = activeProductOldPrice && activeProductOldPrice > activeProductPrice
@@ -335,18 +345,18 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer bg-[#11111A] px-3.5 py-2 rounded-xl border border-[#212133]"
+          className="inline-flex items-center gap-2 text-xs font-bold text-[#B8AEC9] hover:text-white transition-all cursor-pointer bg-[rgba(255,255,255,0.04)] hover:bg-[#6D28D9]/20 px-4 py-2.5 rounded-2xl border border-[rgba(168,85,247,0.20)] hover:border-[rgba(192,132,252,0.45)] shadow-sm active:scale-95"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 text-[#C084FC]" />
           <span>กลับไปที่ร้านค้า</span>
         </button>
 
         <button
           onClick={() => setIsShareModalOpen(true)}
-          className="inline-flex items-center gap-2 text-xs font-bold text-purple-300 hover:text-white transition-all cursor-pointer bg-purple-950/40 hover:bg-purple-900/60 px-3.5 py-2 rounded-xl border border-purple-500/30 hover:border-purple-500/60 shadow-lg shadow-purple-950/30"
+          className="inline-flex items-center gap-2 text-xs font-bold text-white transition-all cursor-pointer bg-gradient-to-r from-[#6D28D9]/40 to-[#A855F7]/30 hover:from-[#6D28D9]/70 hover:to-[#A855F7]/60 px-4 py-2.5 rounded-2xl border border-[rgba(168,85,247,0.30)] hover:border-[#C084FC] shadow-lg shadow-purple-950/40 active:scale-95"
           title="แชร์สินค้านี้ไปยัง Facebook, X, LINE หรือคัดลอกลิงก์"
         >
-          <Share2 className="w-4 h-4 text-purple-400" />
+          <Share2 className="w-4 h-4 text-[#C084FC]" />
           <span>แชร์สินค้า (Social Share)</span>
         </button>
       </div>
@@ -356,22 +366,24 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         
         {/* Left: Product Media Gallery */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="relative aspect-square w-full rounded-3xl overflow-hidden bg-[#0D0D15] border border-[#262638] shadow-2xl p-6 flex items-center justify-center">
+          <div className="relative aspect-square w-full rounded-3xl overflow-hidden bg-[rgba(255,255,255,0.03)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.25)] shadow-[0_12px_40px_rgba(7,5,15,0.8),0_0_35px_rgba(168,85,247,0.15)] p-6 sm:p-8 flex items-center justify-center group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#6D28D9]/15 via-transparent to-[#C084FC]/10 pointer-events-none group-hover:opacity-100 transition-opacity"></div>
             <BloxImage
               src={activeProductImage}
               alt={product.name}
               productName={product.name}
-              className="w-full h-full object-contain object-center drop-shadow-[0_8px_24px_rgba(147,51,234,0.35)]"
+              className="w-full h-full object-contain object-center drop-shadow-[0_12px_32px_rgba(168,85,247,0.40)] group-hover:scale-105 transition-transform duration-500"
             />
             {discountPercent > 0 && (
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 sm:px-3 py-1 rounded-xl bg-rose-600 text-white font-extrabold text-[11px] sm:text-xs tracking-wider shadow-lg">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-rose-950/90 to-pink-950/90 backdrop-blur-md text-rose-200 font-black text-[11px] sm:text-xs tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.4)] border border-rose-500/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
                 ลดพิเศษ -{discountPercent}%
               </div>
             )}
-            <div className={`absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 rounded-xl backdrop-blur-md font-semibold text-[11px] sm:text-xs border ${
+            <div className={`absolute top-3 right-3 sm:top-4 sm:right-4 px-3 py-1 rounded-full backdrop-blur-md font-bold text-[11px] sm:text-xs border ${
               product.category === 'สกินผล'
-                ? 'bg-gradient-to-r from-fuchsia-600/90 to-purple-600/90 border-fuchsia-400/40 text-fuchsia-100 shadow-md shadow-fuchsia-500/25'
-                : 'bg-black/70 border-white/10 text-white'
+                ? 'bg-fuchsia-950/80 border-fuchsia-400/50 text-fuchsia-200 shadow-[0_0_12px_rgba(217,70,239,0.35)]'
+                : 'bg-[#07050F]/80 border-[rgba(168,85,247,0.30)] text-[#E9D5FF]'
             }`}>
               {product.category}
             </div>
@@ -385,37 +397,37 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Rarity & Badges */}
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {product.rarity && (
-                <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold">
+                <span className="px-3 py-1 rounded-xl bg-purple-500/15 border border-purple-500/30 text-[#C084FC] text-xs font-bold shadow-sm">
                   ระดับ: {product.rarity}
                 </span>
               )}
               {product.fruitType && (
-                <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">
+                <span className="px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold shadow-sm">
                   ประเภท: {product.fruitType}
                 </span>
               )}
               {product.stock > 0 ? (
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-semibold flex items-center gap-1">
+                <span className="px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
                   <CheckCircle2 className="w-3.5 h-3.5" /> มีสินค้าพร้อมส่ง ({product.stock} ชิ้น)
                 </span>
               ) : (
-                <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-semibold">
+                <span className="px-3 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold">
                   สินค้าหมดชั่วคราว
                 </span>
               )}
             </div>
 
-            <h1 className="text-xl sm:text-3xl font-black text-white leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
               {product.name}
             </h1>
 
             {/* Pricing */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212133] flex items-baseline gap-2 sm:gap-3">
-              <span className="text-2xl sm:text-3xl font-black text-purple-400">
+            <div className="p-4 sm:p-5 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.22)] shadow-[0_8px_30px_rgba(7,5,15,0.5)] flex items-baseline gap-2 sm:gap-3 flex-wrap">
+              <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#E9D5FF] to-[#C084FC]">
                 ฿{(activeProductPrice || 0).toLocaleString()}
               </span>
               {Boolean(activeProductOldPrice && activeProductOldPrice > activeProductPrice) && (
-                <span className="text-xs sm:text-sm text-zinc-500 line-through">
+                <span className="text-sm sm:text-base text-[#B8AEC9]/60 line-through font-semibold">
                   ฿{(activeProductOldPrice || 0).toLocaleString()}
                 </span>
               )}
@@ -1186,21 +1198,21 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           </div>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden sm:block space-y-3 pt-4 border-t border-[#1E1E2E]">
+          <div className="hidden sm:block space-y-3 pt-4 border-t border-[rgba(168,85,247,0.20)]">
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleAddToCart}
                 disabled={product.stock <= 0}
-                className="py-3.5 px-4 rounded-xl bg-[#181826] hover:bg-[#202033] border border-[#2C2C42] hover:border-purple-500/40 text-zinc-200 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                className="py-4 px-4 rounded-2xl bg-[rgba(255,255,255,0.04)] hover:bg-[#6D28D9]/25 border border-[rgba(168,85,247,0.25)] hover:border-[#C084FC]/60 text-zinc-200 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.25)] active:scale-95"
               >
-                <ShoppingBag className="w-4 h-4 text-purple-400" />
+                <ShoppingBag className="w-4 h-4 text-[#C084FC]" />
                 <span>เพิ่มลงตะกร้า</span>
               </button>
 
               <button
                 onClick={handleDirectBuy}
                 disabled={product.stock <= 0}
-                className="py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:brightness-110 text-white text-xs font-bold shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                className="py-4 px-4 rounded-2xl bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] hover:from-[#7C3AED] hover:to-[#C084FC] text-white text-xs font-bold shadow-[0_4px_25px_rgba(168,85,247,0.35)] hover:shadow-[0_0_35px_rgba(168,85,247,0.50)] flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer active:scale-95"
               >
                 <Zap className="w-4 h-4 fill-white" />
                 <span>ซื้อทันที</span>
@@ -1210,14 +1222,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Quick Share Button */}
             <button
               onClick={() => setIsShareModalOpen(true)}
-              className="w-full py-2.5 px-3 rounded-xl bg-[#141422] hover:bg-[#1A1A2C] border border-[#252538] hover:border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              className="w-full py-2.5 px-3 rounded-2xl bg-[#0F0A1A]/80 hover:bg-[#6D28D9]/20 border border-[rgba(168,85,247,0.20)] hover:border-[rgba(192,132,252,0.45)] text-[#C084FC] hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
             >
-              <Share2 className="w-3.5 h-3.5 text-purple-400" />
+              <Share2 className="w-3.5 h-3.5 text-[#C084FC]" />
               <span>แชร์สินค้านี้ (OpenGraph / Twitter / LINE)</span>
             </button>
 
             {/* Delivery Instructions Box */}
-            <div className="p-4 rounded-2xl bg-[#0D0D16] border border-[#212130] space-y-2">
+            <div className="p-5 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-lg space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-bold text-zinc-300">
                 {product.category === 'บริการ' || product.deliveryType === 'manual_service' || product.deliveryType === 'service' ? (
                   <>
@@ -1305,22 +1317,24 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
       </div>
 
       {/* Mobile Sticky Bottom Purchase Bar */}
-      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-40 bg-[#0A0A12]/95 backdrop-blur-xl border-t border-[#232336] p-3 shadow-2xl">
+      <div className="sm:hidden fixed bottom-14 left-0 right-0 z-40 bg-[#07050F]/95 backdrop-blur-2xl border-t border-[rgba(168,85,247,0.30)] p-3.5 shadow-[0_-10px_35px_rgba(7,5,15,0.9),0_0_25px_rgba(109,40,217,0.25)]">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] text-zinc-400 block">
+            <span className="text-[10px] text-[#B8AEC9] block">
               ราคารวม ({quantity} {isMultiTierBounty ? 'แพ็กเกจ' : isMasteryService ? 'ชุด' : isLevelService ? 'ชุด' : isFragmentService ? 'ชุด' : isBeliService ? 'M' : 'ชิ้น'})
               {isMultiTierBounty && <span className="text-amber-400 font-bold ml-1">({selectedBountyTier})</span>}
               {isMasteryService && <span className="text-amber-400 font-bold ml-1">({(quantity * 100).toLocaleString()} มาส)</span>}
-              {isFragmentService && <span className="text-purple-400 font-bold ml-1">({(quantity * 10000).toLocaleString()} ม่วง)</span>}
+              {isFragmentService && <span className="text-[#C084FC] font-bold ml-1">({(quantity * 10000).toLocaleString()} ม่วง)</span>}
             </span>
-            <span className="text-base font-black text-purple-300">฿{((activeProductPrice || 0) * quantity).toLocaleString()}</span>
+            <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#E9D5FF] to-[#C084FC]">
+              ฿{((activeProductPrice || 0) * quantity).toLocaleString()}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsShareModalOpen(true)}
-              className="p-2.5 rounded-xl bg-[#1C1C2C] border border-[#2F2F44] text-purple-400 hover:text-white active:scale-95 cursor-pointer"
+              className="p-2.5 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.25)] text-[#C084FC] hover:text-white active:scale-95 cursor-pointer shadow-sm"
               title="แชร์สินค้านี้"
             >
               <Share2 className="w-4 h-4" />
@@ -1328,15 +1342,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <button
               onClick={handleAddToCart}
               disabled={product.stock <= 0}
-              className="p-2.5 rounded-xl bg-[#1C1C2C] border border-[#2F2F44] text-zinc-200 active:scale-95 disabled:opacity-30"
+              className="p-2.5 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.25)] text-zinc-200 active:scale-95 disabled:opacity-30"
               title="เพิ่มลงตะกร้า"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4 text-[#C084FC]" />
             </button>
             <button
               onClick={handleDirectBuy}
               disabled={product.stock <= 0}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 active:scale-95 disabled:opacity-30"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#A855F7] text-white text-xs font-black shadow-[0_0_20px_rgba(168,85,247,0.4)] flex items-center gap-1.5 active:scale-95 disabled:opacity-30 cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5 fill-white" />
               <span>ซื้อทันที</span>

@@ -1491,73 +1491,73 @@ export const AdminView: React.FC<AdminViewProps> = ({
       )}
 
       {/* Admin Tab Navigation */}
-      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-[#1E1E2E]">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2.5 no-scrollbar border-b border-[rgba(168,85,247,0.20)]">
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'dashboard'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#6D28D9] to-[#A855F7] text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-[rgba(192,132,252,0.4)]'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
-          <LayoutDashboard className="w-4 h-4" />
+          <LayoutDashboard className="w-4 h-4 text-[#C084FC]" />
           ภาพรวม
         </button>
 
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'products'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#6D28D9] to-[#A855F7] text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-[rgba(192,132,252,0.4)]'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
-          <ShoppingBag className="w-4 h-4" />
+          <ShoppingBag className="w-4 h-4 text-[#C084FC]" />
           สินค้า ({products.length})
         </button>
 
         <button
           onClick={() => setActiveTab('deposits')}
-          className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'deposits'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#6D28D9] to-[#A855F7] text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-[rgba(192,132,252,0.4)]'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
-          <Receipt className="w-4 h-4" />
+          <Receipt className="w-4 h-4 text-[#C084FC]" />
           สลิปเติมเงิน ({deposits.length})
         </button>
 
         <button
           onClick={() => setActiveTab('inventory')}
-          className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'inventory'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#6D28D9] to-[#A855F7] text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-[rgba(192,132,252,0.4)]'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
-          <Package className="w-4 h-4" />
+          <Package className="w-4 h-4 text-[#C084FC]" />
           <span>ส่งมอบ/คลังลูกค้า ({inventoryItems.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('orders')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'orders'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#6D28D9] to-[#A855F7] text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-[rgba(192,132,252,0.4)]'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
-          <ClipboardList className="w-4 h-4" />
+          <ClipboardList className="w-4 h-4 text-[#C084FC]" />
           คำสั่งซื้อ ({orders.length})
         </button>
 
         <button
           onClick={() => setActiveTab('home_config')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'home_config'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/40'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#8B5CF6] via-[#A855F7] to-[#C084FC] text-white shadow-[0_0_25px_rgba(192,132,252,0.45)] border border-white/30'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
           <Sparkles className="w-4 h-4 text-amber-400" />
@@ -1566,10 +1566,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'users'
-              ? 'bg-pink-600 text-white shadow-lg shadow-pink-600/30'
-              : 'text-zinc-400 hover:text-white hover:bg-[#141420]'
+              ? 'bg-gradient-to-r from-[#D946EF] to-[#A855F7] text-white shadow-[0_0_25px_rgba(217,70,239,0.4)] border border-[rgba(244,114,182,0.4)]'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
           }`}
         >
           <Users className="w-4 h-4 text-pink-300" />
@@ -1580,64 +1580,91 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {/* Tab 1: Dashboard Overview */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div className="p-6 rounded-3xl bg-[#11111A] border border-[#212133] shadow-lg">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>ยอดขายรวมทั้งหมด</span>
-                <DollarSign className="w-4 h-4 text-purple-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            <div className="p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.20)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] relative overflow-hidden group hover:border-[rgba(192,132,252,0.45)] transition-all">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-[#8B5CF6]/10 rounded-full blur-2xl pointer-events-none group-hover:bg-[#8B5CF6]/20 transition-all"></div>
+              <div className="flex items-center justify-between text-xs text-[#B8AEC9]">
+                <span className="font-semibold">ยอดขายรวมทั้งหมด</span>
+                <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-[#C084FC]">
+                  <DollarSign className="w-4 h-4" />
+                </div>
               </div>
-              <div className="text-3xl font-black text-white mt-3">
+              <div className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-[#E9D5FF] to-[#C084FC] mt-3">
                 ฿{totalRevenue.toLocaleString()}
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">จากคำสั่งซื้อที่เสร็จสมบูรณ์</p>
+              <p className="text-[11px] text-[#B8AEC9] mt-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7]"></span>
+                จากคำสั่งซื้อที่เสร็จสมบูรณ์
+              </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#11111A] border border-[#212133] shadow-lg">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>ยอดเติมเงินสำเร็จ</span>
-                <Receipt className="w-4 h-4 text-emerald-400" />
+            <div className="p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.20)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/20 transition-all"></div>
+              <div className="flex items-center justify-between text-xs text-[#B8AEC9]">
+                <span className="font-semibold">ยอดเติมเงินสำเร็จ</span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Receipt className="w-4 h-4" />
+                </div>
               </div>
-              <div className="text-3xl font-black text-emerald-400 mt-3">
+              <div className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-teal-300 mt-3">
                 ฿{totalDepositsAmount.toLocaleString()}
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">สลิปผ่านการตรวจ SlipOK</p>
+              <p className="text-[11px] text-[#B8AEC9] mt-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                สลิปผ่านการตรวจ SlipOK
+              </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#11111A] border border-[#212133] shadow-lg">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>คำสั่งซื้อทั้งหมด</span>
-                <ClipboardList className="w-4 h-4 text-amber-400" />
+            <div className="p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.20)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] relative overflow-hidden group hover:border-[rgba(192,132,252,0.45)] transition-all">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-[#A855F7]/10 rounded-full blur-2xl pointer-events-none group-hover:bg-[#A855F7]/20 transition-all"></div>
+              <div className="flex items-center justify-between text-xs text-[#B8AEC9]">
+                <span className="font-semibold">คำสั่งซื้อทั้งหมด</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <ClipboardList className="w-4 h-4" />
+                </div>
               </div>
-              <div className="text-3xl font-black text-white mt-3">
-                {orders.length} รายการ
+              <div className="text-3xl font-black tracking-tight text-white mt-3">
+                {orders.length} <span className="text-lg font-bold text-[#B8AEC9]">รายการ</span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">ออเดอร์ในระบบ</p>
+              <p className="text-[11px] text-[#B8AEC9] mt-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                ออเดอร์ในระบบทั้งหมด
+              </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#11111A] border border-[#212133] shadow-lg">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>สินค้าในระบบ</span>
-                <ShoppingBag className="w-4 h-4 text-purple-400" />
+            <div className="p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.20)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] relative overflow-hidden group hover:border-[rgba(192,132,252,0.45)] transition-all">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-[#C084FC]/10 rounded-full blur-2xl pointer-events-none group-hover:bg-[#C084FC]/20 transition-all"></div>
+              <div className="flex items-center justify-between text-xs text-[#B8AEC9]">
+                <span className="font-semibold">สินค้าในระบบ</span>
+                <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-[#C084FC]">
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
               </div>
-              <div className="text-3xl font-black text-white mt-3">
-                {products.length} รายการ
+              <div className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-[#E9D5FF] to-[#C084FC] mt-3">
+                {products.length} <span className="text-lg font-bold text-[#B8AEC9]">รายการ</span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">พร้อมจำหน่ายในร้านค้า</p>
+              <p className="text-[11px] text-[#B8AEC9] mt-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7]"></span>
+                พร้อมจำหน่ายในร้านค้า
+              </p>
             </div>
           </div>
 
           {/* Recent Orders Overview */}
-          <div className="p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-4">
-            <h3 className="text-base font-bold text-white">คำสั่งซื้อล่าสุด 5 รายการ</h3>
+          <div className="p-6 sm:p-7 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] space-y-4">
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]"></span>
+              คำสั่งซื้อล่าสุด 5 รายการ
+            </h3>
             {orders.slice(0, 5).map((o) => (
-              <div key={o.orderId} className="p-3.5 rounded-2xl bg-[#0D0D16] border border-[#1E1E2E] flex items-center justify-between text-xs">
+              <div key={o.orderId} className="p-4 rounded-2xl bg-[#07050F]/70 border border-[rgba(168,85,247,0.15)] hover:border-[rgba(192,132,252,0.3)] transition-all flex items-center justify-between text-xs">
                 <div>
-                  <div className="font-mono text-purple-300 font-bold">#{o.orderId}</div>
-                  <div className="text-zinc-400 text-[11px] mt-0.5">Roblox: <strong className="text-white">{o.robloxUsername || '-'}</strong></div>
+                  <div className="font-mono text-[#C084FC] font-bold">#{o.orderId}</div>
+                  <div className="text-[#B8AEC9] text-[11px] mt-0.5">Roblox: <strong className="text-white">{o.robloxUsername || '-'}</strong></div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-white">฿{((o.total ?? o.totalAmount) || 0).toLocaleString()}</div>
-                  <span className="text-[10px] text-emerald-400 font-semibold">{o.orderStatus || o.status || 'completed'}</span>
+                  <div className="font-bold text-white text-sm">฿{((o.total ?? o.totalAmount) || 0).toLocaleString()}</div>
+                  <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{o.orderStatus || o.status || 'completed'}</span>
                 </div>
               </div>
             ))}

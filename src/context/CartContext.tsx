@@ -77,9 +77,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cartItemId = selectedOption 
         ? `${product.productId}_${selectedOption}` 
         : product.productId;
-      const displayName = selectedOption 
-        ? `${product.name} [${selectedOption}]` 
-        : product.name;
+      const displayName = product.name;
 
       const maxLimit = getItemMaxQty(product.stock, product.name, product.productId);
       const existingIndex = prev.findIndex((item) => item.cartItemId === cartItemId || (!item.cartItemId && item.productId === cartItemId));

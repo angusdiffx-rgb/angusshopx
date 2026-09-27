@@ -156,17 +156,17 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className={`relative w-full rounded-2xl sm:rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-700 bg-gradient-to-br ${getGradientTheme(activeBanner.themeGradient)}`}
+          className={`relative w-full rounded-2xl sm:rounded-3xl border border-[rgba(168,85,247,0.25)] overflow-hidden shadow-[0_15px_50px_rgba(7,5,15,0.8),0_0_35px_rgba(139,92,246,0.15)] transition-all duration-700 bg-gradient-to-br ${getGradientTheme(activeBanner.themeGradient)}`}
         >
           {/* Subtle Ambient Radial Lighting Inside Banner */}
-          <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 bg-purple-500/10 blur-[90px] rounded-full pointer-events-none" />
+          <div className="absolute top-0 right-0 w-72 sm:w-96 h-72 sm:h-96 bg-purple-500/15 blur-[90px] rounded-full pointer-events-none" />
           <div className="absolute bottom-0 left-1/4 w-60 sm:w-80 h-60 sm:h-80 bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none" />
 
           {/* Autoplay Progress Line Bar */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-white/5 z-20 overflow-hidden">
             <div 
               key={currentIndex}
-              className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-400 animate-[progress_6s_linear_infinite]"
+              className="h-full bg-gradient-to-r from-[#6D28D9] via-[#C084FC] to-[#38BDF8] animate-[progress_6s_linear_infinite]"
               style={{
                 animationPlayState: isPaused ? 'paused' : 'running'
               }}
@@ -187,13 +187,13 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 </span>
 
                 {activeBanner.targetCategory && (
-                  <span className="text-zinc-400 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-black/40 border border-white/5">
+                  <span className="text-zinc-300 text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-[#0F0A1A]/80 border border-[rgba(168,85,247,0.20)]">
                     หมวด: {activeBanner.targetCategory}
                   </span>
                 )}
 
                 {activeBanner.discountBadge && (
-                  <span className="text-rose-300 font-extrabold text-[11px] sm:text-xs px-2.5 py-0.5 rounded-lg bg-rose-500/20 border border-rose-500/30">
+                  <span className="text-rose-300 font-extrabold text-[11px] sm:text-xs px-2.5 py-0.5 rounded-lg bg-rose-500/20 border border-rose-500/35 shadow-sm">
                     ลดพิเศษ {activeBanner.discountBadge}
                   </span>
                 )}
@@ -202,17 +202,19 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               {/* Title & Highlight */}
               <div className="space-y-1.5 sm:space-y-2">
                 <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-5xl font-black text-white leading-tight tracking-tight drop-shadow-md">
-                  {activeBanner.title}
+                  <span className="bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent">
+                    {activeBanner.title}
+                  </span>
                 </h1>
                 {activeBanner.highlightText && (
-                  <p className="text-sm sm:text-lg md:text-xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-cyan-300 bg-clip-text text-transparent">
+                  <p className="text-sm sm:text-lg md:text-xl font-black bg-gradient-to-r from-[#A855F7] via-[#C084FC] to-[#8B5CF6] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]">
                     {activeBanner.highlightText}
                   </p>
                 )}
               </div>
 
               {/* Description */}
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-xl line-clamp-3 sm:line-clamp-none">
+              <p className="text-xs sm:text-sm text-[#B8AEC9] leading-relaxed max-w-xl line-clamp-3 sm:line-clamp-none font-medium">
                 {activeBanner.description}
               </p>
 
@@ -220,7 +222,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
               <div className="flex flex-wrap items-baseline gap-3 pt-1">
                 {activeBanner.priceText && (
                   <div className="flex items-baseline gap-2">
-                    <span className="text-2xl sm:text-4xl font-black text-emerald-400 drop-shadow-sm">
+                    <span className="text-2xl sm:text-4xl font-black text-emerald-400 drop-shadow-[0_0_12px_rgba(34,197,94,0.3)]">
                       {activeBanner.priceText}
                     </span>
                     {activeBanner.originalPriceText && (
@@ -231,7 +233,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                   </div>
                 )}
 
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-400 bg-black/30 border border-white/5 px-2.5 py-1 rounded-xl">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-300 bg-[#0F0A1A]/80 border border-[rgba(168,85,247,0.25)] px-3 py-1 rounded-xl shadow-sm">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                   <span>รับของผ่าน VIP Server 100%</span>
                 </div>
@@ -242,7 +244,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 <button
                   type="button"
                   onClick={() => handleBannerAction(activeBanner, true)}
-                  className="py-3 px-5 sm:px-7 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="py-3 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] hover:from-[#7C3AED] hover:to-[#C084FC] active:scale-95 text-white font-black text-xs sm:text-sm shadow-[0_0_30px_rgba(168,85,247,0.45)] hover:shadow-[0_0_40px_rgba(192,132,252,0.6)] flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
                 >
                   <Zap className="w-4 h-4 fill-white" />
                   <span>{activeBanner.ctaText || 'สั่งซื้อทันที'}</span>
@@ -251,10 +253,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                 <button
                   type="button"
                   onClick={() => handleBannerAction(activeBanner, false)}
-                  className="py-3 px-4 sm:px-6 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                  className="py-3 px-5 sm:px-7 rounded-xl sm:rounded-2xl bg-[#0F0A1A]/80 hover:bg-[#1E1433]/90 active:scale-95 border border-[rgba(168,85,247,0.30)] hover:border-[rgba(192,132,252,0.60)] text-purple-100 hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.25)]"
                 >
                   <span>{activeBanner.secondaryCtaText || 'ดูรายละเอียด'}</span>
-                  <ArrowRight className="w-4 h-4 text-purple-300" />
+                  <ArrowRight className="w-4 h-4 text-[#C084FC]" />
                 </button>
 
                 {onOpenCalculator && (
@@ -264,10 +266,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
                       playClickSound();
                       onOpenCalculator();
                     }}
-                    className="py-3 px-3.5 rounded-xl sm:rounded-2xl bg-[#141422] hover:bg-[#1E1E2E] border border-purple-500/30 text-purple-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer hidden sm:flex"
+                    className="py-3 px-4 rounded-xl sm:rounded-2xl bg-[#0F0A1A]/80 hover:bg-[rgba(139,92,246,0.15)] border border-[rgba(168,85,247,0.25)] hover:border-[#C084FC]/50 text-purple-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer hidden sm:flex hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
                     title="เครื่องคำนวณราคาเทรด Blox Fruits (W/F/L)"
                   >
-                    <Calculator className="w-4 h-4 text-purple-400" />
+                    <Calculator className="w-4 h-4 text-[#C084FC]" />
                     <span>คำนวณราคาเทรด</span>
                   </button>
                 )}

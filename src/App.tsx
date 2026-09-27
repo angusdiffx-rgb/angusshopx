@@ -267,8 +267,28 @@ function MainShop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleBuyNow = (product: Product, quantity = 1) => {
-    addToCart(product, quantity);
+  const handleBuyNow = (
+    product: Product, 
+    quantity = 1,
+    options?: {
+      selectedOption?: string;
+      targetNote?: string;
+      customPrice?: number;
+      customImage?: string;
+      alreadyAdded?: boolean;
+    }
+  ) => {
+    // Only add to cart if caller hasn't already added it
+    if (!options?.alreadyAdded) {
+      addToCart(
+        product, 
+        quantity, 
+        options?.selectedOption, 
+        options?.targetNote, 
+        options?.customPrice, 
+        options?.customImage
+      );
+    }
     setSelectedProduct(product);
     setCurrentView('checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });

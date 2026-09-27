@@ -465,27 +465,27 @@ export const WalletView: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
         {/* Main Balance Card */}
-        <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C1333] via-[#120F24] to-[#0D0B18] border border-purple-500/40 shadow-xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="p-5 sm:p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.30)] shadow-[0_12px_40px_rgba(7,5,15,0.7),0_0_30px_rgba(168,85,247,0.20)] relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-36 h-36 bg-purple-500/15 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">ยอดเงินปัจจุบัน</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300">
+            <span className="text-xs font-semibold text-[#C084FC] uppercase tracking-wider">ยอดเงินปัจจุบัน</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[#C084FC] shadow-sm">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 sm:mt-4">
-            <div className="text-3xl sm:text-4xl font-black text-emerald-400">
+            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]">
               ฿{(user.balance || 0).toLocaleString()}
             </div>
-            <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1">พร้อมใช้งานสำหรับการสั่งซื้อ</p>
+            <p className="text-[10px] sm:text-[11px] text-[#B8AEC9] mt-1">พร้อมใช้งานสำหรับการสั่งซื้อ</p>
           </div>
         </div>
 
         {/* Total Deposited */}
-        <div className="p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] shadow-xl">
+        <div className="p-5 sm:p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-[0_8px_32px_rgba(7,5,15,0.6)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">ยอดเติมเงินทั้งหมด</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+            <span className="text-xs font-semibold text-[#B8AEC9] uppercase tracking-wider">ยอดเติมเงินทั้งหมด</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
           </div>
@@ -493,15 +493,15 @@ export const WalletView: React.FC = () => {
             <div className="text-2xl sm:text-3xl font-black text-white">
               ฿{totalDeposited.toLocaleString()}
             </div>
-            <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1">สลิปผ่านการตรวจสอบแล้ว</p>
+            <p className="text-[10px] sm:text-[11px] text-[#B8AEC9] mt-1">สลิปผ่านการตรวจสอบแล้ว</p>
           </div>
         </div>
 
         {/* Total Spent */}
-        <div className="p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] shadow-xl">
+        <div className="p-5 sm:p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-[0_8px_32px_rgba(7,5,15,0.6)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">ยอดใช้จ่ายทั้งหมด</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+            <span className="text-xs font-semibold text-[#B8AEC9] uppercase tracking-wider">ยอดใช้จ่ายทั้งหมด</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
@@ -509,7 +509,7 @@ export const WalletView: React.FC = () => {
             <div className="text-2xl sm:text-3xl font-black text-zinc-200">
               ฿{totalSpent.toLocaleString()}
             </div>
-            <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-1">สั่งซื้อสินค้าในร้านค้า</p>
+            <p className="text-[10px] sm:text-[11px] text-[#B8AEC9] mt-1">สั่งซื้อสินค้าในร้านค้า</p>
           </div>
         </div>
       </div>
@@ -532,7 +532,7 @@ export const WalletView: React.FC = () => {
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden flex items-center justify-between ${
               depositMethod === 'truemoney'
                 ? 'bg-gradient-to-r from-[#FF5B00]/20 via-[#FF8A00]/10 to-transparent border-[#FF6A00] ring-1 ring-[#FF6A00]/50 shadow-lg shadow-[#FF5B00]/10'
-                : 'bg-[#11111A] border-[#212133] hover:border-[#383850] opacity-80 hover:opacity-100'
+                : 'bg-[rgba(255,255,255,0.04)] backdrop-blur-md border border-[rgba(168,85,247,0.20)] hover:border-[rgba(192,132,252,0.45)] text-zinc-300'
             }`}
           >
             <div className="flex items-center gap-3.5">
@@ -546,7 +546,7 @@ export const WalletView: React.FC = () => {
                     แนะนำ • ออโต้
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400 mt-0.5">
+                <p className="text-xs text-[#B8AEC9] mt-0.5">
                   กรอกเบอร์ {formatPhoneNumber(ANGPAO_RECIPIENT_PHONE)} อัตโนมัติ • ได้รับพ้อยท์ตามจำนวนเงินในซอง
                 </p>
               </div>
@@ -564,28 +564,28 @@ export const WalletView: React.FC = () => {
             onClick={() => setDepositMethod('promptpay')}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden flex items-center justify-between ${
               depositMethod === 'promptpay'
-                ? 'bg-gradient-to-r from-purple-500/20 via-indigo-500/10 to-transparent border-purple-500 ring-1 ring-purple-500/50 shadow-lg shadow-purple-500/10'
-                : 'bg-[#11111A] border-[#212133] hover:border-[#383850] opacity-80 hover:opacity-100'
+                ? 'bg-gradient-to-r from-purple-500/20 via-indigo-500/10 to-transparent border-purple-500 ring-1 ring-purple-500/50 shadow-lg shadow-purple-500/15'
+                : 'bg-[rgba(255,255,255,0.04)] backdrop-blur-md border border-[rgba(168,85,247,0.20)] hover:border-[rgba(192,132,252,0.45)] text-zinc-300'
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#003B71] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-blue-500/30 shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] flex items-center justify-center text-white shadow-md shadow-purple-500/30 shrink-0">
                 <QrCode className="w-6 h-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-black text-white">พร้อมเพย์ PromptPay</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-[#C084FC] border border-purple-500/30">
                     ตรวจสลิปออโต้
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400 mt-0.5">
+                <p className="text-xs text-[#B8AEC9] mt-0.5">
                   สแกน Thai QR Code ทุกธนาคาร ตรวจสอบสลิปผ่าน SlipOK
                 </p>
               </div>
             </div>
             <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-              depositMethod === 'promptpay' ? 'border-purple-500 bg-purple-500 text-white' : 'border-[#33334A]'
+              depositMethod === 'promptpay' ? 'border-[#C084FC] bg-[#C084FC] text-black font-bold' : 'border-[#33334A]'
             }`}>
               {depositMethod === 'promptpay' && <Check className="w-3 h-3 stroke-[3]" />}
             </div>
@@ -597,9 +597,9 @@ export const WalletView: React.FC = () => {
       {depositMethod === 'truemoney' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8">
           {/* Left: How-to and Recipient Phone Info */}
-          <div className="lg:col-span-5 p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-4 sm:space-y-6 flex flex-col justify-between">
+          <div className="lg:col-span-5 p-5 sm:p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] space-y-4 sm:space-y-6 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2.5 pb-3 border-b border-[#212133]">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-purple-500/15">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5B00] to-[#E64A19] flex items-center justify-center text-white shadow-md shadow-[#FF5B00]/20">
                   <Gift className="w-5 h-5" />
                 </div>
@@ -655,19 +655,19 @@ export const WalletView: React.FC = () => {
                   <span>วิธีสร้างซองของขวัญในแอป TrueMoney</span>
                 </h4>
                 <div className="space-y-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-[#0B0B12] border border-[#1E1E2E] flex items-start gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.15)] flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-[#FF5B00]/20 text-[#FF8A00] font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">1</span>
                     <p className="text-zinc-300">เปิดแอป <strong>TrueMoney Wallet</strong> แล้วกดเลือกเมนู <strong>"โอนเงิน"</strong> &gt; <strong>"ส่งซองของขวัญ"</strong></p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#0B0B12] border border-[#1E1E2E] flex items-start gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.15)] flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-[#FF5B00]/20 text-[#FF8A00] font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
                     <p className="text-zinc-300">ใส่จำนวนเงินที่ต้องการเติม (เช่น 20, 50, 100, 300, 500 บาท ฯลฯ)</p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#0B0B12] border border-[#1E1E2E] flex items-start gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.15)] flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-[#FF5B00]/20 text-[#FF8A00] font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">3</span>
                     <p className="text-zinc-300">เลือกประเภทการส่งเป็น <strong className="text-amber-300">"แบ่งจำนวนเงินเท่ากัน"</strong> และใส่จำนวนคนที่รับได้ <strong className="text-amber-300">"1 คน"</strong></p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#0B0B12] border border-[#1E1E2E] flex items-start gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.15)] flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-[#FF5B00]/20 text-[#FF8A00] font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">4</span>
                     <p className="text-zinc-300">คัดลอกลิงก์ซองของขวัญ แล้วนำมาวางในช่องด้านขวา เพื่อรับพ้อยท์เข้าบัญชีทันที</p>
                   </div>
@@ -675,14 +675,14 @@ export const WalletView: React.FC = () => {
               </div>
             </div>
 
-            <div className="text-[10px] sm:text-[11px] text-zinc-500 flex items-center gap-1.5 justify-center mt-3 pt-3 border-t border-[#212133]">
+            <div className="text-[10px] sm:text-[11px] text-[#B8AEC9] flex items-center gap-1.5 justify-center mt-3 pt-3 border-t border-purple-500/15">
               <ShieldCheck className="w-3.5 h-3.5 text-[#FF8A00]" />
               ระบบตัดเงินและแอดพ้อยท์ตามจำนวนเงินในซองของขวัญทันที
             </div>
           </div>
 
           {/* Right: Voucher Link Input & Submit */}
-          <div className="lg:col-span-7 p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-5 sm:space-y-6">
+          <div className="lg:col-span-7 p-5 sm:p-6 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] space-y-5 sm:space-y-6">
             <div>
               <div className="flex items-center justify-between">
                 <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
@@ -1056,30 +1056,33 @@ export const WalletView: React.FC = () => {
       )}
 
       {/* Transaction History Section */}
-      <div className="p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#212133] gap-2">
+      <div className="p-5 sm:p-7 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.18)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] space-y-5">
+        <div className="flex items-center justify-between pb-4 border-b border-[rgba(168,85,247,0.15)] gap-2">
           <div>
-            <h3 className="text-sm sm:text-base font-bold text-white">ประวัติธุรกรรม Wallet</h3>
-            <p className="text-xs text-zinc-400">รายการเติมเงินและสั่งซื้อสินค้าทั้งหมดของคุณ</p>
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]"></span>
+              ประวัติธุรกรรม Wallet
+            </h3>
+            <p className="text-xs text-[#B8AEC9] mt-0.5">รายการเติมเงินและสั่งซื้อสินค้าทั้งหมดของคุณแบบเรียลไทม์</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500 hidden sm:inline">{transactions.length} รายการ</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-[#B8AEC9] bg-[#07050F]/60 border border-[rgba(168,85,247,0.20)] px-2.5 py-1 rounded-xl hidden sm:inline">{transactions.length} รายการ</span>
             <button
               onClick={() => fetchTransactions(true)}
               disabled={isRefreshingTx}
-              className="flex items-center gap-1 bg-[#141420] hover:bg-[#1c1c2e] border border-[#212133] text-zinc-300 hover:text-white px-2.5 py-1 rounded-xl text-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 bg-[#0F0A1A]/80 hover:bg-[#6D28D9]/20 border border-[rgba(168,85,247,0.25)] hover:border-[#C084FC]/50 text-[#B8AEC9] hover:text-white px-3 py-1.5 rounded-xl text-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
               title="รีเฟรชประวัติธุรกรรม"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingTx ? 'animate-spin text-purple-400' : ''}`} />
-              <span className="hidden sm:inline">{isRefreshingTx ? '...' : 'รีเฟรช'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingTx ? 'animate-spin text-[#C084FC]' : ''}`} />
+              <span className="hidden sm:inline font-medium">{isRefreshingTx ? '...' : 'รีเฟรช'}</span>
             </button>
           </div>
         </div>
 
         {loadingTx ? (
-          <div className="py-8 text-center text-xs text-zinc-500">กำลังโหลดประวัติธุรกรรม...</div>
+          <div className="py-10 text-center text-xs text-[#B8AEC9]">กำลังโหลดประวัติธุรกรรม...</div>
         ) : transactions.length === 0 ? (
-          <div className="py-12 text-center text-zinc-500 text-xs">
+          <div className="py-12 text-center text-[#B8AEC9] text-xs">
             ยังไม่มีประวัติธุรกรรมในระบบ เริ่มเติมเงินครั้งแรกได้ทันที
           </div>
         ) : (
@@ -1087,23 +1090,23 @@ export const WalletView: React.FC = () => {
             {/* Mobile Cards View */}
             <div className="sm:hidden space-y-2.5">
               {transactions.map((t) => (
-                <div key={t.id || t.transactionId} className="p-3 rounded-2xl bg-[#0B0B12] border border-[#1E1E2E] flex items-center justify-between gap-2">
+                <div key={t.id || t.transactionId} className="p-3.5 rounded-2xl bg-[#07050F]/70 border border-[rgba(168,85,247,0.15)] flex items-center justify-between gap-2 shadow-sm">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      t.type === 'deposit' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-purple-500/15 text-purple-400'
+                      t.type === 'deposit' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' : 'bg-purple-500/15 text-[#C084FC] border border-purple-500/25'
                     }`}>
                       {t.type === 'deposit' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-white truncate">{t.description || (t.type === 'deposit' ? 'เติมเงิน Wallet' : 'สั่งซื้อสินค้า')}</div>
-                      <div className="text-[10px] text-zinc-500">{new Date(t.createdAt).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div className="text-[10px] text-[#B8AEC9]">{new Date(t.createdAt).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-xs font-black ${t.type === 'deposit' ? 'text-emerald-400' : 'text-purple-300'}`}>
+                    <div className={`text-xs font-black ${t.type === 'deposit' ? 'text-emerald-400' : 'text-[#C084FC]'}`}>
                       {t.type === 'deposit' ? `+฿${(t.amount || 0).toLocaleString()}` : `-฿${(t.amount || 0).toLocaleString()}`}
                     </div>
-                    <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">สำเร็จ</span>
+                    <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">สำเร็จ</span>
                   </div>
                 </div>
               ))}
@@ -1113,38 +1116,38 @@ export const WalletView: React.FC = () => {
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="text-zinc-500 border-b border-[#1E1E2E]">
-                    <th className="pb-3 font-semibold">ประเภท</th>
-                    <th className="pb-3 font-semibold">รายละเอียด</th>
-                    <th className="pb-3 font-semibold">รหัสอ้างอิง</th>
-                    <th className="pb-3 font-semibold">วันที่ / เวลา</th>
-                    <th className="pb-3 font-semibold text-right">จำนวนเงิน</th>
+                  <tr className="text-[#B8AEC9] border-b border-[rgba(168,85,247,0.15)]">
+                    <th className="pb-3.5 font-semibold">ประเภท</th>
+                    <th className="pb-3.5 font-semibold">รายละเอียด</th>
+                    <th className="pb-3.5 font-semibold">รหัสอ้างอิง</th>
+                    <th className="pb-3.5 font-semibold">วันที่ / เวลา</th>
+                    <th className="pb-3.5 font-semibold text-right">จำนวนเงิน</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1A1A28]">
+                <tbody className="divide-y divide-[rgba(168,85,247,0.10)]">
                   {transactions.map((t) => (
-                    <tr key={t.id || t.transactionId} className="hover:bg-[#161624] transition-colors">
+                    <tr key={t.id || t.transactionId} className="hover:bg-[#6D28D9]/10 transition-colors">
                       <td className="py-3.5">
                         {t.type === 'deposit' ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                          <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-lg">
                             <ArrowDownLeft className="w-3 h-3" /> เติมเงิน
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-purple-400 font-semibold bg-purple-500/10 px-2 py-0.5 rounded-md">
+                          <span className="inline-flex items-center gap-1 text-[#C084FC] font-semibold bg-purple-500/10 border border-purple-500/25 px-2.5 py-0.5 rounded-lg">
                             <ArrowUpRight className="w-3 h-3" /> สั่งซื้อสินค้า
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 text-zinc-300">{t.description || '-'}</td>
-                      <td className="py-3.5 font-mono text-[11px] text-zinc-400">{t.reference || '-'}</td>
-                      <td className="py-3.5 text-zinc-400">
+                      <td className="py-3.5 text-zinc-200 font-medium">{t.description || '-'}</td>
+                      <td className="py-3.5 font-mono text-[11px] text-[#B8AEC9]">{t.reference || '-'}</td>
+                      <td className="py-3.5 text-[#B8AEC9]">
                         {t.createdAt ? new Date(t.createdAt).toLocaleString('th-TH', { hour12: false }) : '-'}
                       </td>
                       <td className="py-3.5 text-right font-bold">
                         {t.type === 'deposit' ? (
-                          <span className="text-emerald-400">+฿{(t.amount || 0).toLocaleString()}</span>
+                          <span className="text-emerald-400 font-mono text-sm">+฿{(t.amount || 0).toLocaleString()}</span>
                         ) : (
-                          <span className="text-zinc-300">-฿{(t.amount || 0).toLocaleString()}</span>
+                          <span className="text-[#C084FC] font-mono text-sm">-฿{(t.amount || 0).toLocaleString()}</span>
                         )}
                       </td>
                     </tr>

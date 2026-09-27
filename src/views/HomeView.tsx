@@ -158,25 +158,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {homeConfig.heroTitle ? (
               homeConfig.heroTitle.includes('SHOP') ? (
                 <>
-                  {homeConfig.heroTitle.split('SHOP')[0]}<span className="animate-rgb-text drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">SHOP</span>{homeConfig.heroTitle.split('SHOP')[1]}
+                  <span className="text-white">{homeConfig.heroTitle.split('SHOP')[0]}</span>
+                  <span className="bg-gradient-to-r from-[#A855F7] via-[#C084FC] to-[#8B5CF6] bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(168,85,247,0.5)]">
+                    SHOP
+                  </span>
+                  <span className="text-white">{homeConfig.heroTitle.split('SHOP')[1]}</span>
                 </>
-              ) : homeConfig.heroTitle
+              ) : (
+                <span className="bg-gradient-to-r from-[#A855F7] via-[#C084FC] to-[#8B5CF6] bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(168,85,247,0.5)]">
+                  {homeConfig.heroTitle}
+                </span>
+              )
             ) : (
               <>
-                ANGUS<span className="animate-rgb-text drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">SHOP</span>
+                <span className="text-white">ANGUS</span>
+                <span className="bg-gradient-to-r from-[#A855F7] via-[#C084FC] to-[#8B5CF6] bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(168,85,247,0.5)]">
+                  SHOP
+                </span>
               </>
             )}
           </h1>
 
-          <p className="mt-2.5 sm:mt-5 text-xs sm:text-xl md:text-2xl font-medium text-zinc-300 max-w-2xl mx-auto leading-relaxed px-2">
+          <p className="mt-2.5 sm:mt-5 text-xs sm:text-xl md:text-2xl font-medium text-[#B8AEC9] max-w-2xl mx-auto leading-relaxed px-2">
             {homeConfig.heroSubtitle || 'ศูนย์รวมผลปีศาจ ถาวร, Gamepass และบริการฟาร์ม Roblox ส่งมอบทันที'}
           </p>
 
           {/* Blox Fruits Fast Showcase Ribbon (ตารางผลยอดนิยม) */}
-          <div className="mt-5 sm:mt-8 max-w-3xl mx-auto p-2 sm:p-3 rounded-2xl sm:rounded-3xl bg-[#0E0E18]/80 border border-purple-500/20 backdrop-blur-md shadow-2xl w-full max-w-full overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 border-b border-white/5 mb-2 text-left min-w-0">
+          <div className="mt-5 sm:mt-8 max-w-3xl mx-auto p-2.5 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] backdrop-blur-[18px] shadow-[0_8px_32px_rgba(7,5,15,0.6)] w-full max-w-full overflow-hidden">
+            <div className="flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 border-b border-purple-500/15 mb-2 text-left min-w-0">
               <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300 min-w-0 truncate">
-                <Gamepad2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <Gamepad2 className="w-3.5 h-3.5 text-[#C084FC] shrink-0" />
                 <span className="truncate">{homeConfig.trendingTitle || 'ผลปีศาจยอดนิยมประจำสัปดาห์'}</span>
               </div>
               <span className="text-[9px] sm:text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 whitespace-nowrap shrink-0">
@@ -189,17 +200,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div
                   key={fruit.id || fruit.name}
                   onClick={() => onNavigate('shop', 'ผลปีศาจ')}
-                  className="group p-1.5 sm:p-2 rounded-xl bg-[#141422] hover:bg-purple-900/30 border border-white/5 hover:border-purple-500/60 transition-all duration-200 cursor-pointer text-center flex flex-col items-center min-w-0 overflow-hidden active:scale-95"
+                  className="group p-1.5 sm:p-2.5 rounded-xl bg-[#0F0A1A]/80 hover:bg-[#1A102E] border border-[rgba(168,85,247,0.15)] hover:border-[rgba(192,132,252,0.50)] hover:shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all duration-300 cursor-pointer text-center flex flex-col items-center min-w-0 overflow-hidden active:scale-95"
                 >
                   <div className="relative w-11 h-11 sm:w-14 sm:h-14 mb-1 shrink-0">
                     <BloxImage
                       src={fruit.img}
                       alt={fruit.name}
                       productName={fruit.th || fruit.name}
-                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_4px_10px_rgba(168,85,247,0.3)]"
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_4px_10px_rgba(168,85,247,0.35)]"
                     />
                   </div>
-                  <span className="text-[10px] sm:text-[11px] font-bold text-white group-hover:text-purple-300 truncate w-full block">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-white group-hover:text-[#C084FC] truncate w-full block">
                     {fruit.th}
                   </span>
                   <span className="text-[9px] sm:text-[10px] font-black text-cyan-400 tabular-nums truncate w-full block">
@@ -211,11 +222,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
 
           {/* Action CTA Buttons */}
-          <div className="mt-6 sm:mt-9 grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2 sm:gap-4 max-w-md mx-auto w-full">
+          <div className="mt-6 sm:mt-9 grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2.5 sm:gap-4 max-w-md mx-auto w-full">
             <button
               id="hero-shop-btn"
               onClick={() => onNavigate('shop')}
-              className="py-3 sm:py-3.5 px-3 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 text-white font-bold text-xs sm:text-sm shadow-xl shadow-purple-600/30 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-all duration-300 active:scale-95"
+              className="py-3 sm:py-3.5 px-4 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] hover:from-[#7C3AED] hover:to-[#C084FC] text-white font-black text-xs sm:text-sm shadow-[0_4px_25px_rgba(139,92,246,0.45),0_0_30px_rgba(168,85,247,0.35)] hover:shadow-[0_6px_30px_rgba(168,85,247,0.65),0_0_40px_rgba(192,132,252,0.50)] flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-all duration-300 active:scale-95 hover:-translate-y-0.5"
             >
               <ShoppingBag className="w-4 h-4 shrink-0" />
               <span className="truncate">{homeConfig.heroButtonText || 'เลือกซื้อผลปีศาจ'}</span>
@@ -224,7 +235,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               id="hero-wallet-btn"
               onClick={() => onNavigate('wallet')}
-              className="py-3 sm:py-3.5 px-3 sm:px-8 rounded-xl sm:rounded-2xl bg-[#151522] hover:bg-[#1C1C2E] border border-purple-500/30 hover:border-purple-500/60 text-zinc-200 hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-all duration-300 active:scale-95 shadow-lg"
+              className="py-3 sm:py-3.5 px-4 sm:px-8 rounded-xl sm:rounded-2xl bg-[#0F0A1A]/85 hover:bg-[#1A102E] border border-[rgba(168,85,247,0.25)] hover:border-[rgba(192,132,252,0.55)] text-[#E9D5FF] hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-all duration-300 active:scale-95 shadow-sm hover:shadow-[0_0_25px_rgba(168,85,247,0.25)] hover:-translate-y-0.5"
             >
               <Wallet className="w-4 h-4 text-emerald-400 shrink-0" />
               <span className="truncate">เติมเงิน PromptPay</span>
@@ -238,20 +249,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 playClickSound();
                 if (onOpenCalculator) onOpenCalculator();
               }}
-              className="px-3 py-1.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 text-purple-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-[#0F0A1A]/80 hover:bg-[#1A102E] border border-[rgba(168,85,247,0.25)] hover:border-[#C084FC]/50 text-purple-200 hover:text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm hover:shadow-[0_0_15px_rgba(168,85,247,0.25)]"
             >
-              <Calculator className="w-3.5 h-3.5 text-purple-400" />
+              <Calculator className="w-3.5 h-3.5 text-[#C084FC]" />
               <span>คำนวณ Trade Value (W/F/L)</span>
             </button>
           </div>
 
           {/* Flow Stepper Highlight */}
-          <div className="mt-5 sm:mt-6 inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-[10px] sm:text-xs font-bold text-zinc-400 bg-[#11111A]/90 border border-[#212133] px-3 sm:px-5 py-2 rounded-2xl backdrop-blur-md max-w-full">
-            <span className="text-purple-300">1. เลือกสินค้า</span>
+          <div className="mt-5 sm:mt-6 inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-[10px] sm:text-xs font-bold text-[#B8AEC9] bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] px-3 sm:px-5 py-2 rounded-2xl backdrop-blur-[18px] max-w-full shadow-sm">
+            <span className="text-[#C084FC]">1. เลือกสินค้า</span>
             <span className="text-zinc-600">→</span>
-            <span className="text-purple-300">2. เติมเงิน</span>
+            <span className="text-[#C084FC]">2. เติมเงิน</span>
             <span className="text-zinc-600">→</span>
-            <span className="text-purple-300">3. สั่งซื้อ</span>
+            <span className="text-[#C084FC]">3. สั่งซื้อ</span>
             <span className="text-zinc-600">→</span>
             <span className="text-emerald-400 flex items-center gap-0.5">
               <CheckCircle2 className="w-3 h-3" /> 4. รับของใน VIP
@@ -259,22 +270,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
 
           {/* Stats Bar (แถบสถิติความปลอดภัย & ความน่าเชื่อถือ) */}
-          <div className="mt-7 sm:mt-12 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 max-w-4xl mx-auto w-full">
-            <div className="p-2.5 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center min-w-0 overflow-hidden">
-              <div className="text-lg sm:text-3xl font-black text-white tabular-nums">10,000+</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 truncate">{homeConfig.stat1Label || 'ลูกค้าไว้วางใจ'}</div>
+          <div className="mt-7 sm:mt-12 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 max-w-4xl mx-auto w-full">
+            <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] hover:border-[rgba(192,132,252,0.45)] backdrop-blur-[18px] text-center shadow-[0_8px_32px_rgba(7,5,15,0.6)] hover:shadow-[0_12px_35px_rgba(139,92,246,0.25)] transition-all min-w-0 overflow-hidden">
+              <div className="text-lg sm:text-3xl font-black bg-gradient-to-r from-white via-purple-100 to-[#C084FC] bg-clip-text text-transparent tabular-nums">10,000+</div>
+              <div className="text-[10px] sm:text-xs text-[#B8AEC9] mt-0.5 truncate">{homeConfig.stat1Label || 'ลูกค้าไว้วางใจ'}</div>
             </div>
-            <div className="p-2.5 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center min-w-0 overflow-hidden">
+            <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] hover:border-[rgba(192,132,252,0.45)] backdrop-blur-[18px] text-center shadow-[0_8px_32px_rgba(7,5,15,0.6)] hover:shadow-[0_12px_35px_rgba(139,92,246,0.25)] transition-all min-w-0 overflow-hidden">
               <div className="text-lg sm:text-3xl font-black text-emerald-400 tabular-nums">3 วินาที</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 truncate">{homeConfig.stat2Label || 'ตรวจสลิปอัตโนมัติ'}</div>
+              <div className="text-[10px] sm:text-xs text-[#B8AEC9] mt-0.5 truncate">{homeConfig.stat2Label || 'ตรวจสลิปอัตโนมัติ'}</div>
             </div>
-            <div className="p-2.5 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center min-w-0 overflow-hidden">
-              <div className="text-lg sm:text-3xl font-black text-purple-400 tabular-nums">100%</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 truncate">{homeConfig.stat3Label || 'ของแท้ปลอดภัย'}</div>
+            <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] hover:border-[rgba(192,132,252,0.45)] backdrop-blur-[18px] text-center shadow-[0_8px_32px_rgba(7,5,15,0.6)] hover:shadow-[0_12px_35px_rgba(139,92,246,0.25)] transition-all min-w-0 overflow-hidden">
+              <div className="text-lg sm:text-3xl font-black text-[#C084FC] drop-shadow-[0_0_12px_rgba(192,132,252,0.5)] tabular-nums">100%</div>
+              <div className="text-[10px] sm:text-xs text-[#B8AEC9] mt-0.5 truncate">{homeConfig.stat3Label || 'ของแท้ปลอดภัย'}</div>
             </div>
-            <div className="p-2.5 sm:p-4 rounded-2xl bg-[#11111A]/80 border border-[#212133] backdrop-blur-sm text-center min-w-0 overflow-hidden">
+            <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] hover:border-[rgba(192,132,252,0.45)] backdrop-blur-[18px] text-center shadow-[0_8px_32px_rgba(7,5,15,0.6)] hover:shadow-[0_12px_35px_rgba(139,92,246,0.25)] transition-all min-w-0 overflow-hidden">
               <div className="text-lg sm:text-3xl font-black text-amber-400 tabular-nums">4.9/5</div>
-              <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 truncate">{homeConfig.stat4Label || 'คะแนนรีวิวผู้เล่น'}</div>
+              <div className="text-[10px] sm:text-xs text-[#B8AEC9] mt-0.5 truncate">{homeConfig.stat4Label || 'คะแนนรีวิวผู้เล่น'}</div>
             </div>
           </div>
 

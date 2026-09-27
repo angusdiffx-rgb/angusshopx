@@ -32,7 +32,6 @@ import { useHomeConfig } from '../context/HomeConfigContext';
 import { HomeConfig, TrendingFruitItem, PromoShowcaseCard } from '../types';
 import { BLOX_FRUITS_PRESETS, DEFAULT_HOME_CONFIG, BloxPreset } from '../data/bloxPresets';
 import { BloxImage } from './BloxImage';
-import { AdminHeroBanners } from './AdminHeroBanners';
 import { parseYoutubeUrl, POPULAR_MUSIC_PRESETS } from '../lib/youtube';
 
 export const HomeConfigManager: React.FC = () => {
@@ -42,7 +41,7 @@ export const HomeConfigManager: React.FC = () => {
   const [config, setConfig] = useState<HomeConfig>(homeConfig);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'banners' | 'desktop_banner' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('banners');
+  const [activeSubTab, setActiveSubTab] = useState<'all' | 'desktop_banner' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('desktop_banner');
 
   // Sync with context if updated externally
   useEffect(() => {
@@ -337,22 +336,6 @@ export const HomeConfigManager: React.FC = () => {
           </span>
         </button>
         <button
-          onClick={() => setActiveSubTab('banners')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeSubTab === 'banners'
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30'
-              : 'text-zinc-400 hover:text-white bg-[#151522]'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          <span>แบนเนอร์โปรโมชั่น & AI Generator</span>
-          {(config.heroBanners || DEFAULT_HOME_CONFIG.heroBanners) && (
-            <span className="px-1.5 py-0.5 rounded-full bg-black/40 text-purple-200 text-[10px] font-bold">
-              {(config.heroBanners || DEFAULT_HOME_CONFIG.heroBanners || []).length}
-            </span>
-          )}
-        </button>
-        <button
           onClick={() => setActiveSubTab('all')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
             activeSubTab === 'all'
@@ -418,16 +401,6 @@ export const HomeConfigManager: React.FC = () => {
           <span>แบนเนอร์ไฮไลท์ส่งมอบไว (Hero Promo)</span>
         </button>
       </div>
-
-      {/* ======================================================== */}
-      {/* SECTION 0.5: แบนเนอร์โปรโมชั่น & AI Generator */}
-      {/* ======================================================== */}
-      {(activeSubTab === 'all' || activeSubTab === 'banners') && (
-        <AdminHeroBanners 
-          config={config} 
-          setConfig={setConfig} 
-        />
-      )}
 
       {/* ======================================================== */}
       {/* SECTION 0.7: แบนเนอร์พิเศษ (Desktop Banner: เพลง YouTube หรือ รูปภาพ) */}

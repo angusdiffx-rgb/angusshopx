@@ -71,22 +71,25 @@ export const ShopView: React.FC<ShopViewProps> = ({
     <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8 overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white">ร้านค้า AngusShop</h1>
-        <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">
-          ผลปีศาจ Blox Fruits และสินค้าเกม Roblox ครบครัน พร้อมส่งมอบทันที
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#A855F7] shadow-[0_0_12px_#A855F7]"></span>
+          ร้านค้า AngusShop
+        </h1>
+        <p className="text-xs sm:text-sm text-[#B8AEC9] mt-1">
+          ผลปีศาจ Blox Fruits และสินค้าเกม Roblox ครบครัน พร้อมส่งมอบทันทีด้วยระบบอัตโนมัติ
         </p>
       </div>
 
       {/* Category Pills Bar (Horizontal Scrollable on Mobile) */}
-      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 no-scrollbar w-full max-w-full touch-pan-x">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar w-full max-w-full touch-pan-x">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all duration-300 cursor-pointer shrink-0 ${
               selectedCategory === cat
-                ? 'bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white shadow-md shadow-purple-500/30 ring-1 ring-purple-400/50'
-                : 'bg-[#11111A] text-zinc-400 hover:text-white hover:bg-[#181826] border border-[#212133]'
+                ? 'bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] border border-[rgba(192,132,252,0.4)]'
+                : 'bg-[rgba(255,255,255,0.04)] text-[#B8AEC9] hover:text-white hover:bg-[rgba(139,92,246,0.12)] border border-[rgba(168,85,247,0.18)] hover:border-[rgba(192,132,252,0.4)]'
             }`}
           >
             {cat}
@@ -95,21 +98,21 @@ export const ShopView: React.FC<ShopViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-[#11111A] border border-[#212133] space-y-3 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-3 items-center w-full max-w-full">
+      <div className="p-3.5 sm:p-5 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.20)] shadow-[0_8px_32px_rgba(7,5,15,0.6)] space-y-3 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-3 items-center w-full max-w-full">
         {/* Search input */}
         <div className="sm:col-span-6 relative">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#C084FC] absolute left-3.5 top-3 pointer-events-none" />
           <input
             type="text"
             placeholder="ค้นหาตามชื่อสินค้า เช่น คิตสึเนะ, โยรุ, โมจิ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+            className="w-full bg-[#07050F]/70 border border-[rgba(168,85,247,0.25)] rounded-2xl pl-10 pr-9 py-2.5 text-xs text-white placeholder-[#B8AEC9]/60 focus:outline-none focus:border-[#C084FC] focus:ring-1 focus:ring-[#C084FC]/40 transition-all shadow-inner"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-white"
+              className="absolute right-3 top-3 text-[#B8AEC9] hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -118,11 +121,11 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
         {/* Sort Select */}
         <div className="sm:col-span-3 flex items-center gap-1.5">
-          <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          <ArrowUpDown className="w-3.5 h-3.5 text-[#C084FC] shrink-0" />
           <select
             value={sortBy}
             onChange={(e: any) => setSortBy(e.target.value)}
-            className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl px-2.5 py-2 text-xs text-zinc-200 focus:outline-none focus:border-purple-500"
+            className="w-full bg-[#07050F]/70 border border-[rgba(168,85,247,0.25)] rounded-2xl px-3 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-[#C084FC] focus:ring-1 focus:ring-[#C084FC]/40 transition-all cursor-pointer"
           >
             <option value="newest">มาใหม่ล่าสุด</option>
             <option value="bestseller">สินค้าขายดี</option>
@@ -138,18 +141,18 @@ export const ShopView: React.FC<ShopViewProps> = ({
               type="checkbox"
               checked={inStockOnly}
               onChange={(e) => setInStockOnly(e.target.checked)}
-              className="rounded border-[#262638] bg-[#0B0B12] text-purple-600 focus:ring-purple-500 w-4 h-4"
+              className="rounded-lg border-[rgba(168,85,247,0.30)] bg-[#07050F] text-[#8B5CF6] focus:ring-[#A855F7] w-4 h-4"
             />
-            <span className="text-[11px] sm:text-xs">เฉพาะที่มีสินค้า ({products.filter(p => p.stock > 0).length})</span>
+            <span className="text-[11px] sm:text-xs text-[#B8AEC9]">เฉพาะที่มีสินค้า ({products.filter(p => p.stock > 0).length})</span>
           </label>
         </div>
       </div>
 
       {/* Product count stats */}
-      <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
-        <span>พบสินค้า <strong className="text-white">{filteredProducts.length}</strong> รายการ</span>
+      <div className="flex items-center justify-between text-xs text-[#B8AEC9] px-1">
+        <span>พบสินค้า <strong className="text-white font-bold">{filteredProducts.length}</strong> รายการ</span>
         {selectedCategory !== 'ทั้งหมด' && (
-          <span className="text-purple-400 font-medium">หมวดหมู่: {selectedCategory}</span>
+          <span className="text-[#C084FC] font-semibold">หมวดหมู่: {selectedCategory}</span>
         )}
       </div>
 

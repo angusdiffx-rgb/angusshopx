@@ -136,46 +136,46 @@ export const AuthModal: React.FC = () => {
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-md my-8 rounded-2xl bg-neutral-900/95 border border-purple-500/30 shadow-[0_0_50px_rgba(147,51,234,0.25)] overflow-hidden text-neutral-100"
+          className="relative w-full max-w-md my-8 rounded-3xl bg-[#0F0A1A]/95 backdrop-blur-2xl border border-[rgba(168,85,247,0.25)] shadow-[0_25px_70px_rgba(7,5,15,0.9),0_0_40px_rgba(168,85,247,0.25)] overflow-hidden text-white"
         >
           {/* Top glowing ambient effect */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-to-b from-purple-500/30 via-cyan-500/20 to-transparent blur-2xl pointer-events-none" />
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-36 bg-gradient-to-b from-[#8B5CF6]/30 via-[#6D28D9]/20 to-transparent blur-3xl pointer-events-none" />
 
           {/* Close button */}
           <button
             id="auth-modal-close-btn"
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/80 transition-colors z-10"
+            className="absolute top-4 right-4 p-2 rounded-xl text-[#B8AEC9] hover:text-white hover:bg-[rgba(139,92,246,0.15)] border border-transparent hover:border-[rgba(168,85,247,0.25)] transition-all z-10 cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Header */}
-          <div className="pt-6 pb-4 px-6 text-center border-b border-neutral-800/80">
+          <div className="pt-7 pb-4 px-6 text-center border-b border-purple-500/15">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40 text-xs font-semibold text-purple-300 mb-3 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
-              <Gamepad2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <Gamepad2 className="w-3.5 h-3.5 text-[#C084FC] animate-pulse" />
               <span>ANGUSSHOP • BLOX FRUITS</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-100 to-cyan-300">
+            <h2 className="text-2xl font-black tracking-tight bg-gradient-to-r from-white via-purple-100 to-[#C084FC] bg-clip-text text-transparent">
               {tab === 'login' ? 'เข้าสู่ระบบร้านค้า' : 'สมัครสมาชิกใหม่'}
             </h2>
-            <p className="text-xs text-neutral-400 mt-1">
+            <p className="text-xs text-[#B8AEC9] mt-1">
               {tab === 'login' 
                 ? 'เข้าสู่ระบบเพื่อซื้อสินค้า เติมเงิน และดูประวัติการสั่งซื้อ' 
                 : 'สร้างบัญชี AngusShop เพื่อรับสิทธิพิเศษและส่วนลดมากมาย'}
             </p>
 
             {/* Tab switch buttons */}
-            <div className="flex p-1 mt-4 rounded-xl bg-neutral-950/70 border border-neutral-800">
+            <div className="flex p-1 mt-4 rounded-xl bg-[#07050F]/90 border border-[rgba(168,85,247,0.20)]">
               <button
                 id="auth-tab-login-btn"
                 type="button"
                 onClick={() => handleTabSwitch('login')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   tab === 'login'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-neutral-400 hover:text-neutral-200'
+                    ? 'bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] text-white shadow-md shadow-purple-600/40 border border-[#C084FC]/30'
+                    : 'text-[#B8AEC9] hover:text-white'
                 }`}
               >
                 เข้าสู่ระบบ
@@ -184,10 +184,10 @@ export const AuthModal: React.FC = () => {
                 id="auth-tab-register-btn"
                 type="button"
                 onClick={() => handleTabSwitch('register')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   tab === 'register'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-neutral-400 hover:text-neutral-200'
+                    ? 'bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] text-white shadow-md shadow-purple-600/40 border border-[#C084FC]/30'
+                    : 'text-[#B8AEC9] hover:text-white'
                 }`}
               >
                 สมัครสมาชิก
@@ -201,9 +201,9 @@ export const AuthModal: React.FC = () => {
             {activeError && (
               <div 
                 id="auth-modal-error"
-                className="mb-4 p-3.5 rounded-xl bg-red-950/50 border border-red-500/40 text-red-200 text-xs flex items-start gap-2.5 animate-shake"
+                className="mb-4 p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex items-start gap-2.5 shadow-md shadow-rose-950/30"
               >
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{activeError}</span>
               </div>
             )}
@@ -212,18 +212,18 @@ export const AuthModal: React.FC = () => {
               {/* Display Name (Only in Register mode) */}
               {tab === 'register' && (
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#B8AEC9] mb-1.5">
                     ชื่อที่แสดง / ชื่อตัวละคร Roblox
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C084FC]" />
                     <input
                       id="register-displayname-input"
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="เช่น AngusProGamer, BloxMaster"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-neutral-100 placeholder-neutral-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.20)] focus:border-[#C084FC] focus:ring-2 focus:ring-[#C084FC]/30 text-xs text-white placeholder-zinc-500 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -231,11 +231,11 @@ export const AuthModal: React.FC = () => {
 
               {/* Email */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                <label className="block text-xs font-semibold text-[#B8AEC9] mb-1.5">
                   อีเมล (Email)
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C084FC]" />
                   <input
                     id="auth-email-input"
                     type="email"
@@ -243,18 +243,18 @@ export const AuthModal: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-neutral-100 placeholder-neutral-500 outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.20)] focus:border-[#C084FC] focus:ring-2 focus:ring-[#C084FC]/30 text-xs text-white placeholder-zinc-500 outline-none transition-all"
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                <label className="block text-xs font-semibold text-[#B8AEC9] mb-1.5">
                   รหัสผ่าน (Password)
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C084FC]" />
                   <input
                     id="auth-password-input"
                     type={showPassword ? 'text' : 'password'}
@@ -262,14 +262,14 @@ export const AuthModal: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={tab === 'register' ? 'อย่างน้อย 6 ตัวอักษร' : 'กรอกรหัสผ่านของคุณ'}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-neutral-100 placeholder-neutral-500 outline-none transition-all"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.20)] focus:border-[#C084FC] focus:ring-2 focus:ring-[#C084FC]/30 text-xs text-white placeholder-zinc-500 outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-4 h-4 text-[#C084FC]" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -277,11 +277,11 @@ export const AuthModal: React.FC = () => {
               {/* Confirm Password (Only in Register mode) */}
               {tab === 'register' && (
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#B8AEC9] mb-1.5">
                     ยืนยันรหัสผ่าน (Confirm Password)
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C084FC]" />
                     <input
                       id="register-confirm-password-input"
                       type={showPassword ? 'text' : 'password'}
@@ -289,7 +289,7 @@ export const AuthModal: React.FC = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="ยืนยันรหัสผ่านอีกครั้ง"
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-sm text-neutral-100 placeholder-neutral-500 outline-none transition-all"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#07050F]/80 border border-[rgba(168,85,247,0.20)] focus:border-[#C084FC] focus:ring-2 focus:ring-[#C084FC]/30 text-xs text-white placeholder-zinc-500 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -300,13 +300,13 @@ export const AuthModal: React.FC = () => {
                 id="auth-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-purple-500 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-black text-sm tracking-wide shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] hover:from-[#7C3AED] hover:to-[#C084FC] text-white font-black text-xs sm:text-sm tracking-wide shadow-[0_4px_20px_rgba(139,92,246,0.4),0_0_25px_rgba(168,85,247,0.35)] hover:shadow-[0_6px_25px_rgba(168,85,247,0.6),0_0_35px_rgba(192,132,252,0.45)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer active:scale-[0.99]"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Flame className="w-4 h-4 text-yellow-300" />
+                    <Flame className="w-4 h-4 text-amber-300" />
                     <span>{tab === 'login' ? 'เข้าสู่ระบบ AngusShop' : 'ยืนยันการสมัครสมาชิก'}</span>
                   </>
                 )}
@@ -316,9 +316,9 @@ export const AuthModal: React.FC = () => {
             {/* Divider */}
             <div className="relative my-5 text-center">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-800" />
+                <div className="w-full border-t border-purple-500/15" />
               </div>
-              <span className="relative px-3 bg-neutral-900 text-[11px] font-medium text-neutral-500 uppercase tracking-wider">
+              <span className="relative px-3 bg-[#0F0A1A] text-[11px] font-medium text-[#B8AEC9] uppercase tracking-wider">
                 หรือเชื่อมต่อผ่าน
               </span>
             </div>
@@ -329,7 +329,7 @@ export const AuthModal: React.FC = () => {
               type="button"
               onClick={handleGoogleAuth}
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800/80 border border-neutral-800 hover:border-neutral-700 text-neutral-200 text-sm font-semibold flex items-center justify-center gap-3 transition-all cursor-pointer shadow-sm"
+              className="w-full py-2.5 px-4 rounded-xl bg-[#07050F]/85 hover:bg-[#1A102E] border border-[rgba(168,85,247,0.20)] hover:border-[rgba(192,132,252,0.45)] text-zinc-200 hover:text-white text-xs font-semibold flex items-center justify-center gap-3 transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -353,7 +353,7 @@ export const AuthModal: React.FC = () => {
             </button>
 
             {/* Bottom footer text */}
-            <div className="mt-5 text-center text-xs text-neutral-400">
+            <div className="mt-5 text-center text-xs text-[#B8AEC9]">
               {tab === 'login' ? (
                 <p>
                   ยังไม่มีบัญชี AngusShop?{' '}
@@ -361,7 +361,7 @@ export const AuthModal: React.FC = () => {
                     id="switch-to-register-link"
                     type="button"
                     onClick={() => handleTabSwitch('register')}
-                    className="text-purple-400 hover:text-purple-300 font-bold underline underline-offset-2 ml-1 cursor-pointer"
+                    className="text-[#C084FC] hover:text-white font-bold underline underline-offset-2 ml-1 cursor-pointer transition-colors"
                   >
                     สมัครสมาชิกฟรีทันที
                   </button>
@@ -373,7 +373,7 @@ export const AuthModal: React.FC = () => {
                     id="switch-to-login-link"
                     type="button"
                     onClick={() => handleTabSwitch('login')}
-                    className="text-purple-400 hover:text-purple-300 font-bold underline underline-offset-2 ml-1 cursor-pointer"
+                    className="text-[#C084FC] hover:text-white font-bold underline underline-offset-2 ml-1 cursor-pointer transition-colors"
                   >
                     เข้าสู่ระบบที่นี่
                   </button>
@@ -382,7 +382,7 @@ export const AuthModal: React.FC = () => {
             </div>
 
             {/* Safety guarantee badge */}
-            <div className="mt-4 pt-3 border-t border-neutral-800/60 flex items-center justify-center gap-1.5 text-[11px] text-neutral-500">
+            <div className="mt-4 pt-3 border-t border-purple-500/15 flex items-center justify-center gap-1.5 text-[11px] text-[#B8AEC9]">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>ระบบปลอดภัย 100% เชื่อมต่อด้วย Firebase Authentication</span>
             </div>
