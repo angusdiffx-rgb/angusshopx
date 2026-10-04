@@ -375,18 +375,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               className="w-full h-full object-contain object-center drop-shadow-[0_12px_32px_rgba(168,85,247,0.40)] group-hover:scale-105 transition-transform duration-500"
             />
             {discountPercent > 0 && (
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-rose-950/90 to-pink-950/90 backdrop-blur-md text-rose-200 font-black text-[11px] sm:text-xs tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.4)] border border-rose-500/60">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-                ลดพิเศษ -{discountPercent}%
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 pointer-events-none">
+                <span className="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-mono text-xs font-black tracking-tight shadow-md">
+                  ลด -{discountPercent}%
+                </span>
               </div>
             )}
-            <div className={`absolute top-3 right-3 sm:top-4 sm:right-4 px-3 py-1 rounded-full backdrop-blur-md font-bold text-[11px] sm:text-xs border ${
-              product.category === 'สกินผล'
-                ? 'bg-fuchsia-950/80 border-fuchsia-400/50 text-fuchsia-200 shadow-[0_0_12px_rgba(217,70,239,0.35)]'
-                : 'bg-[#07050F]/80 border-[rgba(168,85,247,0.30)] text-[#E9D5FF]'
-            }`}>
-              {product.category}
-            </div>
           </div>
         </div>
 
@@ -394,26 +388,31 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
         <div className="lg:col-span-6 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
             
-            {/* Rarity & Badges */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Clean Unboxed Metadata */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-medium">
+              <span className="text-purple-400 font-semibold tracking-wider uppercase text-[11px] sm:text-xs">
+                {product.category}
+              </span>
               {product.rarity && (
-                <span className="px-3 py-1 rounded-xl bg-purple-500/15 border border-purple-500/30 text-[#C084FC] text-xs font-bold shadow-sm">
-                  ระดับ: {product.rarity}
-                </span>
+                <>
+                  <span aria-hidden="true" className="text-zinc-600">·</span>
+                  <span>ระดับ: {product.rarity}</span>
+                </>
               )}
               {product.fruitType && (
-                <span className="px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold shadow-sm">
-                  ประเภท: {product.fruitType}
-                </span>
+                <>
+                  <span aria-hidden="true" className="text-zinc-600">·</span>
+                  <span>ประเภท: {product.fruitType}</span>
+                </>
               )}
+              <span aria-hidden="true" className="text-zinc-600">·</span>
               {product.stock > 0 ? (
-                <span className="px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> มีสินค้าพร้อมส่ง ({product.stock} ชิ้น)
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_6px_#34D399]" />
+                  พร้อมส่ง ({product.stock} ชิ้น)
                 </span>
               ) : (
-                <span className="px-3 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold">
-                  สินค้าหมดชั่วคราว
-                </span>
+                <span className="text-rose-400 font-medium">สินค้าหมดชั่วคราว</span>
               )}
             </div>
 
@@ -421,33 +420,33 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               {product.name}
             </h1>
 
-            {/* Pricing */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-[rgba(255,255,255,0.04)] backdrop-blur-[18px] border border-[rgba(168,85,247,0.22)] shadow-[0_8px_30px_rgba(7,5,15,0.5)] flex items-baseline gap-2 sm:gap-3 flex-wrap">
-              <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#E9D5FF] to-[#C084FC]">
+            {/* Pricing Module */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#0E0C16] border border-white/[0.08] flex items-baseline gap-2 sm:gap-3 flex-wrap">
+              <span className="text-3xl sm:text-4xl font-black text-white font-mono tabular-nums">
                 ฿{(activeProductPrice || 0).toLocaleString()}
               </span>
               {Boolean(activeProductOldPrice && activeProductOldPrice > activeProductPrice) && (
-                <span className="text-sm sm:text-base text-[#B8AEC9]/60 line-through font-semibold">
+                <span className="text-sm sm:text-base text-zinc-500 line-through font-mono tabular-nums">
                   ฿{(activeProductOldPrice || 0).toLocaleString()}
                 </span>
               )}
               {isBountyService && (
-                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                <span className="text-xs px-2.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold">
                   แพ็กเกจ {selectedBountyTier}
                 </span>
               )}
               {isBeliService && (
-                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold">
+                <span className="text-xs px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
                   ต่อ 1,000,000 Beli (1M)
                 </span>
               )}
               {isFragmentService && (
-                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold">
+                <span className="text-xs px-2.5 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-semibold">
                   ต่อ 10,000 Fragments (10k)
                 </span>
               )}
               {isLevelService && (
-                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold">
+                <span className="text-xs px-2.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-semibold">
                   ต่อ 100 เลเวล (10 บาท)
                 </span>
               )}

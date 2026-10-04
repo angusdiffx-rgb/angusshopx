@@ -1,23 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Permanent+Marker&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @layer base {
   :root {
     --bg-main: #07050F;
-    --bg-secondary: #0F0A1A;
+    --bg-secondary: #0D091A;
     --primary-purple: #8B5CF6;
     --bright-purple: #A855F7;
     --deep-purple: #6D28D9;
     --neon-purple: #C084FC;
-    --dark-purple: #2E1065;
-    --card-bg: rgba(255, 255, 255, 0.04);
-    --card-hover-bg: rgba(139, 92, 246, 0.08);
-    --border-purple: rgba(168, 85, 247, 0.20);
-    --border-purple-hover: rgba(192, 132, 252, 0.50);
+    --dark-purple: #1A0D33;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --card-hover-bg: rgba(139, 92, 246, 0.06);
+    --border-purple: rgba(168, 85, 247, 0.16);
+    --border-purple-hover: rgba(192, 132, 252, 0.40);
     --text-main: #FFFFFF;
-    --text-secondary: #B8AEC9;
-    --success: #22C55E;
-    --danger: #EF4444;
+    --text-secondary: #9E94B2;
+    --success: #10B981;
+    --danger: #F43F5E;
     font-size: 16px;
   }
 
@@ -295,10 +295,11 @@
   scrollbar-width: none;
 }
 
-/* Rapper / Street Font */
+/* Display Headline Font (Modern Geometric Sans) */
 .font-rapper {
-  font-family: 'Permanent Marker', cursive;
-  letter-spacing: 0.05em;
+  font-family: 'Outfit', 'Kanit', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 /* Mobile Viewport Containment & Touch Protection */

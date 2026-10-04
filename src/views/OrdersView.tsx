@@ -9,12 +9,14 @@ import {
   User, 
   Wallet, 
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
+import { DigitalReceiptModal } from '../components/DigitalReceiptModal';
 import type { Order } from '../types';
 
 interface OrdersViewProps {
@@ -33,6 +35,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
   const [loading, setLoading] = useState(!orders.length);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(25);
+  const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const fetchOrders = async (force = false) => {
     if (!user) {
@@ -255,14 +259,28 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
                     <span className="text-sm sm:text-base font-black text-white">฿{((order.total ?? order.totalAmount) || 0).toLocaleString()}</span>
                   </div>
 
-                  <button
-                    onClick={() => onNavigate('inventory')}
-                    className="px-3 sm:px-4 py-2 rounded-xl bg-[#1C1C2C] hover:bg-purple-600/30 border border-[#2B2B40] text-purple-300 hover:text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
-                  >
-                    <Package className="w-3.5 h-3.5" />
-                    <span>ดูในคลัง</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setReceiptOrder(order);
+                        setIsReceiptOpen(true);
+                      }}
+                      className="px-3 py-2 rounded-xl bg-[#140D26] hover:bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 hover:text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                      title="ดูและพิมพ์ใบเสร็จรับเงิน"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>ใบเสร็จ</span>
+                    </button>
+
+                    <button
+                      onClick={() => onNavigate('inventory')}
+                      className="px-3 sm:px-4 py-2 rounded-xl bg-[#1C1C2C] hover:bg-purple-600/30 border border-[#2B2B40] text-purple-300 hover:text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
+                    >
+                      <Package className="w-3.5 h-3.5" />
+                      <span>ดูในคลัง</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -280,6 +298,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
           )}
         </div>
       )}
+
+      {/* Digital Receipt Modal */}
+      <DigitalReceiptModal
+        isOpen={isReceiptOpen}
+        onClose={() => setIsReceiptOpen(false)}
+        order={receiptOrder}
+      />
     </div>
   );
 };

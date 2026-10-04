@@ -472,22 +472,44 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5 w-full">
           {configCategories.map((cat, idx) => {
             const Icon = cat.iconName === 'Zap' ? Zap : cat.iconName === 'Sparkles' ? Sparkles : cat.iconName === 'ShieldCheck' ? ShieldCheck : Flame;
+            
+            // Map category names to official high-res Blox Fruits image assets
+            const fallbackImage = 
+              cat.name === 'ผลปีศาจ' ? '/images/blox/category_devil_fruit.jpg' :
+              cat.name === 'Gamepass' ? '/images/blox/category_gamepass_vip.jpg' :
+              cat.name === 'ไอเทม' ? '/images/blox/category_special_items.jpg' :
+              cat.name === 'บริการ' ? '/images/blox/service_bounty_hunt.jpg' :
+              cat.name === 'สกินผล' ? '/images/blox/skin_galaxy_kitsune.png' :
+              '/images/blox/kitsune.png';
+
+            const displayImage = (cat.iconType === 'image' && cat.imageUrl) ? cat.imageUrl : fallbackImage;
+            const productCount = products.filter(p => p.category === cat.name).length;
+
             return (
               <div
                 key={idx}
                 onClick={() => onNavigate('shop', cat.name)}
-                className="p-3.5 sm:p-6 rounded-2xl bg-[#11111A] hover:bg-[#161624] border border-[#212133] hover:border-purple-500/50 transition-all duration-300 cursor-pointer group shadow-lg flex flex-col justify-between items-center text-center active:scale-[0.98] min-w-0 overflow-hidden"
+                className="p-3.5 sm:p-6 rounded-2xl bg-[#11111A]/90 hover:bg-[#161624] border border-[#212133] hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] transition-all duration-300 cursor-pointer group shadow-lg flex flex-col justify-between items-center text-center active:scale-[0.98] min-w-0 overflow-hidden relative"
               >
+                {/* Ambient Glow */}
+                <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-purple-600/10 blur-2xl group-hover:bg-purple-600/25 transition-all pointer-events-none" />
+
                 <div className="flex flex-col items-center w-full min-w-0">
-                  <div className={`w-24 h-24 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-2xl flex items-center justify-center mb-3 sm:mb-5 group-hover:scale-110 transition-transform overflow-hidden ${cat.iconType === 'image' && cat.imageUrl ? 'bg-transparent border-0 p-0' : 'bg-gradient-to-br text-purple-300 ' + cat.colorClass}`}>
-                    {cat.iconType === 'image' && cat.imageUrl ? (
-                      <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-contain rounded-2xl shadow-lg" />
-                    ) : (
-                      <Icon className="w-12 h-12 sm:w-20 sm:h-20" />
-                    )}
+                  <div className="w-24 h-24 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-2xl flex items-center justify-center mb-3 sm:mb-5 group-hover:scale-110 transition-transform overflow-hidden relative">
+                    <BloxImage
+                      src={displayImage}
+                      alt={cat.name}
+                      productName={cat.name}
+                      className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(168,85,247,0.35)]"
+                    />
                   </div>
                   <h3 className="text-sm sm:text-xl font-black text-white group-hover:text-purple-300 transition-colors truncate w-full">{cat.name}</h3>
                   <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 sm:mt-2 leading-relaxed line-clamp-2 max-w-[95%]">{cat.desc}</p>
+                  
+                  {/* Real-time Item Count Tag */}
+                  <span className="mt-2 text-[10px] font-bold text-[#C084FC] bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+                    {productCount > 0 ? `${productCount} รายการ` : 'พร้อมส่งมอบ'}
+                  </span>
                 </div>
                 <div className="mt-3.5 sm:mt-5 flex items-center justify-center gap-1.5 text-[10px] sm:text-xs font-semibold text-purple-400 bg-purple-500/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl w-full max-w-[120px] group-hover:bg-purple-500/20 transition-colors">
                   <span>เลือกชม</span>

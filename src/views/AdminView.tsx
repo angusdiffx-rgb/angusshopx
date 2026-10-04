@@ -79,6 +79,7 @@ import { BLOX_FRUITS_PRESETS, BloxPreset } from '../data/bloxPresets';
 import { HomeConfigManager } from '../components/HomeConfigManager';
 import { BloxPresetPickerModal } from '../components/BloxPresetPickerModal';
 import { BloxImage } from '../components/BloxImage';
+import { DigitalReceiptModal } from '../components/DigitalReceiptModal';
 
 interface AdminViewProps {
   products?: Product[];
@@ -174,6 +175,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+  const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [orderSearchKey, setOrderSearchKey] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'cancelled'>('all');
   const [deposits, setDeposits] = useState<Deposit[]>(() => {
     try {
       const saved = localStorage.getItem('angus_admin_deposits');
@@ -810,6 +815,34 @@ export const AdminView: React.FC<AdminViewProps> = ({
       console.error('Update error:', err);
       toastError('อัปเดตไม่สำเร็จ', err.message);
     }
+  };
+
+  // Quick Stock Adjustment directly from table without modal
+  const handleQuickAdjustStock = async (product: Product, delta: number) => {
+    const newStock = Math.max(0, (product.stock || 0) + delta);
+    setProducts((prev) => prev.map((p) => (p.productId === product.productId ? { ...p, stock: newStock } : p)));
+    try {
+      localStorage.setItem('angus_cached_products', JSON.stringify(
+        products.map((p) => (p.productId === product.productId ? { ...p, stock: newStock } : p))
+      ));
+    } catch {}
+
+    try {
+      const prodRef = doc(db, 'products', product.productId);
+      await updateDoc(prodRef, { stock: newStock, updatedAt: new Date().toISOString() });
+    } catch (clientErr) {
+      await fetch('/api/admin/update-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.productId, stock: newStock, updatedAt: new Date().toISOString() }),
+      }).catch(() => {});
+    }
+    success('ปรับสต็อกสำเร็จ', `${product.name}: เหลือ ${newStock} ชิ้น`);
+  };
+
+  const handleToggleStockStatus = async (product: Product) => {
+    const newStock = (product.stock || 0) > 0 ? 0 : 10;
+    await handleQuickAdjustStock(product, newStock - (product.stock || 0));
   };
 
   // Open Quick Image Editor Modal
@@ -1902,21 +1935,45 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           )}
                         </td>
                         <td className="p-3.5 sm:p-4">
-                          <span className="font-bold text-white text-sm">{p.stock}</span>
-                          <span className="text-[10px] text-zinc-500 ml-1">ชิ้น</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAdjustStock(p, -1)}
+                              className="w-5 h-5 rounded-md bg-[#1C1C2C] hover:bg-[#2A2A40] text-zinc-400 hover:text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                              title="ลดสต็อก 1 ชิ้น"
+                            >
+                              -
+                            </button>
+                            <span className="font-bold text-white text-sm min-w-[20px] text-center">{p.stock}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAdjustStock(p, 1)}
+                              className="w-5 h-5 rounded-md bg-[#1C1C2C] hover:bg-[#2A2A40] text-zinc-400 hover:text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                              title="เพิ่มสต็อก 1 ชิ้น"
+                            >
+                              +
+                            </button>
+                          </div>
                         </td>
                         <td className="p-3.5 sm:p-4">
-                          {p.stock > 0 ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-emerald-500/20">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                              พร้อมขาย
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-rose-500/20">
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-                              สินค้าหมด
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStockStatus(p)}
+                            className="transition-transform active:scale-95 cursor-pointer"
+                            title="คลิกเพื่อสลับสถานะ พร้อมขาย / สินค้าหมด"
+                          >
+                            {p.stock > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500/25 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-emerald-500/30 shadow-sm transition-colors">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                พร้อมขาย
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-rose-400 bg-rose-500/15 hover:bg-rose-500/25 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-rose-500/30 shadow-sm transition-colors">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                                สินค้าหมด
+                              </span>
+                            )}
+                          </button>
                         </td>
                         <td className="p-3.5 sm:p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
@@ -2517,11 +2574,78 @@ export const AdminView: React.FC<AdminViewProps> = ({
       })()}
 
       {/* Tab 4: Orders Management */}
-      {activeTab === 'orders' && (
+      {activeTab === 'orders' && (() => {
+        const filteredOrders = orders.filter((o) => {
+          if (orderStatusFilter !== 'all') {
+            const st = o.orderStatus || o.status;
+            if (orderStatusFilter === 'pending' && st !== 'pending') return false;
+            if (orderStatusFilter === 'processing' && st !== 'processing' && st !== 'paid') return false;
+            if (orderStatusFilter === 'completed' && st !== 'completed') return false;
+            if (orderStatusFilter === 'cancelled' && st !== 'cancelled') return false;
+          }
+          if (orderSearchKey.trim()) {
+            const q = orderSearchKey.toLowerCase();
+            const matchId = (o.orderId || '').toLowerCase().includes(q);
+            const matchRoblox = (o.robloxUsername || '').toLowerCase().includes(q);
+            const matchEmail = (o.userEmail || '').toLowerCase().includes(q);
+            const matchItem = o.items?.some(it => (it.name || '').toLowerCase().includes(q));
+            return matchId || matchRoblox || matchEmail || matchItem;
+          }
+          return true;
+        });
+
+        return (
         <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-bold text-white">รายการคำสั่งซื้อ Blox Fruits ทั้งหมด</h3>
-            <p className="text-xs text-zinc-400">ตรวจสอบชื่อผู้รับ Roblox และอัปเดตสถานะการส่งมอบ</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white">รายการคำสั่งซื้อ Blox Fruits ทั้งหมด</h3>
+              <p className="text-xs text-zinc-400">ตรวจสอบชื่อผู้รับ Roblox และอัปเดตสถานะการส่งมอบ</p>
+            </div>
+            <div className="text-xs font-bold text-[#C084FC] bg-purple-950/60 border border-purple-500/30 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+              แสดง {filteredOrders.length} จาก {orders.length} ออเดอร์
+            </div>
+          </div>
+
+          {/* Orders Search & Status Filter Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#11111A] p-3 rounded-2xl border border-[#212133]">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="ค้นหาด้วยรหัส Order ID, ชื่อสินค้า, Roblox Username หรืออีเมล..."
+                value={orderSearchKey}
+                onChange={(e) => setOrderSearchKey(e.target.value)}
+                className="w-full bg-[#0B0B12] border border-[#242436] rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
+              />
+              {orderSearchKey && (
+                <button
+                  onClick={() => setOrderSearchKey('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-xs"
+                >
+                  ล้าง
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              {(['all', 'pending', 'processing', 'completed', 'cancelled'] as const).map((statusKey) => (
+                <button
+                  key={statusKey}
+                  onClick={() => setOrderStatusFilter(statusKey)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors cursor-pointer shrink-0 ${
+                    orderStatusFilter === statusKey
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-[#181826] text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {statusKey === 'all' && `ทั้งหมด (${orders.length})`}
+                  {statusKey === 'pending' && 'รอดำเนินการ'}
+                  {statusKey === 'processing' && 'กำลังจัดส่ง'}
+                  {statusKey === 'completed' && 'จัดส่งสำเร็จ'}
+                  {statusKey === 'cancelled' && 'ยกเลิก'}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-[#212133] bg-[#11111A]">
@@ -2533,11 +2657,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <th className="p-4">รายการสินค้า</th>
                   <th className="p-4">ยอดรวม</th>
                   <th className="p-4">สถานะ</th>
-                  <th className="p-4 text-right">ปรับสถานะ</th>
+                  <th className="p-4 text-right">ปรับสถานะ & จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1D1D2C]">
-                {orders.map((o) => {
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-zinc-400">
+                      ไม่พบรายการคำสั่งซื้อที่ตรงกับตัวกรอง
+                    </td>
+                  </tr>
+                ) : filteredOrders.map((o) => {
                   const isService = o.isServiceOrder || !!o.serviceAccountPassword || o.items?.some(it => 
                     it.deliveryType === 'service' || 
                     it.deliveryType === 'manual_service' || 
@@ -2648,7 +2778,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       })()}
                     </td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => {
+                            setReceiptOrder(o);
+                            setIsReceiptModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-white border border-emerald-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
+                          title="ดูและพิมพ์ใบเสร็จรับเงินอิเล็กทรอนิกส์"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>ใบเสร็จ</span>
+                        </button>
                         <button
                           onClick={() => {
                             setActiveTab('inventory');
@@ -2679,7 +2820,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </table>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Tab: Customer Inventory & Delivery Details */}
       {activeTab === 'inventory' && (
@@ -5674,6 +5816,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Digital Receipt Modal for Orders */}
+      <DigitalReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        order={receiptOrder}
+      />
 
     </div>
   );
