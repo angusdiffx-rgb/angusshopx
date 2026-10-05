@@ -12,6 +12,7 @@ import {
   Search, 
   ExternalLink, 
   Eye, 
+  EyeOff, 
   Sliders, 
   Check, 
   ArrowUp, 
@@ -23,7 +24,10 @@ import {
   Music,
   Monitor,
   Play,
-  Headphones
+  Headphones,
+  ShieldCheck,
+  Flame,
+  Clock
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -41,7 +45,7 @@ export const HomeConfigManager: React.FC = () => {
   const [config, setConfig] = useState<HomeConfig>(homeConfig);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'desktop_banner' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('desktop_banner');
+  const [activeSubTab, setActiveSubTab] = useState<'web_promo_banner' | 'all' | 'desktop_banner' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('web_promo_banner');
 
   // Sync with context if updated externally
   useEffect(() => {
@@ -143,10 +147,8 @@ export const HomeConfigManager: React.FC = () => {
 
   // Reset to default
   const handleResetToDefault = () => {
-    if (window.confirm('คุณต้องการรีเซ็ตข้อมูลหน้าแรกและแบนเนอร์กลับเป็นค่าเริ่มต้นหรือไม่?')) {
-      setConfig(DEFAULT_HOME_CONFIG);
-      success('รีเซ็ตกลับเป็นค่าเริ่มต้นแล้ว (อย่าลืมกดบันทึก)');
-    }
+    setConfig(DEFAULT_HOME_CONFIG);
+    success('รีเซ็ตกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว (กรุณากดปุ่มบันทึกเพื่อใช้งาน)');
   };
 
   // Trending items handlers
@@ -322,6 +324,22 @@ export const HomeConfigManager: React.FC = () => {
       {/* Sub Tabs Selection */}
       <div className="flex items-center gap-2 border-b border-[#212133] pb-2 overflow-x-auto no-scrollbar">
         <button
+          onClick={() => setActiveSubTab('web_promo_banner')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+            activeSubTab === 'web_promo_banner'
+              ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-purple-600 text-white shadow-lg shadow-amber-500/25 ring-1 ring-amber-400/50'
+              : 'text-amber-300 hover:text-white bg-amber-950/30 border border-amber-500/30'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          <span>แบนเนอร์โปรโมชั่นหน้าแรก (Hero Web Banner)</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ${
+            config.showWebBanner !== false ? 'bg-emerald-500/30 text-emerald-200' : 'bg-zinc-700 text-zinc-300'
+          }`}>
+            {config.showWebBanner !== false ? 'เปิดอยู่' : 'ปิด'}
+          </span>
+        </button>
+        <button
           onClick={() => setActiveSubTab('desktop_banner')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
             activeSubTab === 'desktop_banner'
@@ -401,6 +419,399 @@ export const HomeConfigManager: React.FC = () => {
           <span>แบนเนอร์ไฮไลท์ส่งมอบไว (Hero Promo)</span>
         </button>
       </div>
+
+      {/* ======================================================== */}
+      {/* SECTION 0.5: แบนเนอร์โปรโมชั่นหน้าแรก (Hero Web Promo Banner) */}
+      {/* ======================================================== */}
+      {(activeSubTab === 'all' || activeSubTab === 'web_promo_banner') && (
+        <div className="p-5 sm:p-6 rounded-2xl bg-[#11111A] border border-[#212133] space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1E1E2E]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/30 to-purple-600/30 text-amber-300 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-lg">
+                <ImageIcon className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>แบนเนอร์โปรโมชั่นหลักหน้าแรก (Hero Web Banner)</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                    config.showWebBanner !== false 
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
+                      : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                  }`}>
+                    {config.showWebBanner !== false ? '● เปิดใช้งานอยู่' : '○ ปิดการแสดงผล'}
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  เปลี่ยนรูปภาพแบนเนอร์, ป้ายข้อความ, สินค้าไฮไลท์ (เช่น สุ่มไก่ตันดาบคู่ 35฿), ราคา และปุ่มกดหน้าแรกได้ทันที
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle show/hide banner */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfig(prev => ({ ...prev, showWebBanner: prev.showWebBanner === false ? true : false }))}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  config.showWebBanner !== false
+                    ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                }`}
+              >
+                {config.showWebBanner !== false ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                <span>{config.showWebBanner !== false ? 'เปิดแสดงแบนเนอร์' : 'ซ่อนแบนเนอร์'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Live Preview Box */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>ตัวอย่างการแสดงผลจริงบนหน้าเว็บ (Live Preview)</span>
+              </span>
+              <span className="text-[11px] text-zinc-500">อัปเดตตามการแก้ไขแบบเรียลไทม์</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#090614] border border-purple-500/25 relative overflow-hidden">
+              <div className="max-w-2xl mx-auto rounded-2xl bg-[#0D091A] border border-purple-500/40 overflow-hidden shadow-2xl">
+                {/* Banner Image Preview Container */}
+                <div className="relative aspect-[21/9] w-full overflow-hidden bg-zinc-950 flex items-center justify-center">
+                  <img
+                    src={config.webBannerImageUrl || '/images/blox/hero_banner.jpg'}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/blox/hero_banner.jpg';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B0616] via-transparent to-black/20 pointer-events-none" />
+
+                  {/* Top Badges Preview */}
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                    {config.webBannerBadge1 !== '' && (
+                      <span className="px-2 py-0.5 rounded-full bg-red-600/90 text-white font-black text-[10px] shadow flex items-center gap-1">
+                        <Flame className="w-2.5 h-2.5 text-amber-300" />
+                        <span>{config.webBannerBadge1 || 'โปรโมชั่นเด็ด'}</span>
+                      </span>
+                    )}
+                    {config.webBannerBadge2 !== '' && (
+                      <span className="px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-400/40 text-purple-200 font-bold text-[9px]">
+                        {config.webBannerBadge2 || 'เริ่มต้น 20-35 บาท'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Shop Button Preview */}
+                  <div className="absolute bottom-2 right-2">
+                    <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-[10px] shadow-lg border border-purple-400/30 flex items-center gap-1">
+                      <ShoppingBag className="w-3 h-3" />
+                      <span>{config.webBannerShopButtonText || '🛒 เข้าร้านเลย!'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Highlight Card Preview */}
+                <div className="p-3 bg-gradient-to-b from-[#130B24] to-[#0A0614] border-t border-purple-500/25 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-500/40 p-1 flex items-center justify-center shrink-0">
+                      <img src="/images/blox/cursed_dual_katana.png" alt="Icon" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-white truncate">
+                        {config.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท'}
+                      </div>
+                      <div className="text-[10px] text-zinc-400 truncate">
+                        {config.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      {(config.webBannerHighlightOldPrice ?? 79) > (config.webBannerHighlightPrice ?? 35) && (
+                        <span className="text-[9px] text-zinc-500 line-through block">฿{config.webBannerHighlightOldPrice ?? 79}</span>
+                      )}
+                      <span className="text-sm font-black text-cyan-400 block">฿{config.webBannerHighlightPrice ?? 35}</span>
+                    </div>
+                    <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-[11px] shadow">
+                      {config.webBannerHighlightButtonText || `สุ่มเลย ฿${config.webBannerHighlightPrice ?? 35}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Guarantee Tags Preview */}
+                <div className="grid grid-cols-4 gap-1 p-1.5 bg-[#08040F] border-t border-purple-500/15 text-[9px] text-zinc-400 text-center font-medium">
+                  <div className="truncate">{config.webBannerTag1 || 'สุ่มผลปีศาจหายาก'}</div>
+                  <div className="truncate">{config.webBannerTag2 || 'ปลอดภัย 100% อัตโนมัติ'}</div>
+                  <div className="truncate">{config.webBannerTag3 || 'ราคาถูก เริ่มต้น 20-35฿'}</div>
+                  <div className="truncate">{config.webBannerTag4 || 'บริการตลอด 24 ชม.'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner Image Settings */}
+          <div className="p-4 rounded-xl bg-[#0D0D17] border border-[#212133] space-y-4">
+            <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Upload className="w-3.5 h-3.5 text-purple-400" />
+              <span>1. เปลี่ยนรูปภาพแบนเนอร์ (Banner Image)</span>
+            </h4>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  URL รูปภาพแบนเนอร์ หรือ อัปโหลดจากคอมพิวเตอร์
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.webBannerImageUrl || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, webBannerImageUrl: e.target.value }))}
+                    placeholder="เช่น /images/blox/hero_banner.jpg หรือ https://.../image.png"
+                    className="flex-1 px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
+                  />
+                  <label className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 transition-all shadow">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>อัปโหลดรูป</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, (dataUrl) => {
+                        setConfig(prev => ({ ...prev, webBannerImageUrl: dataUrl }));
+                        success('อัปโหลดรูปภาพแบนเนอร์เรียบร้อย');
+                      })}
+                    />
+                  </label>
+                  {config.webBannerImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setConfig(prev => ({ ...prev, webBannerImageUrl: '/images/blox/hero_banner.jpg' }))}
+                      className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs transition-colors"
+                      title="รีเซ็ตรูปกลับเป็นค่าเริ่มต้น"
+                    >
+                      รีเซ็ต
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 4 Preset Quick Banner Choices */}
+              <div>
+                <span className="text-[11px] text-zinc-400 block mb-2 font-medium">
+                  หรือเลือกจากแบนเนอร์สำเร็จรูปธีม Blox Fruits:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { label: 'AngusShop Official', url: '/images/blox/hero_banner.jpg', desc: 'แบนเนอร์ทางการ สุ่มไก่ตันดาบคู่' },
+                    { label: 'Devil Fruit Mythical', url: '/images/blox/category_devil_fruit.jpg', desc: 'ธีมผลปีศาจ คิตสึเนะ/มังกร' },
+                    { label: 'Gamepass & VIP', url: '/images/blox/category_gamepass_vip.jpg', desc: 'ดาบโยรุ คูณเงิน คูณเวล' },
+                    { label: 'Special Items & CDK', url: '/images/blox/category_special_items.jpg', desc: 'ดาบคู่ CDK & กีตาร์วิญญาณ' }
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setConfig(prev => ({ ...prev, webBannerImageUrl: preset.url }));
+                        success(`เลือกแบนเนอร์ ${preset.label} เรียบร้อย`);
+                      }}
+                      className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        config.webBannerImageUrl === preset.url
+                          ? 'bg-purple-950/40 border-purple-400 ring-1 ring-purple-400/50 shadow'
+                          : 'bg-[#151522] border-[#29293D] hover:border-purple-500/40'
+                      }`}
+                    >
+                      <div className="aspect-[16/9] w-full rounded-lg overflow-hidden bg-black/40 mb-1.5">
+                        <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-xs font-bold text-white block truncate">{preset.label}</span>
+                      <span className="text-[10px] text-zinc-400 block truncate">{preset.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner Text & Badges Settings */}
+          <div className="p-4 rounded-xl bg-[#0D0D17] border border-[#212133] space-y-4">
+            <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>2. ป้ายข้อความ & ปุ่มบนแบนเนอร์ (Badges & Buttons)</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ป้ายกำกับบน 1 (Badge 1)</label>
+                <input
+                  type="text"
+                  value={config.webBannerBadge1 ?? 'โปรโมชั่นเด็ด'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerBadge1: e.target.value }))}
+                  placeholder="เช่น โปรโมชั่นเด็ด หรือ สินค้ามาใหม่"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ป้ายกำกับบน 2 (Badge 2)</label>
+                <input
+                  type="text"
+                  value={config.webBannerBadge2 ?? 'เริ่มต้น 20-35 บาท'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerBadge2: e.target.value }))}
+                  placeholder="เช่น เริ่มต้น 20-35 บาท หรือ ส่งไว 24 ชม."
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ข้อความปุ่มเข้าร้าน (Shop Button)</label>
+                <input
+                  type="text"
+                  value={config.webBannerShopButtonText ?? '🛒 เข้าร้านเลย!'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerShopButtonText: e.target.value }))}
+                  placeholder="เช่น 🛒 เข้าร้านเลย!"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Highlight Product & Pricing Card Settings */}
+          <div className="p-4 rounded-xl bg-[#0D0D17] border border-[#212133] space-y-4">
+            <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+              <ShoppingBag className="w-3.5 h-3.5 text-cyan-400" />
+              <span>3. การ์ดสินค้าโปรโมชั่นด้านล่างแบนเนอร์ (Highlight Product & Price)</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ชื่อสินค้าไฮไลท์ (Title)</label>
+                <input
+                  type="text"
+                  value={config.webBannerHighlightTitle ?? '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightTitle: e.target.value }))}
+                  placeholder="เช่น ⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">คำอธิบายสินค้า (Subtitle)</label>
+                <input
+                  type="text"
+                  value={config.webBannerHighlightSubtitle ?? 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightSubtitle: e.target.value }))}
+                  placeholder="คำอธิบายสั้นๆ..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ราคาโปรโมชั่น (บาท)</label>
+                <input
+                  type="number"
+                  value={config.webBannerHighlightPrice ?? 35}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightPrice: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ราคาปกติ/ราคาเต็ม (บาท - ขีดฆ่า)</label>
+                <input
+                  type="number"
+                  value={config.webBannerHighlightOldPrice ?? 79}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightOldPrice: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ข้อความปุ่มซื้อด่วน</label>
+                <input
+                  type="text"
+                  value={config.webBannerHighlightButtonText ?? 'สุ่มเลย ฿35'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightButtonText: e.target.value }))}
+                  placeholder="เช่น สุ่มเลย ฿35 หรือ ซื้อทันที"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">ปลายทางเมื่อคลิกแบนเนอร์ (Link)</label>
+                <input
+                  type="text"
+                  value={config.webBannerLink ?? 'prod_gacha_cdk_35'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerLink: e.target.value }))}
+                  placeholder="เช่น prod_gacha_cdk_35 หรือ shop หรือ URL"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Bottom Guarantee Tags */}
+          <div className="p-4 rounded-xl bg-[#0D0D17] border border-[#212133] space-y-4">
+            <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>4. แท็กการันตี 4 ข้อด้านล่าง (Bottom Guarantee Tags)</span>
+            </h4>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">แท็กที่ 1</label>
+                <input
+                  type="text"
+                  value={config.webBannerTag1 ?? 'สุ่มผลปีศาจหายาก'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerTag1: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">แท็กที่ 2</label>
+                <input
+                  type="text"
+                  value={config.webBannerTag2 ?? 'ปลอดภัย 100% อัตโนมัติ'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerTag2: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">แท็กที่ 3</label>
+                <input
+                  type="text"
+                  value={config.webBannerTag3 ?? 'ราคาถูก เริ่มต้น 20-35฿'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerTag3: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">แท็กที่ 4</label>
+                <input
+                  type="text"
+                  value={config.webBannerTag4 ?? 'บริการตลอด 24 ชม.'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerTag4: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Save Bar at bottom of section */}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#1E1E2E]">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-purple-600/30 active:scale-95 transition-all cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'กำลังบันทึก...' : '💾 บันทึกการเปลี่ยนแปลงแบนเนอร์'}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* SECTION 0.7: แบนเนอร์พิเศษ (Desktop Banner: เพลง YouTube หรือ รูปภาพ) */}

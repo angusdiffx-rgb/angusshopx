@@ -2,6 +2,29 @@ import { Product } from '../types';
 
 export const fallbackProducts: Product[] = [
   {
+    productId: 'prod_gacha_cdk_35',
+    name: 'สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
+    slug: 'gacha-cdk-35-baht',
+    description: 'สุ่มไอดีไก่ตัน Blox Fruits ดาบคู่ Cursed Dual Katana (CDK) การันตีเลเวล Max 2550 สเตตัสอัปเต็ม พร้อมดาบ CDK 100% สุ่มผลตื่นและผลเทพ ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+    shortDescription: 'สุ่มไก่ตันดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน พร้อมเล่น ส่งมอบรหัสอัตโนมัติ 24 ชม.',
+    category: 'ไอดี',
+    price: 35,
+    oldPrice: 79,
+    image: '/images/blox/cursed_dual_katana.png',
+    stock: 50,
+    isActive: true,
+    isFeatured: true,
+    isBestSeller: true,
+    deliveryType: 'account_code',
+    rarity: 'Mythical',
+    claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+    claimCode: '',
+    deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+    instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
     productId: 'trend-kitsune',
     name: 'Kitsune (คิตสึเนะ)',
     slug: 'kitsune-fruit',

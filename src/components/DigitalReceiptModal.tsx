@@ -97,12 +97,30 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
             <div className="space-y-2.5">
               {order.items?.map((item, idx) => (
                 <div key={idx} className="flex items-start justify-between text-xs gap-3">
-                  <div className="min-w-0">
+                    <div className="min-w-0">
                     <p className="font-bold text-white truncate">{item.name}</p>
                     <p className="text-[10px] text-zinc-400">
                       จำนวน: {item.quantity} ชิ้น • ราคา ฿{item.price.toLocaleString()}
                       {item.selectedOption ? ` • [${item.selectedOption}]` : ''}
                     </p>
+                    {item.claimCode && (
+                      <div className="mt-1.5 p-2 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] font-mono text-amber-300">
+                        <span className="text-[10px] text-zinc-400 block">{item.claimCodeTitle || 'ข้อมูลไอดี / รหัสรับของ'}:</span>
+                        <div className="font-bold flex items-center justify-between gap-1 mt-0.5 select-all">
+                          <span className="break-all">{item.claimCode}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.claimCode || '');
+                              playClickSound();
+                            }}
+                            className="text-[10px] text-amber-400 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-0.5 rounded cursor-pointer shrink-0"
+                          >
+                            คัดลอก
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <span className="font-bold text-white shrink-0">
                     ฿{(item.price * item.quantity).toLocaleString()}

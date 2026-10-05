@@ -362,8 +362,11 @@ function MainShop() {
         {currentView === 'shop' && (
           <ShopView
             products={products}
-            initialCategory={['ผลปีศาจ', 'Gamepass', 'ไอเทม', 'บริการ', 'สกินผล', 'อื่นๆ', 'ทั้งหมด'].includes(navParam || '') ? navParam : 'ทั้งหมด'}
-            initialSearch={['ผลปีศาจ', 'Gamepass', 'ไอเทม', 'บริการ', 'สกินผล', 'อื่นๆ', 'ทั้งหมด'].includes(navParam || '') ? '' : (navParam || '')}
+            initialCategory={
+              navParam === 'ไอเทม' ? 'ไอดี' :
+              ['ไอดี', 'ผลปีศาจ', 'Gamepass', 'บริการ', 'สกินผล', 'อื่นๆ', 'ทั้งหมด'].includes(navParam || '') ? navParam : 'ทั้งหมด'
+            }
+            initialSearch={['ไอดี', 'ผลปีศาจ', 'Gamepass', 'บริการ', 'สกินผล', 'อื่นๆ', 'ทั้งหมด', 'ไอเทม'].includes(navParam || '') ? '' : (navParam || '')}
             onSelectProduct={handleSelectProduct}
             onBuyNow={handleBuyNow}
             onOpenCalculator={() => setIsCalculatorModalOpen(true)}

@@ -13,7 +13,7 @@ export interface UserProfile {
   lastLoginAt: string;
 }
 
-export type ProductCategory = 'ผลปีศาจ' | 'Gamepass' | 'ไอเทม' | 'บริการ' | 'สกินผล' | 'อื่นๆ';
+export type ProductCategory = 'ไอดี' | 'ผลปีศาจ' | 'Gamepass' | 'บริการ' | 'สกินผล' | 'ไอเทม' | 'อื่นๆ';
 export type DeliveryType = 'fruit' | 'item' | 'gamepass' | 'service' | 'fruit_trade' | 'gamepass_gift' | 'account_code' | 'manual_service';
 
 export interface Product {
@@ -323,6 +323,23 @@ export interface HomeConfig {
   desktopBannerAutoplay?: boolean;
   desktopBannerImageUrl?: string;
   desktopBannerImageLink?: string;
+  // Web Promo Banner (แบนเนอร์เว็ป AngusShop Blox Fruits ปรับแต่งใน Admin ได้)
+  webBannerImageUrl?: string;
+  webBannerLink?: string;
+  webBannerBadge1?: string;
+  webBannerBadge2?: string;
+  webBannerShopButtonText?: string;
+  webBannerHighlightTitle?: string;
+  webBannerHighlightSubtitle?: string;
+  webBannerHighlightPrice?: number;
+  webBannerHighlightOldPrice?: number;
+  webBannerHighlightBadge?: string;
+  webBannerHighlightButtonText?: string;
+  webBannerTag1?: string;
+  webBannerTag2?: string;
+  webBannerTag3?: string;
+  webBannerTag4?: string;
+  showWebBanner?: boolean;
   updatedAt?: string;
   updatedBy?: string;
 }

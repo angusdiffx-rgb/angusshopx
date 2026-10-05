@@ -357,27 +357,72 @@ export const InventoryView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Claim Code Box */}
+                  {/* Claim Code / Roblox Account Box */}
                   {claimCode && (
-                    <div className="mt-3.5 p-2.5 sm:p-3 rounded-2xl bg-[#09090F] border border-[#212130] flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[9px] sm:text-[10px] text-zinc-400 uppercase font-bold tracking-wider truncate flex items-center gap-1">
-                          <Key className="w-3 h-3 text-amber-400 shrink-0" />
+                    <div className="mt-3.5 p-3 rounded-2xl bg-[#09090F] border border-amber-500/30 space-y-2">
+                      <div className="flex items-center justify-between gap-2 border-b border-amber-500/15 pb-1.5">
+                        <div className="text-[10px] sm:text-[11px] text-amber-300 uppercase font-bold tracking-wider truncate flex items-center gap-1.5">
+                          <Key className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           <span>{claimCodeTitle}</span>
                         </div>
-                        <div className="font-mono text-xs sm:text-sm font-bold text-amber-300 mt-0.5 select-all truncate">{claimCode}</div>
+                        <button
+                          onClick={() => handleCopyCode(claimCode, item.id || item.inventoryId)}
+                          className="px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          {copiedId === (item.id || item.inventoryId) ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span className="text-emerald-400">คัดลอกแล้ว</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>คัดลอกทั้งหมด</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleCopyCode(claimCode, item.id || item.inventoryId)}
-                        className="p-1.5 sm:p-2 rounded-xl bg-[#181826] hover:bg-[#202034] text-zinc-300 hover:text-white transition-colors cursor-pointer shrink-0"
-                        title={`คัดลอก ${claimCodeTitle}`}
-                      >
-                        {copiedId === (item.id || item.inventoryId) ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
+
+                      {claimCode.includes(':') ? (
+                        <div className="space-y-1.5 font-mono text-xs">
+                          {(() => {
+                            const [u, p] = claimCode.split(':').map(s => s.trim());
+                            return (
+                              <>
+                                <div className="flex items-center justify-between gap-2 bg-[#120F1D] px-2.5 py-1.5 rounded-xl border border-white/5">
+                                  <div className="truncate">
+                                    <span className="text-zinc-500 text-[10px] mr-1.5">User:</span>
+                                    <strong className="text-white select-all">{u}</strong>
+                                  </div>
+                                  <button
+                                    onClick={() => handleCopyCode(u, `${item.id}_u`)}
+                                    className="text-[10px] text-zinc-400 hover:text-white bg-white/5 px-2 py-0.5 rounded cursor-pointer shrink-0"
+                                  >
+                                    {copiedId === `${item.id}_u` ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-2 bg-[#120F1D] px-2.5 py-1.5 rounded-xl border border-white/5">
+                                  <div className="truncate">
+                                    <span className="text-zinc-500 text-[10px] mr-1.5">Pass:</span>
+                                    <strong className="text-amber-300 select-all">{p}</strong>
+                                  </div>
+                                  <button
+                                    onClick={() => handleCopyCode(p, `${item.id}_p`)}
+                                    className="text-[10px] text-amber-400 hover:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded cursor-pointer shrink-0"
+                                  >
+                                    {copiedId === `${item.id}_p` ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                                  </button>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="font-mono text-xs sm:text-sm font-bold text-amber-300 select-all truncate">
+                          {claimCode}
+                        </div>
+                      )}
                     </div>
                   )}
 

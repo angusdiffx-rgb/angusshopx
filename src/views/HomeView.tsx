@@ -183,43 +183,186 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {homeConfig.heroSubtitle || 'ศูนย์รวมผลปีศาจ ถาวร, Gamepass และบริการฟาร์ม Roblox ส่งมอบทันที'}
           </p>
 
-          {/* Blox Fruits Fast Showcase Ribbon (ตารางผลยอดนิยม) */}
-          <div className="mt-5 sm:mt-8 max-w-3xl mx-auto p-2.5 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[rgba(255,255,255,0.04)] border border-[rgba(168,85,247,0.18)] backdrop-blur-[18px] shadow-[0_8px_32px_rgba(7,5,15,0.6)] w-full max-w-full overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 border-b border-purple-500/15 mb-2 text-left min-w-0">
-              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-zinc-300 min-w-0 truncate">
-                <Gamepad2 className="w-3.5 h-3.5 text-[#C084FC] shrink-0" />
-                <span className="truncate">{homeConfig.trendingTitle || 'ผลปีศาจยอดนิยมประจำสัปดาห์'}</span>
-              </div>
-              <span className="text-[9px] sm:text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 whitespace-nowrap shrink-0">
-                {homeConfig.trendingBadge || 'VIP พร้อมเทรด'}
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2 w-full max-w-full">
-              {homeConfig.trendingItems.map((fruit) => (
-                <div
-                  key={fruit.id || fruit.name}
-                  onClick={() => onNavigate('shop', 'ผลปีศาจ')}
-                  className="group p-1.5 sm:p-2.5 rounded-xl bg-[#0F0A1A]/80 hover:bg-[#1A102E] border border-[rgba(168,85,247,0.15)] hover:border-[rgba(192,132,252,0.50)] hover:shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all duration-300 cursor-pointer text-center flex flex-col items-center min-w-0 overflow-hidden active:scale-95"
-                >
-                  <div className="relative w-11 h-11 sm:w-14 sm:h-14 mb-1 shrink-0">
-                    <BloxImage
-                      src={fruit.img}
-                      alt={fruit.name}
-                      productName={fruit.th || fruit.name}
-                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_4px_10px_rgba(168,85,247,0.35)]"
+          {/* AngusShop Blox Fruits Official Web Banner (ปรับแต่งใน Admin ได้) */}
+          {(() => {
+            if (homeConfig.showWebBanner === false) return null;
+
+            const cdkProduct = products.find(p => 
+              (homeConfig.webBannerLink && (p.productId === homeConfig.webBannerLink || p.slug === homeConfig.webBannerLink)) ||
+              p.productId === 'prod_gacha_cdk_35' || 
+              p.name.includes('ดาบคู่') || 
+              p.name.includes('CDK')
+            ) || {
+              productId: 'prod_gacha_cdk_35',
+              name: homeConfig.webBannerHighlightTitle || 'สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
+              slug: 'gacha-cdk-35-baht',
+              description: homeConfig.webBannerHighlightSubtitle || 'สุ่มไอดีไก่ตัน Blox Fruits ดาบคู่ CDK เลเวล Max 2550 สเตตัสอัปเต็ม พร้อมดาบ CDK 100% ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+              shortDescription: 'สุ่มไก่ตันดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน พร้อมเล่น ส่งมอบรหัสอัตโนมัติ 24 ชม.',
+              category: 'ไอดี' as const,
+              price: homeConfig.webBannerHighlightPrice ?? 35,
+              oldPrice: homeConfig.webBannerHighlightOldPrice ?? 79,
+              image: '/images/blox/cursed_dual_katana.png',
+              stock: 50,
+              isActive: true,
+              isFeatured: true,
+              isBestSeller: true,
+              deliveryType: 'account_code' as const,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+
+            const bannerImage = homeConfig.webBannerImageUrl || '/images/blox/hero_banner.jpg';
+            const badge1 = homeConfig.webBannerBadge1 || 'โปรโมชั่นเด็ด';
+            const badge2 = homeConfig.webBannerBadge2 || 'เริ่มต้น 20-35 บาท';
+            const shopBtnText = homeConfig.webBannerShopButtonText || '🛒 เข้าร้านเลย!';
+            const highlightTitle = homeConfig.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท';
+            const highlightSubtitle = homeConfig.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.';
+            const currentPrice = homeConfig.webBannerHighlightPrice !== undefined ? homeConfig.webBannerHighlightPrice : (cdkProduct.price || 35);
+            const oldPrice = homeConfig.webBannerHighlightOldPrice !== undefined ? homeConfig.webBannerHighlightOldPrice : (cdkProduct.oldPrice || 79);
+            const buyButtonText = homeConfig.webBannerHighlightButtonText || `สุ่มเลย ฿${currentPrice}`;
+
+            const handleBannerClick = () => {
+              playClickSound();
+              if (homeConfig.webBannerLink === 'shop') {
+                onNavigate('shop');
+              } else if (homeConfig.webBannerLink?.startsWith('http')) {
+                window.open(homeConfig.webBannerLink, '_blank');
+              } else if (cdkProduct) {
+                onSelectProduct(cdkProduct);
+              } else {
+                onNavigate('shop');
+              }
+            };
+
+            return (
+              <div className="mt-5 sm:mt-8 max-w-4xl mx-auto w-full group relative">
+                {/* Glowing ambient background glow */}
+                <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-amber-600/30 blur-xl opacity-75 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+                
+                <div className="relative rounded-2xl sm:rounded-3xl bg-[#0D091A] border-2 border-purple-500/35 hover:border-purple-400/60 overflow-hidden shadow-[0_12px_40px_rgba(112,26,117,0.35)] transition-all duration-300">
+                  
+                  {/* Clickable Banner Image Container */}
+                  <div 
+                    onClick={handleBannerClick}
+                    className="relative cursor-pointer w-full overflow-hidden aspect-[21/9] sm:aspect-[2.35/1] max-h-[380px]"
+                  >
+                    <img
+                      src={bannerImage}
+                      alt={highlightTitle}
+                      className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-500"
                     />
+                    
+                    {/* Subtle Gradient Overlays for contrast */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0616] via-transparent to-black/20 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/30 pointer-events-none" />
+
+                    {/* Floating Badges on top of Banner */}
+                    <div className="absolute top-2.5 sm:top-4 left-2.5 sm:left-4 flex items-center gap-1.5 sm:gap-2">
+                      {badge1 && (
+                        <span className="px-2.5 sm:px-3 py-1 rounded-full bg-red-600/90 text-white font-black text-[10px] sm:text-xs shadow-lg flex items-center gap-1 animate-pulse">
+                          <Flame className="w-3 h-3 text-amber-300" />
+                          <span>{badge1}</span>
+                        </span>
+                      )}
+                      {badge2 && (
+                        <span className="px-2.5 sm:px-3 py-1 rounded-full bg-purple-950/80 border border-purple-400/40 text-purple-200 font-bold text-[10px] sm:text-xs backdrop-blur-md">
+                          {badge2}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick Action Pill on Banner (Bottom Right) */}
+                    <div className="absolute bottom-2.5 sm:bottom-4 right-2.5 sm:right-4 flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playClickSound();
+                          onNavigate('shop');
+                        }}
+                        className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-[11px] sm:text-xs flex items-center gap-1.5 shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer border border-purple-400/30"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>{shopBtnText}</span>
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[10px] sm:text-[11px] font-bold text-white group-hover:text-[#C084FC] truncate w-full block">
-                    {fruit.th}
-                  </span>
-                  <span className="text-[9px] sm:text-[10px] font-black text-cyan-400 tabular-nums truncate w-full block">
-                    {fruit.price}
-                  </span>
+
+                  {/* Integrated Highlight Card: สุ่มไก่ตันดาบคู่ / สินค้าโปรโมชั่น */}
+                  <div className="p-3 sm:p-4 bg-gradient-to-b from-[#130B24] to-[#0A0614] border-t border-purple-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-purple-950/70 border border-purple-500/40 p-1 flex items-center justify-center shrink-0 shadow-lg">
+                        <BloxImage
+                          src={cdkProduct.image || '/images/blox/cursed_dual_katana.png'}
+                          alt={highlightTitle}
+                          productName={highlightTitle}
+                          className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+                        />
+                        <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">
+                          {currentPrice}฿
+                        </span>
+                      </div>
+                      <div className="min-w-0 text-left">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span 
+                            className="text-xs sm:text-sm font-black text-white hover:text-purple-300 transition-colors cursor-pointer" 
+                            onClick={() => onSelectProduct(cdkProduct)}
+                          >
+                            {highlightTitle}
+                          </span>
+                          <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            พร้อมส่งอัตโนมัติ
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+                          {highlightSubtitle}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 shrink-0">
+                      <div className="text-right hidden sm:block mr-1">
+                        {oldPrice > currentPrice && (
+                          <span className="text-[10px] text-zinc-500 line-through block">฿{oldPrice}</span>
+                        )}
+                        <span className="text-base sm:text-lg font-black text-cyan-400 block">฿{currentPrice}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          playClickSound();
+                          onBuyNow(cdkProduct);
+                        }}
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_25px_rgba(245,158,11,0.6)] active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Zap className="w-4 h-4 fill-white" />
+                        <span>{buyButtonText}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Feature Guarantee Bar at Banner bottom */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-2 bg-[#08040F] border-t border-purple-500/15 text-[10px] sm:text-[11px] text-zinc-400 font-medium">
+                    <div className="flex items-center justify-center gap-1 text-center py-1">
+                      <Sparkles className="w-3 h-3 text-purple-400 shrink-0" />
+                      <span>{homeConfig.webBannerTag1 || 'สุ่มผลปีศาจหายาก'}</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1 text-center py-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>{homeConfig.webBannerTag2 || 'ปลอดภัย 100% อัตโนมัติ'}</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1 text-center py-1">
+                      <Flame className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>{homeConfig.webBannerTag3 || 'ราคาถูก เริ่มต้น 20-35฿'}</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1 text-center py-1">
+                      <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+                      <span>{homeConfig.webBannerTag4 || 'บริการตลอด 24 ชม.'}</span>
+                    </div>
+                  </div>
+
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
 
           {/* Action CTA Buttons */}
           <div className="mt-6 sm:mt-9 grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2.5 sm:gap-4 max-w-md mx-auto w-full">
@@ -475,15 +618,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             
             // Map category names to official high-res Blox Fruits image assets
             const fallbackImage = 
+              cat.name === 'ไอดี' ? '/images/blox/cursed_dual_katana.png' :
               cat.name === 'ผลปีศาจ' ? '/images/blox/category_devil_fruit.jpg' :
               cat.name === 'Gamepass' ? '/images/blox/category_gamepass_vip.jpg' :
-              cat.name === 'ไอเทม' ? '/images/blox/category_special_items.jpg' :
+              cat.name === 'ไอเทม' ? '/images/blox/cursed_dual_katana.png' :
               cat.name === 'บริการ' ? '/images/blox/service_bounty_hunt.jpg' :
               cat.name === 'สกินผล' ? '/images/blox/skin_galaxy_kitsune.png' :
               '/images/blox/kitsune.png';
 
             const displayImage = (cat.iconType === 'image' && cat.imageUrl) ? cat.imageUrl : fallbackImage;
-            const productCount = products.filter(p => p.category === cat.name).length;
+            const productCount = cat.name === 'ไอดี'
+              ? products.filter(p => p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || p.name.includes('ไก่ตัน') || p.name.includes('สุ่ม')).length
+              : products.filter(p => p.category === cat.name).length;
 
             return (
               <div

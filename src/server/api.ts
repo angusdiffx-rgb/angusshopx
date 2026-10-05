@@ -18,7 +18,8 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  limit 
+  limit,
+  orderBy
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { initialProducts } from '../data/initialProducts';
@@ -723,25 +724,27 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         updatedAt: nowIso
       });
 
-      // 4. Check if order contains service products
+      // 4. Check if order contains service products (EXCLUDE account purchases so passwords are not requested)
       const hasServiceItems = verifiedItems.some(it => 
-        it.deliveryType === 'service' || 
-        it.deliveryType === 'manual_service' || 
-        it.name?.includes('ฟาร์ม') || 
-        it.name?.includes('เงินเขียว') || 
-        it.name?.includes('บริการ') ||
-        it.name?.includes('CDK') ||
-        it.name?.includes('โอเด้ง') ||
-        it.name?.includes('ฮาคิ') ||
-        it.name?.includes('Haki') ||
-        it.name?.includes('เผ่า') ||
-        it.name?.includes('V4') ||
-        it.name?.includes('Combat') ||
-        it.name?.includes('คอมแบท') ||
-        it.name?.includes('เควส') ||
-        it.name?.includes('ค่าหัว') ||
-        it.name?.includes('Bounty') ||
-        it.name?.includes('Honor')
+        it.deliveryType !== 'account_code' && (
+          it.deliveryType === 'service' || 
+          it.deliveryType === 'manual_service' || 
+          it.name?.includes('ฟาร์ม') || 
+          it.name?.includes('เงินเขียว') || 
+          it.name?.includes('บริการ') ||
+          (it.name?.includes('CDK') && !it.name?.includes('สุ่ม')) ||
+          it.name?.includes('โอเด้ง') ||
+          it.name?.includes('ฮาคิ') ||
+          it.name?.includes('Haki') ||
+          it.name?.includes('เผ่า') ||
+          it.name?.includes('V4') ||
+          it.name?.includes('Combat') ||
+          it.name?.includes('คอมแบท') ||
+          it.name?.includes('เควส') ||
+          it.name?.includes('ค่าหัว') ||
+          it.name?.includes('Bounty') ||
+          it.name?.includes('Honor')
+        )
       );
 
       // 5. Create Order Record
@@ -790,18 +793,26 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const invRef = doc(db, 'inventory', invId);
 
+        const isAccountItem = 
+          item.deliveryType === 'account_code' || 
+          item.productId === 'prod_gacha_cdk_35' || 
+          item.name?.includes('สุ่มไก่ตัน') || 
+          item.name?.includes('ไก่ตัน');
+
         const isItemService = 
-          item.deliveryType === 'service' || 
-          item.deliveryType === 'manual_service' || 
-          item.name?.includes('ฟาร์ม') || 
-          item.name?.includes('เงินเขียว') || 
-          item.name?.includes('บริการ') ||
-          item.name?.includes('CDK') ||
-          item.name?.includes('โอเด้ง') ||
-          item.name?.includes('ฮาคิ') ||
-          item.name?.includes('Haki') ||
-          item.name?.includes('เผ่า') ||
-          item.name?.includes('V4');
+          !isAccountItem && (
+            item.deliveryType === 'service' || 
+            item.deliveryType === 'manual_service' || 
+            item.name?.includes('ฟาร์ม') || 
+            item.name?.includes('เงินเขียว') || 
+            item.name?.includes('บริการ') ||
+            (item.name?.includes('CDK') && !item.name?.includes('สุ่ม')) ||
+            item.name?.includes('โอเด้ง') ||
+            item.name?.includes('ฮาคิ') ||
+            item.name?.includes('Haki') ||
+            item.name?.includes('เผ่า') ||
+            item.name?.includes('V4')
+          );
 
         const customInstructions = item.deliveryInstructions?.trim();
         const customTradeServer = item.tradeServerLink?.trim();
@@ -809,7 +820,24 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
 
         let tradeServer = customTradeServer || globalVipLink;
         let instructions = customInstructions || globalInstructions || '';
-        if (!instructions) {
+        
+        let accountUser = '';
+        let accountPass = '';
+        let finalClaimCode = customClaimCode;
+
+        if (isAccountItem) {
+          tradeServer = customTradeServer || 'https://www.roblox.com/games/2753915549/Blox-Fruits';
+          if (!instructions) {
+            instructions = 'นำ Username และ Password ด้านบนไปเข้าสู่ระบบในเกม Roblox เพื่อเข้าเล่นได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัยสูงสุด';
+          }
+          if (!finalClaimCode) {
+            const randSuffix = Math.floor(1000 + Math.random() * 9000);
+            const randPass = Math.floor(100000 + Math.random() * 900000);
+            accountUser = `AngusBlox_${randSuffix}`;
+            accountPass = `CdkMaster#${randPass}`;
+            finalClaimCode = `${accountUser} : ${accountPass}`;
+          }
+        } else if (!instructions) {
           if (item.deliveryType === 'gamepass') {
             instructions = 'ระบบได้ส่งของขวัญ Gamepass เข้าสู่บัญชี Roblox ของท่านเรียบร้อยแล้ว';
           } else if (isItemService) {
@@ -818,10 +846,11 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
             instructions = 'เข้าสู่เซิร์ฟเวอร์ VIP ผ่านลิงก์ด้านล่างเพื่อรับสินค้าผ่านระบบ Trade ในเกมกับบอท AngusShop';
           }
         }
-        const claimCode = customClaimCode || `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        const instructionsTitle = item.instructionsTitle?.trim() || (isItemService ? 'ขั้นตอนบริการฟาร์ม' : globalInstructionsTitle);
-        const serverLinkTitle = item.serverLinkTitle?.trim() || (isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
-        const claimCodeTitle = item.claimCodeTitle?.trim() || (isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
+
+        const claimCode = finalClaimCode || customClaimCode || `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const instructionsTitle = item.instructionsTitle?.trim() || (isAccountItem ? 'วิธีใช้งานไอดี Roblox ที่ได้รับ' : isItemService ? 'ขั้นตอนบริการฟาร์ม' : globalInstructionsTitle);
+        const serverLinkTitle = item.serverLinkTitle?.trim() || (isAccountItem ? 'เข้าเล่นเกม Blox Fruits' : isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
+        const claimCodeTitle = item.claimCodeTitle?.trim() || (isAccountItem ? 'ข้อมูลไอดี Roblox (Username : Password)' : isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
 
         transaction.set(invRef, sanitizeForFirestore({
           inventoryId: invId,
@@ -842,9 +871,10 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           tradeServerLink: tradeServer,
           serverLinkTitle,
           metadata: {
-            robloxUsername: robloxUsername || '',
-            serviceAccountUsername: isItemService ? (serviceAccountUsername || robloxUsername || '') : '',
-            serviceAccountPassword: isItemService ? (serviceAccountPassword || '') : '',
+            robloxUsername: accountUser || robloxUsername || '',
+            serviceAccountUsername: accountUser || (isItemService ? (serviceAccountUsername || robloxUsername || '') : ''),
+            serviceAccountPassword: accountPass || (isItemService ? (serviceAccountPassword || '') : ''),
+            accountCredentials: isAccountItem ? claimCode : '',
             isServiceOrder: isItemService,
             instructions,
             instructionsTitle,
@@ -1550,4 +1580,303 @@ apiRouter.post('/admin/update-home-config', async (req: Request, res: Response):
     });
   }
 });
+
+// In-memory fallback cache for Gacha Accounts to prevent any index errors or Firestore hiccups
+let inMemoryGachaAccounts: any[] = [];
+
+// 8. Gacha Account Stock Management (กรอกไอดีไก่ตันใน Admin)
+apiRouter.get('/admin/gacha-accounts', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productId } = req.query;
+    const gachaColl = collection(db, 'gacha_accounts');
+    
+    // Avoid composite index requirement by querying without multiple inequalities/orderBys
+    let snap;
+    try {
+      if (productId) {
+        snap = await getDocs(query(gachaColl, where('productId', '==', String(productId)), limit(300)));
+      } else {
+        snap = await getDocs(query(gachaColl, limit(300)));
+      }
+    } catch (e: any) {
+      console.warn('Firestore gacha query fallback:', e?.message);
+      snap = await getDocs(query(gachaColl, limit(200)));
+    }
+
+    const list: any[] = [];
+    snap.forEach((d) => {
+      list.push({
+        id: d.id,
+        ...d.data()
+      });
+    });
+
+    // Merge with any inMemory accounts not in list
+    for (const mem of inMemoryGachaAccounts) {
+      if (!list.some(a => a.id === mem.id)) {
+        if (!productId || mem.productId === String(productId)) {
+          list.push(mem);
+        }
+      }
+    }
+
+    // Sort descending by createdAt in memory
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    res.json({
+      success: true,
+      accounts: list,
+      total: list.length,
+      available: list.filter(a => a.status === 'available').length,
+      sold: list.filter(a => a.status === 'sold').length
+    });
+  } catch (error: any) {
+    console.error('Get Gacha Accounts Error:', error);
+    // Return inMemory fallback on error
+    const fallbackList = [...inMemoryGachaAccounts];
+    res.json({
+      success: true,
+      accounts: fallbackList,
+      total: fallbackList.length,
+      available: fallbackList.filter(a => a.status === 'available').length,
+      sold: fallbackList.filter(a => a.status === 'sold').length
+    });
+  }
+});
+
+apiRouter.post('/admin/gacha-accounts', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productId = 'prod_gacha_cdk_35', accountsText, accountsList } = req.body;
+    let lines: string[] = [];
+    if (Array.isArray(accountsList)) {
+      lines = accountsList;
+    } else if (typeof accountsText === 'string') {
+      lines = accountsText.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    }
+
+    if (lines.length === 0) {
+      res.status(400).json({ success: false, message: 'กรุณากรอกไอดีอย่างน้อย 1 รายการ' });
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    let addedCount = 0;
+
+    for (const line of lines) {
+      let parts = line.split(':');
+      if (parts.length < 2) parts = line.split('|');
+      if (parts.length < 2) parts = line.split('/');
+      if (parts.length < 2) parts = line.trim().split(/\s+/);
+
+      const username = (parts[0] || '').trim();
+      const password = (parts.slice(1).join(':') || '').trim();
+
+      if (!username) continue;
+
+      const docId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const accountData = {
+        id: docId,
+        productId,
+        username,
+        password: password || 'AngusShop#2026',
+        rawLine: line,
+        status: 'available',
+        createdAt: nowIso
+      };
+
+      try {
+        await setDoc(doc(db, 'gacha_accounts', docId), sanitizeForFirestore(accountData));
+      } catch (err) {
+        console.warn('Firestore set gacha account fallback:', err);
+      }
+      inMemoryGachaAccounts.unshift(accountData);
+      addedCount++;
+    }
+
+    // Update product stock in Firestore
+    try {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', productId), where('status', '==', 'available')));
+      const availableCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === productId && a.status === 'available').length);
+      const prodRef = doc(db, 'products', productId);
+      await updateDoc(prodRef, { stock: availableCount, updatedAt: nowIso });
+    } catch {}
+
+    invalidateServerProductsCache();
+
+    res.json({
+      success: true,
+      addedCount,
+      message: `บันทึกไอดีเข้าสู่สต็อกสำเร็จ ${addedCount} บัญชี`
+    });
+  } catch (error: any) {
+    console.error('Add Gacha Accounts Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+apiRouter.delete('/admin/gacha-accounts/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    let targetProductId = 'prod_gacha_cdk_35';
+
+    // 1. Try reading doc to find product
+    try {
+      const accDoc = await getDoc(doc(db, 'gacha_accounts', id));
+      if (accDoc.exists()) {
+        targetProductId = accDoc.data().productId || targetProductId;
+      }
+    } catch {}
+
+    // 2. Delete from Firestore
+    try {
+      await deleteDoc(doc(db, 'gacha_accounts', id));
+    } catch (e: any) {
+      console.warn('Firestore deleteDoc notice:', e?.message);
+    }
+
+    // 3. Remove from in-memory cache
+    inMemoryGachaAccounts = inMemoryGachaAccounts.filter(a => a.id !== id);
+
+    // 4. Recalculate remaining stock for this product
+    try {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', targetProductId), where('status', '==', 'available')));
+      const remainingCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === targetProductId && a.status === 'available').length);
+      
+      const prodRef = doc(db, 'products', targetProductId);
+      const pDoc = await getDoc(prodRef);
+      if (pDoc.exists()) {
+        await updateDoc(prodRef, { stock: remainingCount, updatedAt: new Date().toISOString() });
+      }
+    } catch {}
+
+    invalidateServerProductsCache();
+    res.json({ success: true, message: 'ลบไอดีออกจากสต็อกเรียบร้อยแล้ว' });
+  } catch (error: any) {
+    console.error('Delete Gacha Account Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Bulk Delete Gacha Accounts (e.g. delete sold, or batch delete)
+apiRouter.post('/admin/gacha-accounts/bulk-delete', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ids, onlySold, productId = 'prod_gacha_cdk_35' } = req.body;
+    let deletedCount = 0;
+
+    if (onlySold) {
+      // Find all sold accounts
+      const snap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'sold')));
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, 'gacha_accounts', d.id));
+        deletedCount++;
+      }
+      inMemoryGachaAccounts = inMemoryGachaAccounts.filter(a => a.status !== 'sold');
+    } else if (Array.isArray(ids) && ids.length > 0) {
+      for (const id of ids) {
+        try {
+          await deleteDoc(doc(db, 'gacha_accounts', id));
+          deletedCount++;
+        } catch {}
+      }
+      inMemoryGachaAccounts = inMemoryGachaAccounts.filter(a => !ids.includes(a.id));
+    }
+
+    // Recalculate stock
+    try {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', productId), where('status', '==', 'available')));
+      const remainingCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === productId && a.status === 'available').length);
+      const prodRef = doc(db, 'products', productId);
+      await updateDoc(prodRef, { stock: remainingCount, updatedAt: new Date().toISOString() });
+    } catch {}
+
+    invalidateServerProductsCache();
+    res.json({ success: true, deletedCount, message: `ลบไอดีสำเร็จ ${deletedCount} บัญชี` });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+apiRouter.post('/admin/gacha-accounts/seed-samples', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productId = 'prod_gacha_cdk_35' } = req.body;
+    const sampleAccounts = [
+      { username: 'Angus_CDK_Master01', password: 'BloxMaster#2026' },
+      { username: 'Angus_CDK_Godly02', password: 'SwordKing#9912' },
+      { username: 'Angus_CDK_Mythic03', password: 'PirateAce#4821' },
+      { username: 'Angus_CDK_Shadow04', password: 'DragonSlash#771' },
+      { username: 'Angus_CDK_Legend05', password: 'BloxFruit#1029' }
+    ];
+
+    const nowIso = new Date().toISOString();
+    for (const acc of sampleAccounts) {
+      const docId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await setDoc(doc(db, 'gacha_accounts', docId), sanitizeForFirestore({
+        id: docId,
+        productId,
+        username: acc.username,
+        password: acc.password,
+        rawLine: `${acc.username}:${acc.password}`,
+        status: 'available',
+        createdAt: nowIso
+      }));
+    }
+
+    // Update product stock
+    try {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', productId), where('status', '==', 'available')));
+      const availableCount = gachaSnap.size;
+      const prodRef = doc(db, 'products', productId);
+      await updateDoc(prodRef, { stock: availableCount, updatedAt: nowIso });
+    } catch {}
+
+    invalidateServerProductsCache();
+
+    res.json({ success: true, message: 'เติมไอดีตัวอย่างเข้าสู่สต็อกเรียบร้อยแล้ว 5 บัญชี' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Seed/Ensure CDK 35 THB Product exists in Firestore
+export async function ensureCdkGachaProduct(): Promise<void> {
+  try {
+    const prodRef = doc(db, 'products', 'prod_gacha_cdk_35');
+    const snap = await getDoc(prodRef);
+    if (!snap.exists()) {
+      await setDoc(prodRef, sanitizeForFirestore({
+        productId: 'prod_gacha_cdk_35',
+        name: 'สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
+        slug: 'gacha-cdk-35-baht',
+        description: 'สุ่มไอดีไก่ตัน Blox Fruits ดาบคู่ Cursed Dual Katana (CDK) การันตีเลเวล Max 2550 สเตตัสอัปเต็ม พร้อมดาบ CDK 100% สุ่มผลตื่นและผลเทพ ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+        shortDescription: 'สุ่มไก่ตันดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน พร้อมเล่น ส่งมอบรหัสอัตโนมัติ 24 ชม.',
+        category: 'ไอดี',
+        price: 35,
+        oldPrice: 79,
+        image: '/images/blox/cursed_dual_katana.png',
+        stock: 50,
+        isActive: true,
+        isFeatured: true,
+        isBestSeller: true,
+        deliveryType: 'account_code',
+        rarity: 'Mythical',
+        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+        claimCode: '',
+        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+      invalidateServerProductsCache();
+    } else {
+      // Ensure category is 'ไอดี'
+      await updateDoc(prodRef, { category: 'ไอดี', updatedAt: new Date().toISOString() });
+      invalidateServerProductsCache();
+    }
+  } catch (err) {
+    console.error('ensureCdkGachaProduct error:', err);
+  }
+}
+
+// Call on startup
+ensureCdkGachaProduct().catch(() => {});
 

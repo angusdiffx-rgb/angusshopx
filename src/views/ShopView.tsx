@@ -53,8 +53,13 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       // Category match
-      if (selectedCategory !== 'ทั้งหมด' && p.category !== selectedCategory) {
-        return false;
+      if (selectedCategory !== 'ทั้งหมด') {
+        if (selectedCategory === 'ไอดี') {
+          const isAccount = p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || p.name.includes('ไก่ตัน') || p.name.includes('สุ่ม');
+          if (!isAccount) return false;
+        } else if (p.category !== selectedCategory) {
+          return false;
+        }
       }
       // Search term
       if (searchTerm.trim()) {

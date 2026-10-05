@@ -23,9 +23,9 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   categoriesTitle: 'หมวดหมู่สินค้า',
   categoriesSubtitle: 'เลือกช้อปสินค้า Blox Fruits ตามประเภทที่ท่านต้องการ',
   categoryCards: [
-    { name: 'ผลปีศาจ', desc: 'คิตสึเนะ มังกร โมจิ ถาวร & กล่องผล', iconType: 'icon', iconName: 'Flame', colorClass: 'from-amber-500/25 to-orange-500/10' },
-    { name: 'Gamepass', desc: 'ดาบโยรุ คูณเงิน คูณชำนาญ เรือเร็ว', iconType: 'icon', iconName: 'Zap', colorClass: 'from-purple-500/25 to-indigo-500/10' },
-    { name: 'ไอเทม', desc: 'ดาบคู่ CDK กีตาร์วิญญาณ รหัสเทพ', iconType: 'icon', iconName: 'Sparkles', colorClass: 'from-emerald-500/25 to-teal-500/10' },
+    { name: 'ไอดี', desc: 'สุ่มไก่ตันดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน พร้อมเล่นทันที', iconType: 'icon', iconName: 'Sparkles', colorClass: 'from-amber-500/25 to-orange-500/10' },
+    { name: 'ผลปีศาจ', desc: 'คิตสึเนะ มังกร โมจิ ถาวร & กล่องผล', iconType: 'icon', iconName: 'Flame', colorClass: 'from-purple-500/25 to-pink-500/10' },
+    { name: 'Gamepass', desc: 'ดาบโยรุ คูณเงิน คูณชำนาญ เรือเร็ว', iconType: 'icon', iconName: 'Zap', colorClass: 'from-blue-500/25 to-indigo-500/10' },
     { name: 'บริการ', desc: 'ดันดอว์ อเวค V4 ฟาร์มเวลทันใจ', iconType: 'icon', iconName: 'ShieldCheck', colorClass: 'from-rose-500/25 to-pink-500/10' },
   ],
   // 1. แถบผลปีศาจยอดนิยมประจำสัปดาห์ (Weekly Trending Strip)
@@ -126,7 +126,23 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   desktopBannerStartTime: 27,
   desktopBannerAutoplay: true,
   desktopBannerImageUrl: '',
-  desktopBannerImageLink: ''
+  desktopBannerImageLink: '',
+  // 4. แบนเนอร์โปรโมชั่นหน้าแรก (Hero Web Banner)
+  showWebBanner: true,
+  webBannerImageUrl: '/images/blox/hero_banner.jpg',
+  webBannerBadge1: 'โปรโมชั่นเด็ด',
+  webBannerBadge2: 'เริ่มต้น 20-35 บาท',
+  webBannerShopButtonText: '🛒 เข้าร้านเลย!',
+  webBannerHighlightTitle: '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
+  webBannerHighlightSubtitle: 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.',
+  webBannerHighlightPrice: 35,
+  webBannerHighlightOldPrice: 79,
+  webBannerHighlightButtonText: 'สุ่มเลย ฿35',
+  webBannerTag1: 'สุ่มผลปีศาจหายาก',
+  webBannerTag2: 'ปลอดภัย 100% อัตโนมัติ',
+  webBannerTag3: 'ราคาถูก เริ่มต้น 20-35฿',
+  webBannerTag4: 'บริการตลอด 24 ชม.',
+  webBannerLink: 'prod_gacha_cdk_35'
 };
 
 // ฐานข้อมูลผลไม้ ไอเทม Gamepass ดาบ และหมัด ทั้งหมดในเกม Blox Fruits

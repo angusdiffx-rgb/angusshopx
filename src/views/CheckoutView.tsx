@@ -46,21 +46,23 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Check if cart contains any service/farm items
+  // Check if cart contains any service/farm items (exclude account purchases)
   const hasServiceItems = items.some(item => 
-    item.category === 'บริการ' ||
-    item.deliveryType === 'service' || 
-    item.deliveryType === 'manual_service' ||
-    item.name?.includes('ฟาร์ม') ||
-    item.name?.includes('เงินเขียว') ||
-    item.name?.includes('Beli') ||
-    item.name?.includes('บริการ') ||
-    item.name?.includes('CDK') ||
-    item.name?.includes('โอเด้ง') ||
-    item.name?.includes('ฮาคิ') ||
-    item.name?.includes('Haki') ||
-    item.name?.includes('เผ่า') ||
-    item.name?.includes('V4')
+    item.deliveryType !== 'account_code' && (
+      item.category === 'บริการ' ||
+      item.deliveryType === 'service' || 
+      item.deliveryType === 'manual_service' ||
+      item.name?.includes('ฟาร์ม') ||
+      item.name?.includes('เงินเขียว') ||
+      item.name?.includes('Beli') ||
+      item.name?.includes('บริการ') ||
+      (item.name?.includes('CDK') && !item.name?.includes('สุ่ม')) ||
+      item.name?.includes('โอเด้ง') ||
+      item.name?.includes('ฮาคิ') ||
+      item.name?.includes('Haki') ||
+      item.name?.includes('เผ่า') ||
+      item.name?.includes('V4')
+    )
   );
 
   const hasHakiItem = items.some(item => 

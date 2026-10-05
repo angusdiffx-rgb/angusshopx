@@ -115,7 +115,6 @@ export const AdminHeroBanners: React.FC<AdminHeroBannersProps> = ({
       toastError('ต้องมีแบนเนอร์อย่างน้อย 1 รายการ');
       return;
     }
-    if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบแบนเนอร์นี้?')) return;
 
     setConfig(prev => {
       const currentBanners = (prev.heroBanners || DEFAULT_HOME_CONFIG.heroBanners || []).filter(b => b.id !== bannerId);

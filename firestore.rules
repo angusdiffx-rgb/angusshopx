@@ -84,6 +84,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
+    // Gacha accounts collection (Roblox accounts pool)
+    match /gacha_accounts/{accountId} {
+      allow read, write: if true;
+    }
+    
     // Settings collection
     match /settings/{settingId} {
       allow read: if true;

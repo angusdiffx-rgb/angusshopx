@@ -93,7 +93,134 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const { user, isAdmin } = useAuth();
   const { success, error: toastError } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'inventory' | 'deposits' | 'orders' | 'home_config' | 'users'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'gacha' | 'inventory' | 'deposits' | 'orders' | 'home_config' | 'users'>('dashboard');
+
+  // Gacha Accounts Management State (ช่องกรอกไอดีไก่ตันใน admin)
+  const [gachaAccounts, setGachaAccounts] = useState<any[]>([]);
+  const [isLoadingGacha, setIsLoadingGacha] = useState(false);
+  const [gachaInputText, setGachaInputText] = useState('');
+  const [isSubmittingGacha, setIsSubmittingGacha] = useState(false);
+  const [gachaFilter, setGachaFilter] = useState<'all' | 'available' | 'sold'>('all');
+  const [gachaRevealedPasswords, setGachaRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [gachaTargetProduct, setGachaTargetProduct] = useState('prod_gacha_cdk_35');
+  const [confirmDeleteGachaId, setConfirmDeleteGachaId] = useState<string | null>(null);
+  const [isBulkDeletingGacha, setIsBulkDeletingGacha] = useState(false);
+
+  const loadGachaAccounts = async () => {
+    setIsLoadingGacha(true);
+    try {
+      const res = await fetch(`/api/admin/gacha-accounts?productId=${gachaTargetProduct}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.accounts)) {
+        setGachaAccounts(data.accounts);
+      }
+    } catch (e) {
+      console.warn('Load gacha accounts error:', e);
+    } finally {
+      setIsLoadingGacha(false);
+    }
+  };
+
+  const handleAddGachaAccounts = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!gachaInputText.trim()) {
+      toastError('กรุณากรอกไอดี', 'กรุณาระบุ Username:Password อย่างน้อย 1 บัญชี');
+      return;
+    }
+    setIsSubmittingGacha(true);
+    try {
+      const res = await fetch('/api/admin/gacha-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: gachaTargetProduct,
+          accountsText: gachaInputText
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        success('บันทึกสำเร็จ', data.message || `เพิ่มไอดีเข้าสต็อกแล้ว ${data.addedCount} บัญชี`);
+        setGachaInputText('');
+        await loadGachaAccounts();
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+      } else {
+        toastError('ไม่สำเร็จ', data.message || 'ไม่สามารถเพิ่มไอดีได้');
+      }
+    } catch (err: any) {
+      toastError('ข้อผิดพลาด', err.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ');
+    } finally {
+      setIsSubmittingGacha(false);
+    }
+  };
+
+  const handleDeleteGachaAccount = async (id: string) => {
+    try {
+      // Optimistically remove from state so the user sees instant response
+      setGachaAccounts(prev => prev.filter(a => a.id !== id));
+      setConfirmDeleteGachaId(null);
+
+      const res = await fetch(`/api/admin/gacha-accounts/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        success('ลบไอดีแล้ว', 'ลบไอดีออกจากสต็อกเรียบร้อย');
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+      } else {
+        toastError('ไม่สำเร็จ', data.message || 'ลบไม่สำเร็จ');
+        loadGachaAccounts();
+      }
+    } catch (e: any) {
+      toastError('ไม่สามารถลบได้', e.message);
+      loadGachaAccounts();
+    }
+  };
+
+  const handleClearSoldGacha = async () => {
+    setIsBulkDeletingGacha(true);
+    try {
+      const res = await fetch('/api/admin/gacha-accounts/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ onlySold: true, productId: gachaTargetProduct })
+      });
+      const data = await res.json();
+      if (data.success) {
+        success('ล้างไอดีที่ขายแล้วสำเร็จ', data.message || `ลบ ${data.deletedCount} บัญชี`);
+        setGachaAccounts(prev => prev.filter(a => a.status !== 'sold'));
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+      }
+    } catch (e: any) {
+      toastError('เกิดข้อผิดพลาด', e.message);
+    } finally {
+      setIsBulkDeletingGacha(false);
+    }
+  };
+
+  const handleSeedSampleGacha = async () => {
+    setIsSubmittingGacha(true);
+    try {
+      const res = await fetch('/api/admin/gacha-accounts/seed-samples', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: gachaTargetProduct })
+      });
+      const data = await res.json();
+      if (data.success) {
+        success('เติมไอดีตัวอย่างสำเร็จ', data.message || 'เพิ่ม 5 ไอดีทดสอบเรียบร้อย');
+        await loadGachaAccounts();
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+      }
+    } catch (e: any) {
+      toastError('ข้อผิดพลาด', e.message);
+    } finally {
+      setIsSubmittingGacha(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'gacha' || activeTab === 'products') {
+      loadGachaAccounts();
+    }
+  }, [activeTab, gachaTargetProduct]);
   
   // Blox Fruits preset picker modal state
   const [isPresetPickerOpen, setIsPresetPickerOpen] = useState(false);
@@ -1550,6 +1677,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('gacha')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            activeTab === 'gacha'
+              ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 text-white shadow-[0_0_25px_rgba(245,158,11,0.4)] border border-amber-400/40'
+              : 'text-[#B8AEC9] hover:text-white bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(139,92,246,0.12)] border border-transparent hover:border-[rgba(168,85,247,0.25)]'
+          }`}
+        >
+          <KeyRound className="w-4 h-4 text-amber-400" />
+          <span>📦 สต็อกไอดีไก่ตัน ({gachaAccounts.filter(a => a.status === 'available').length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('deposits')}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'deposits'
@@ -1707,8 +1846,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
       {/* Tab 2: Products Management (แยกหมวดหมู่สินค้าอย่างสมบูรณ์แบบ) */}
       {activeTab === 'products' && (() => {
-        // รายการหมวดหมู่มาตรฐาน
-        const standardOrder: string[] = ['ผลปีศาจ', 'สกินผล', 'Gamepass', 'ไอเทม', 'บริการ', 'อื่นๆ'];
+        // รายการหมวดหมู่มาตรฐาน (ไอดี เอาไว้รองจากทั้งหมด)
+        const standardOrder: string[] = ['ไอดี', 'ผลปีศาจ', 'Gamepass', 'สกินผล', 'บริการ', 'อื่นๆ'];
         
         // หมวดหมู่ทั้งหมดที่มีสินค้าอยู่ในระบบจริง
         const allPresentCategories: string[] = Array.from(new Set(products.map(p => (p.category as string) || 'อื่นๆ')));
@@ -1720,6 +1859,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
         // ฟังก์ชันกำหนดรูปแบบสีและไอคอนประจำหมวดหมู่
         const getCategoryConfig = (cat: string) => {
           switch (cat) {
+            case 'ไอดี':
+              return {
+                label: 'ไอดี (Roblox Accounts / สุ่มไก่ตัน)',
+                shortLabel: 'ไอดี',
+                icon: KeyRound,
+                color: 'text-amber-400',
+                bg: 'bg-amber-500/10',
+                border: 'border-amber-500/30',
+                activeBg: 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-900/30',
+                badge: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+                glow: 'group-hover:border-amber-500/50'
+              };
             case 'ผลปีศาจ':
               return {
                 label: 'ผลปีศาจ (Devil Fruits)',
@@ -2823,6 +2974,330 @@ export const AdminView: React.FC<AdminViewProps> = ({
         );
       })()}
 
+      {/* Tab: Gacha Accounts Stock & Input (ช่องกรอกไอดีไก่ตันใน admin) */}
+      {activeTab === 'gacha' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-amber-400" />
+                <span>จัดการสต็อกไอดีไก่ตัน (Gacha Accounts Management)</span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                กรอกไอดีและรหัสผ่าน Roblox สำหรับส่งมอบให้ลูกค้าแบบอัตโนมัติ 24 ชม. เมื่อสั่งซื้อ สุ่มไก่ตันดาบคู่ 35 บาท
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={loadGachaAccounts}
+                disabled={isLoadingGacha}
+                className="px-3.5 py-2 rounded-xl bg-[#1C1C2C] hover:bg-[#25253A] border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingGacha ? 'animate-spin' : ''}`} />
+                <span>รีเฟรชสต็อก</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSeedSampleGacha}
+                disabled={isSubmittingGacha}
+                className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-purple-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>+ เติม 5 ไอดีตัวอย่าง</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Metric Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#18132A] to-[#100C1E] border border-emerald-500/30 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-400">ไอดีพร้อมส่ง (Available)</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2">
+                {gachaAccounts.filter(a => a.status === 'available').length} <span className="text-xs text-zinc-400 font-normal">บัญชี</span>
+              </div>
+              <span className="text-[11px] text-zinc-500 mt-1 block">พร้อมตัดส่งมอบเข้าคลังลูกค้าทันที</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#18132A] to-[#100C1E] border border-purple-500/30 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-400">ขาย/ส่งมอบแล้ว (Delivered)</span>
+                <CheckCircle2 className="w-4 h-4 text-purple-400" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-purple-400 mt-2">
+                {gachaAccounts.filter(a => a.status === 'sold').length} <span className="text-xs text-zinc-400 font-normal">บัญชี</span>
+              </div>
+              <span className="text-[11px] text-zinc-500 mt-1 block">ส่งมอบให้ลูกค้าสำเร็จแล้ว</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#18132A] to-[#100C1E] border border-amber-500/30 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-400">รวมสต็อกทั้งหมด (Total)</span>
+                <KeyRound className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-300 mt-2">
+                {gachaAccounts.length} <span className="text-xs text-zinc-400 font-normal">บัญชี</span>
+              </div>
+              <span className="text-[11px] text-zinc-500 mt-1 block">ประวัติไอดีทั้งหมดในระบบ</span>
+            </div>
+          </div>
+
+          {/* Form: ช่องกรอกไอดีใน admin */}
+          <div className="p-4 sm:p-6 rounded-3xl bg-[#110D20] border-2 border-amber-500/40 shadow-xl shadow-amber-950/20 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-amber-500/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">ช่องกรอกไอดีไก่ตันเข้าสต็อก (Roblox Accounts Input)</h4>
+                  <p className="text-[11px] text-zinc-400">กรอกหรือวางไอดีทีละหลายบัญชี เพื่อให้ระบบนำไปสุ่มแจกลูกค้า</p>
+                </div>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="text-xs text-zinc-400">ผูกกับสินค้า:</span>
+                <select
+                  value={gachaTargetProduct}
+                  onChange={(e) => setGachaTargetProduct(e.target.value)}
+                  className="bg-[#0A0714] border border-[#2E2448] rounded-xl px-3 py-1.5 text-xs text-amber-300 focus:outline-none"
+                >
+                  <option value="prod_gacha_cdk_35">สุ่มไก่ตันดาบคู่ (CDK) 35 บาท</option>
+                  {products.filter(p => p.productId !== 'prod_gacha_cdk_35' && (p.deliveryType === 'account_code' || p.name.includes('สุ่ม'))).map(p => (
+                    <option key={p.productId} value={p.productId}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddGachaAccounts} className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center justify-between">
+                  <span>กรอกไอดีและรหัสผ่าน (1 บรรทัด ต่อ 1 บัญชี):</span>
+                  <span className="text-[10px] text-amber-400">รูปแบบ: Username:Password หรือ Username Password</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={gachaInputText}
+                  onChange={(e) => setGachaInputText(e.target.value)}
+                  placeholder="ตัวอย่างการกรอก:&#10;angus_cdk_01:Password1234&#10;angus_cdk_02:BloxHero#99&#10;angus_cdk_03:SwordGod777"
+                  className="w-full bg-[#080511] border border-[#2E2448] focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-2xl p-3 text-amber-300 font-mono text-xs placeholder:text-zinc-600 focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <p className="text-[11px] text-zinc-500">
+                  💡 เมื่อลูกค้าสั่งซื้อสำเร็จ ระบบจะดึงไอดีจากช่องนี้ไปส่งมอบในคลังสินค้าและใบเสร็จให้ทันที 24 ชม.
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGachaInputText('')}
+                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-semibold cursor-pointer"
+                  >
+                    ล้างข้อความ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingGacha || !gachaInputText.trim()}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/20 disabled:opacity-50 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{isSubmittingGacha ? 'กำลังบันทึก...' : '+ บันทึกไอดีเข้าสต็อก'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Accounts Stock Table */}
+          <div className="p-4 sm:p-6 rounded-3xl bg-[#120D22] border border-purple-500/20 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-500/15">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">รายการไอดีทั้งหมดในระบบ</span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                  {gachaAccounts.length} บัญชี
+                </span>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1 bg-[#0A0714] p-1 rounded-xl border border-purple-500/20">
+                <button
+                  type="button"
+                  onClick={() => setGachaFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    gachaFilter === 'all' ? 'bg-purple-600 text-white shadow' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  ทั้งหมด ({gachaAccounts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGachaFilter('available')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    gachaFilter === 'available' ? 'bg-emerald-600 text-white shadow' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  พร้อมส่ง ({gachaAccounts.filter(a => a.status === 'available').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGachaFilter('sold')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    gachaFilter === 'sold' ? 'bg-purple-900 text-purple-200 shadow' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  ขายแล้ว ({gachaAccounts.filter(a => a.status === 'sold').length})
+                </button>
+
+                {gachaAccounts.some(a => a.status === 'sold') && (
+                  <button
+                    type="button"
+                    onClick={handleClearSoldGacha}
+                    disabled={isBulkDeletingGacha}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-950/50 hover:bg-rose-900/70 border border-rose-500/30 text-rose-300 hover:text-white transition-all cursor-pointer flex items-center gap-1 ml-2"
+                    title="ลบไอดีทั้งหมดที่มีสถานะขายแล้วออกจากสต็อก"
+                  >
+                    <Trash2 className="w-3 h-3 text-rose-400" />
+                    <span>{isBulkDeletingGacha ? 'กำลังลบ...' : 'ล้างไอดีที่ขายแล้ว'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isLoadingGacha ? (
+              <div className="py-12 text-center text-xs text-zinc-500">กำลังโหลดรายการไอดีในสต็อก...</div>
+            ) : gachaAccounts.length === 0 ? (
+              <div className="py-12 text-center space-y-2">
+                <KeyRound className="w-10 h-10 text-zinc-600 mx-auto" />
+                <p className="text-sm font-bold text-zinc-300">ยังไม่มีไอดีในสต็อก</p>
+                <p className="text-xs text-zinc-500">กรอกไอดีในช่องด้านบน หรือกดปุ่ม "เติม 5 ไอดีตัวอย่าง" เพื่อเริ่มต้นใช้งาน</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-zinc-300 border-collapse">
+                  <thead>
+                    <tr className="border-b border-purple-500/15 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">ลำดับ</th>
+                      <th className="py-2.5 px-3">ชื่อบัญชี (Username)</th>
+                      <th className="py-2.5 px-3">รหัสผ่าน (Password)</th>
+                      <th className="py-2.5 px-3">สถานะ</th>
+                      <th className="py-2.5 px-3">คำสั่งซื้อที่รับ</th>
+                      <th className="py-2.5 px-3">วันที่บันทึก</th>
+                      <th className="py-2.5 px-3 text-right">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-purple-500/10">
+                    {gachaAccounts
+                      .filter(acc => {
+                        if (gachaFilter === 'available') return acc.status === 'available';
+                        if (gachaFilter === 'sold') return acc.status === 'sold';
+                        return true;
+                      })
+                      .map((acc, index) => {
+                        const isRevealed = gachaRevealedPasswords[acc.id] || false;
+                        return (
+                          <tr key={acc.id} className="hover:bg-purple-950/20 transition-colors">
+                            <td className="py-2.5 px-3 text-zinc-500 font-mono text-[11px]">{index + 1}</td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-white select-all">
+                              {acc.username}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-amber-300 select-all">
+                              <div className="flex items-center gap-1.5">
+                                <span>{isRevealed ? acc.password : '••••••••'}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setGachaRevealedPasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] }))}
+                                  className="text-zinc-500 hover:text-white p-0.5"
+                                  title={isRevealed ? 'ซ่อนรหัส' : 'ดูรหัส'}
+                                >
+                                  {isRevealed ? <EyeOff className="w-3 h-3 text-amber-400" /> : <Eye className="w-3 h-3" />}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              {acc.status === 'available' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  พร้อมส่ง
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 font-bold text-[10px]">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  ขายแล้ว
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-zinc-400">
+                              {acc.orderId ? (
+                                <span className="text-cyan-300 font-bold">#{acc.orderId.substring(0, 12)}</span>
+                              ) : (
+                                <span className="text-zinc-600">-</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-[10px] text-zinc-500">
+                              {acc.createdAt ? new Date(acc.createdAt).toLocaleDateString('th-TH') : '-'}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(`${acc.username}:${acc.password}`);
+                                    success('คัดลอกแล้ว', `${acc.username}:${acc.password}`);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                                  title="คัดลอกไอดีและรหัสผ่าน"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                                {confirmDeleteGachaId === acc.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteGachaAccount(acc.id)}
+                                      className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] animate-pulse cursor-pointer shadow whitespace-nowrap"
+                                      title="ยืนยันการลบไอดีนี้"
+                                    >
+                                      ลบเลย
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteGachaId(null)}
+                                      className="px-1.5 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-[10px] cursor-pointer whitespace-nowrap"
+                                    >
+                                      ยกเลิก
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteGachaId(acc.id)}
+                                    className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 hover:text-white transition-colors cursor-pointer"
+                                    title="กดเพื่อลบไอดีนี้ออกจากสต็อก"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Tab: Customer Inventory & Delivery Details */}
       {activeTab === 'inventory' && (
         <div className="space-y-6">
@@ -3425,10 +3900,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as ProductCategory })}
                     className="w-full bg-[#0A0A10] border border-[#262638] rounded-xl p-2.5 text-white"
                   >
+                    <option value="ไอดี">ไอดี (Roblox Accounts / สุ่มไก่ตัน)</option>
                     <option value="ผลปีศาจ">ผลปีศาจ</option>
-                    <option value="สกินผล">สกินผล</option>
                     <option value="Gamepass">Gamepass</option>
-                    <option value="ไอเทม">ไอเทม</option>
+                    <option value="สกินผล">สกินผล</option>
                     <option value="บริการ">บริการ</option>
                     <option value="อื่นๆ">อื่นๆ</option>
                   </select>
@@ -3681,11 +4156,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                    <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-zinc-300 font-semibold text-[11px] flex items-center gap-1">
                         <Key className="w-3 h-3 text-amber-400" />
-                        <span>ชื่อหัวข้อรหัสสินค้า</span>
+                        <span>ชื่อหัวข้อรหัสสินค้า / ไอดี</span>
                       </label>
                       <span className="text-[10px] text-zinc-500">เริ่มต้น: รหัสรับสินค้า (Claim Code)</span>
                     </div>
@@ -3703,6 +4178,38 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onChange={(e) => setNewProduct({ ...newProduct, claimCode: e.target.value })}
                       className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2 text-amber-300 font-mono text-xs placeholder:text-zinc-600 focus:outline-none"
                     />
+
+                    {/* Dedicated Gacha Account Field (ช่องกรอกไอดีใน admin) */}
+                    {(newProduct.deliveryType === 'account_code' || newProduct.name?.includes('สุ่ม') || newProduct.name?.includes('ไก่ตัน')) && (
+                      <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-amber-300 font-bold text-[11px] flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                            <span>ช่องกรอกไอดี Roblox สำหรับสุ่มไก่ตัน (Username : Password)</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddModalOpen(false);
+                              setActiveTab('gacha');
+                            }}
+                            className="text-[10px] text-amber-400 underline hover:text-amber-300 cursor-pointer"
+                          >
+                            📦 เปิดคลังสต็อกไอดี
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="เช่น angus_user01 : password123 (ส่งมอบทันที)"
+                          value={newProduct.claimCode || ''}
+                          onChange={(e) => setNewProduct({ ...newProduct, claimCode: e.target.value })}
+                          className="w-full bg-[#0A0A10] border border-amber-500/40 focus:border-amber-400 rounded-xl p-2 text-amber-300 font-mono text-xs placeholder:text-zinc-600 focus:outline-none"
+                        />
+                        <p className="text-[10px] text-zinc-400">
+                          สามารถกรอกไอดีเริ่มต้นที่นี่ หรือไปที่แท็บ "สต็อกไอดีไก่ตัน" เพื่อเติมไอดีจำนวนมาก
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -4011,10 +4518,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onChange={(e) => setSelectedProduct({ ...selectedProduct, category: e.target.value as ProductCategory })}
                       className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2.5 text-white focus:outline-none cursor-pointer"
                     >
+                      <option value="ไอดี">ไอดี (Roblox Accounts / สุ่มไก่ตัน)</option>
                       <option value="ผลปีศาจ">ผลปีศาจ</option>
-                      <option value="สกินผล">สกินผล</option>
                       <option value="Gamepass">Gamepass</option>
-                      <option value="ไอเทม">ไอเทม</option>
+                      <option value="สกินผล">สกินผล</option>
                       <option value="บริการ">บริการ</option>
                       <option value="อื่นๆ">อื่นๆ</option>
                     </select>
@@ -4169,7 +4676,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <div className="space-y-1.5">
                     <label className="text-zinc-300 font-semibold text-[11px] flex items-center gap-1">
                       <Key className="w-3 h-3 text-amber-400" />
-                      <span>ชื่อหัวข้อ / รหัส Claim Code</span>
+                      <span>ชื่อหัวข้อ / รหัส Claim Code หรือ ไอดี</span>
                     </label>
                     <input
                       type="text"
@@ -4185,6 +4692,38 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       onChange={(e) => setSelectedProduct({ ...selectedProduct, claimCode: e.target.value })}
                       className="w-full bg-[#0A0A10] border border-[#262638] focus:border-purple-500 rounded-xl p-2 text-amber-300 font-mono text-xs placeholder:text-zinc-600 focus:outline-none"
                     />
+
+                    {/* Dedicated Gacha Account Field (ช่องกรอกไอดีใน admin) */}
+                    {(selectedProduct.deliveryType === 'account_code' || selectedProduct.name?.includes('สุ่ม') || selectedProduct.name?.includes('ไก่ตัน')) && (
+                      <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-amber-300 font-bold text-[11px] flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                            <span>ช่องกรอกไอดี Roblox สำหรับส่งมอบ (Username : Password)</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditModalOpen(false);
+                              setActiveTab('gacha');
+                            }}
+                            className="text-[10px] text-amber-400 underline hover:text-amber-300 cursor-pointer"
+                          >
+                            📦 เปิดคลังสต็อกไอดี
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="เช่น angus_user01 : password123 (ส่งมอบทันที)"
+                          value={selectedProduct.claimCode || ''}
+                          onChange={(e) => setSelectedProduct({ ...selectedProduct, claimCode: e.target.value })}
+                          className="w-full bg-[#0A0A10] border border-amber-500/40 focus:border-amber-400 rounded-xl p-2 text-amber-300 font-mono text-xs placeholder:text-zinc-600 focus:outline-none"
+                        />
+                        <p className="text-[10px] text-zinc-400">
+                          สามารถกรอกไอดีเริ่มต้นที่นี่ หรือไปที่แท็บ "สต็อกไอดีไก่ตัน" เพื่อเติมไอดีจำนวนมาก
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

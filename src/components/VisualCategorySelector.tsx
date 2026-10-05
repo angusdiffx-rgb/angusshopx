@@ -27,6 +27,16 @@ export const CATEGORY_DEFINITIONS: CategoryInfo[] = [
     glow: 'rgba(168, 85, 247, 0.35)'
   },
   {
+    name: 'ไอดี',
+    enName: 'Roblox Accounts',
+    desc: 'สุ่มไก่ตันดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน พร้อมเล่นทันที',
+    image: '/images/blox/cursed_dual_katana.png',
+    gradient: 'from-amber-600/30 via-orange-600/20 to-[#2A1508]/60',
+    borderColor: 'border-amber-500/40 hover:border-amber-400',
+    accentColor: '#F59E0B',
+    glow: 'rgba(245, 158, 11, 0.35)'
+  },
+  {
     name: 'ผลปีศาจ',
     enName: 'Devil Fruits',
     desc: 'คิตสึเนะ มังกร โมจิ ถาวร & กล่องผล',
@@ -67,16 +77,6 @@ export const CATEGORY_DEFINITIONS: CategoryInfo[] = [
     glow: 'rgba(59, 130, 246, 0.35)'
   },
   {
-    name: 'ไอเทม',
-    enName: 'Weapons & Items',
-    desc: 'ดาบคู่ CDK กีตาร์วิญญาณ สมอฉลาม หมัดเทพ',
-    image: '/images/blox/category_special_items.jpg',
-    gradient: 'from-emerald-600/30 via-teal-600/20 to-[#062419]/60',
-    borderColor: 'border-emerald-500/40 hover:border-emerald-400',
-    accentColor: '#34D399',
-    glow: 'rgba(16, 185, 129, 0.35)'
-  },
-  {
     name: 'อื่นๆ',
     enName: 'Others',
     desc: 'วัตถุดิบตีบวก หัวใจเลเวียธาน และสินค้าเบ็ดเตล็ด',
@@ -113,7 +113,9 @@ export const VisualCategorySelector: React.FC<VisualCategorySelectorProps> = ({
       'ทั้งหมด': products.length
     };
     products.forEach((p) => {
-      map[p.category] = (map[p.category] || 0) + 1;
+      const isAccount = p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || p.name.includes('ไก่ตัน') || p.name.includes('สุ่ม');
+      const catKey = isAccount ? 'ไอดี' : p.category;
+      map[catKey] = (map[catKey] || 0) + 1;
     });
     return map;
   }, [products]);
