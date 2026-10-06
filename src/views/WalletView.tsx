@@ -34,8 +34,8 @@ import {
   extractVoucherCode, 
   formatPhoneNumber 
 } from '../lib/angpao';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { db, getDocsSmart } from '../lib/firebase';
 import type { WalletTransaction } from '../types';
 
 export const WalletView: React.FC = () => {
@@ -124,7 +124,7 @@ export const WalletView: React.FC = () => {
     const now = Date.now();
     const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-    if (!force && now - lastTime < 3 * 60 * 1000) {
+    if (!force && now - lastTime < 8 * 60 * 1000) {
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
@@ -144,7 +144,7 @@ export const WalletView: React.FC = () => {
         where('uid', '==', user.uid),
         limit(15)
       );
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocsSmart(q);
       const items: WalletTransaction[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...(docSnap.data() as WalletTransaction) });

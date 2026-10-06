@@ -34,10 +34,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_CACHE_KEY = 'angus_cached_user_profile';
+
+const getInitialUser = (): UserProfile | null => {
+  try {
+    const saved = localStorage.getItem(USER_CACHE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(getInitialUser);
+  const [loading, setLoading] = useState(!getInitialUser());
   const [error, setError] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
@@ -59,57 +70,99 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | null = null;
+    let currentFbUser: FirebaseUser | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-
+    const detachUserListener = () => {
       if (unsubscribeUserDoc) {
         unsubscribeUserDoc();
         unsubscribeUserDoc = null;
       }
+    };
+
+    const attachUserListener = (fbUser: FirebaseUser) => {
+      detachUserListener();
+
+      const userRef = doc(db, 'users', fbUser.uid);
+      
+      // Listen to real-time changes on user document (balance, role, etc.)
+      unsubscribeUserDoc = onSnapshot(userRef, async (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as UserProfile;
+          setUser(data);
+          setLoading(false);
+          try {
+            localStorage.setItem(USER_CACHE_KEY, JSON.stringify(data));
+          } catch {}
+        } else {
+          // Create user profile if not exists
+          const now = new Date().toISOString();
+          const emailLower = (fbUser.email || '').toLowerCase().trim();
+          const isAdmin = emailLower === 'otinrealxz@gmail.com' || emailLower === 'angusdiffx@gmail.com';
+          const initialUser: UserProfile = {
+            uid: fbUser.uid,
+            displayName: fbUser.displayName || 'Blox Player',
+            email: fbUser.email || '',
+            photoURL: fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
+            role: isAdmin ? 'admin' : 'user',
+            balance: 0,
+            createdAt: now,
+            updatedAt: now,
+            lastLoginAt: now,
+          };
+          await setDoc(userRef, initialUser);
+          setUser(initialUser);
+          setLoading(false);
+          try {
+            localStorage.setItem(USER_CACHE_KEY, JSON.stringify(initialUser));
+          } catch {}
+        }
+      }, (err) => {
+        console.warn('User snapshot notice:', err?.message || err);
+        // On quota error, preserve cached profile so the user is never logged out
+        setLoading(false);
+      });
+    };
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      currentFbUser = fbUser;
+      setFirebaseUser(fbUser);
 
       if (fbUser) {
-        const userRef = doc(db, 'users', fbUser.uid);
-        
-        // Listen to real-time changes on user document (balance, role, etc.)
-        unsubscribeUserDoc = onSnapshot(userRef, async (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data() as UserProfile;
-            setUser(data);
-            setLoading(false);
-          } else {
-            // Create user profile if not exists
-            const now = new Date().toISOString();
-            const emailLower = (fbUser.email || '').toLowerCase().trim();
-            const isAdmin = emailLower === 'otinrealxz@gmail.com' || emailLower === 'angusdiffx@gmail.com';
-            const initialUser: UserProfile = {
-              uid: fbUser.uid,
-              displayName: fbUser.displayName || 'Blox Player',
-              email: fbUser.email || '',
-              photoURL: fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
-              role: isAdmin ? 'admin' : 'user',
-              balance: 0,
-              createdAt: now,
-              updatedAt: now,
-              lastLoginAt: now,
-            };
-            await setDoc(userRef, initialUser);
-            setUser(initialUser);
-            setLoading(false);
-          }
-        }, (err) => {
-          console.error('User snapshot error:', err);
+        // Only attach real-time listener if tab is currently visible
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          attachUserListener(fbUser);
+        } else {
           setLoading(false);
-        });
+        }
       } else {
+        detachUserListener();
         setUser(null);
         setLoading(false);
+        try {
+          localStorage.removeItem(USER_CACHE_KEY);
+        } catch {}
       }
     });
 
+    // Smart Visibility Connection Management:
+    // Disconnect snapshot listener when user switches away or puts phone in pocket.
+    // Drastically preserves the 100 concurrent connection limit on Firebase Free Tier!
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (currentFbUser) {
+          attachUserListener(currentFbUser);
+        }
+      } else {
+        detachUserListener();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       unsubscribeAuth();
-      if (unsubscribeUserDoc) unsubscribeUserDoc();
+      detachUserListener();
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

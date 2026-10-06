@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { collection, query, where, limit, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, limit, doc, updateDoc } from 'firebase/firestore';
+import { db, getDocsSmart } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
 import type { InventoryItem } from '../types';
 
@@ -52,7 +52,7 @@ export const InventoryView: React.FC = () => {
     const now = Date.now();
     const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-    if (!force && now - lastTime < 3 * 60 * 1000) {
+    if (!force && now - lastTime < 8 * 60 * 1000) {
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
@@ -75,8 +75,8 @@ export const InventoryView: React.FC = () => {
           where('uid', '==', user.uid),
           limit(displayLimit)
         );
-        const snapshot = await getDocs(q);
-        snapshot.forEach((d) => {
+        const snapshot = await getDocsSmart(q);
+        snapshot.forEach((d: any) => {
           list.push({ id: d.id, ...(d.data() as InventoryItem) });
         });
       } catch (err) {

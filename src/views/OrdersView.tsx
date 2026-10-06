@@ -13,8 +13,8 @@ import {
   FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { db, getDocsSmart } from '../lib/firebase';
 import { BloxImage } from '../components/BloxImage';
 import { DigitalReceiptModal } from '../components/DigitalReceiptModal';
 import type { Order } from '../types';
@@ -50,7 +50,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
     const now = Date.now();
     const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-    if (!force && now - lastTime < 3 * 60 * 1000) {
+    if (!force && now - lastTime < 8 * 60 * 1000) {
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
@@ -70,7 +70,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onNavigate }) => {
         where('uid', '==', user.uid),
         limit(displayLimit)
       );
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocsSmart(q);
       const list: Order[] = [];
       snapshot.forEach((d) => {
         list.push({ id: d.id, ...(d.data() as Order) });

@@ -13,8 +13,8 @@ import {
   Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { db, getDocsSmart } from '../lib/firebase';
 
 interface AccountViewProps {
   onNavigate: (view: string) => void;
@@ -40,7 +40,7 @@ export const AccountView: React.FC<AccountViewProps> = ({ onNavigate }) => {
       const now = Date.now();
       const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-      if (!force && now - lastTime < 10 * 60 * 1000) {
+      if (!force && now - lastTime < 15 * 60 * 1000) {
         try {
           const cached = sessionStorage.getItem(cacheKey);
           if (cached) {
@@ -52,9 +52,9 @@ export const AccountView: React.FC<AccountViewProps> = ({ onNavigate }) => {
 
       try {
         const [ordersSnap, invSnap, depSnap] = await Promise.all([
-          getDocs(query(collection(db, 'orders'), where('uid', '==', user.uid), limit(15))),
-          getDocs(query(collection(db, 'inventory'), where('uid', '==', user.uid), limit(15))),
-          getDocs(query(collection(db, 'deposits'), where('uid', '==', user.uid), where('status', '==', 'completed'), limit(15)))
+          getDocsSmart(query(collection(db, 'orders'), where('uid', '==', user.uid), limit(15))),
+          getDocsSmart(query(collection(db, 'inventory'), where('uid', '==', user.uid), limit(15))),
+          getDocsSmart(query(collection(db, 'deposits'), where('uid', '==', user.uid), where('status', '==', 'completed'), limit(15)))
         ]);
 
         let deposited = 0;

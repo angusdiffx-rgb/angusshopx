@@ -23,6 +23,8 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { initialProducts } from '../data/initialProducts';
+import { fallbackProducts } from '../data/fallbackProducts';
+import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 import { redeemAngpaoVoucher, extractVoucherCode } from './angpao';
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -1294,7 +1296,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     const now = Date.now();
 
     if (!force && serverProductsCache && (now - serverProductsCache.timestamp < SERVER_PRODUCTS_TTL_MS)) {
-      res.setHeader('Cache-Control', 'no-cache, private, must-revalidate');
+      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
       res.json({
         success: true,
         products: serverProductsCache.data,
@@ -1308,7 +1310,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     if (force) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     } else {
-      res.setHeader('Cache-Control', 'no-cache, private, must-revalidate');
+      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
     }
 
     const productsColl = collection(db, 'products');
@@ -1332,7 +1334,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     if (force) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     } else {
-      res.setHeader('Cache-Control', 'no-cache, private, must-revalidate');
+      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
     }
     res.json({
       success: true,
@@ -1343,6 +1345,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
   } catch (error: any) {
     console.error('Get Products API Error:', error);
     if (serverProductsCache) {
+      res.setHeader('Cache-Control', 'public, max-age=120');
       res.json({
         success: true,
         products: serverProductsCache.data,
@@ -1352,10 +1355,21 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
       });
       return;
     }
-    res.status(500).json({
-      success: false,
-      error: 'GET_PRODUCTS_ERROR',
-      message: error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้'
+    // Zero-downtime fallback: if Firestore quota is exhausted or offline, return fallback catalog
+    const safeFallback = (Array.isArray(fallbackProducts) && fallbackProducts.length > 0)
+      ? fallbackProducts
+      : initialProducts;
+    serverProductsCache = {
+      data: safeFallback,
+      timestamp: Date.now()
+    };
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.json({
+      success: true,
+      products: safeFallback,
+      cached: true,
+      fallback: true,
+      count: safeFallback.length
     });
   }
 });
@@ -1844,7 +1858,7 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
     const now = Date.now();
 
     if (!force && serverHomeConfigCache && (now - serverHomeConfigCache.timestamp < SERVER_HOME_CONFIG_TTL_MS)) {
-      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
       res.json({
         success: true,
         config: serverHomeConfigCache.data,
@@ -1862,7 +1876,7 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
       timestamp: now
     };
 
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
     res.json({
       success: true,
       config: configData,
@@ -1871,6 +1885,7 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
   } catch (error: any) {
     console.error('Get Home Config Error:', error);
     if (serverHomeConfigCache) {
+      res.setHeader('Cache-Control', 'public, max-age=120');
       res.json({
         success: true,
         config: serverHomeConfigCache.data,
@@ -1879,10 +1894,13 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
       });
       return;
     }
-    res.status(500).json({
-      success: false,
-      error: 'GET_CONFIG_ERROR',
-      message: error.message || 'ไม่สามารถดึงข้อมูลหน้าแรกได้'
+    // Zero-downtime fallback: if Firestore quota is exhausted, return default preset config
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.json({
+      success: true,
+      config: DEFAULT_HOME_CONFIG,
+      cached: true,
+      fallback: true
     });
   }
 });

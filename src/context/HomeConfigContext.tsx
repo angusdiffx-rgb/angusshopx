@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, getDocSmart, getDocFromCache } from '../lib/firebase';
 import type { HomeConfig } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
@@ -95,7 +95,41 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // network or dev fallback
       }
 
-      // Fallback: one-time read from Firestore if API unreachable
+      // If cached in localStorage already, avoid unnecessary Firestore network calls
+      const existingCached = localStorage.getItem(CACHE_KEY);
+      if (existingCached) {
+        try {
+          const parsed = JSON.parse(existingCached);
+          if (parsed && typeof parsed === 'object') {
+            return;
+          }
+        } catch {}
+      }
+
+      // Check IndexedDB local cache first (0 network reads)
+      try {
+        const cachedSnap = await getDocFromCache(doc(db, 'settings', 'homeConfig'));
+        if (cachedSnap.exists() && isMounted) {
+          const data = cachedSnap.data() as HomeConfig;
+          const merged: HomeConfig = {
+            ...DEFAULT_HOME_CONFIG,
+            ...data,
+            trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
+            promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
+            promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
+          };
+          setHomeConfig(merged);
+          if (merged.siteLogo) {
+            applyFavicon(merged.siteLogo);
+          }
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+          } catch {}
+          return;
+        }
+      } catch {}
+
+      // Fallback: one-time read from Firestore only if API unreachable and cache is empty
       try {
         const docSnap = await getDoc(doc(db, 'settings', 'homeConfig'));
         if (docSnap.exists() && isMounted) {

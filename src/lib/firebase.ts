@@ -17,6 +17,9 @@ import {
   persistentMultipleTabManager,
   doc, 
   getDoc, 
+  getDocs,
+  getDocFromCache,
+  getDocsFromCache,
   setDoc, 
   updateDoc, 
   serverTimestamp 
@@ -79,6 +82,67 @@ export const isQuotaExceededError = (err: any): boolean => {
     message.includes('resource_exhausted') ||
     message.includes('RESOURCE_EXHAUSTED')
   );
+};
+
+/**
+ * Smart cache-first document fetcher.
+ * Checks IndexedDB local cache first (0 network reads to Firestore).
+ * Falls back to server only on cache miss.
+ * Protects against Firestore quota depletion.
+ */
+export const getDocsSmart = async (q: any): Promise<any> => {
+  try {
+    const cachedSnap = await getDocsFromCache(q);
+    if (!cachedSnap.empty) {
+      return cachedSnap;
+    }
+  } catch (cacheErr) {
+    // Cache miss or query not yet stored in IndexedDB
+  }
+
+  try {
+    return await getDocs(q);
+  } catch (serverErr: any) {
+    if (isQuotaExceededError(serverErr)) {
+      console.warn('Firestore read quota exhausted, attempting offline cache recovery...');
+      try {
+        return await getDocsFromCache(q);
+      } catch {
+        // Return empty snapshot format if totally unavailable
+      }
+    }
+    throw serverErr;
+  }
+};
+
+/**
+ * Smart cache-first single document fetcher.
+ * Reads from IndexedDB local cache first (0 network reads to Firestore).
+ */
+export const getDocSmart = async (docRef: any): Promise<any> => {
+  try {
+    const cachedSnap = await getDocFromCache(docRef);
+    if (cachedSnap.exists()) {
+      return cachedSnap;
+    }
+  } catch (cacheErr) {
+    // Cache miss
+  }
+
+  try {
+    return await getDoc(docRef);
+  } catch (serverErr: any) {
+    if (isQuotaExceededError(serverErr)) {
+      console.warn('Firestore read quota exhausted, attempting offline cache recovery...');
+      try {
+        const cachedSnap = await getDocFromCache(docRef);
+        if (cachedSnap.exists()) return cachedSnap;
+      } catch {
+        // Fall through
+      }
+    }
+    throw serverErr;
+  }
 };
 
 const googleProvider = new GoogleAuthProvider();

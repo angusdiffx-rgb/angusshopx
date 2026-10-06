@@ -20,8 +20,9 @@ import { OrdersView } from './views/OrdersView';
 import { AccountView } from './views/AccountView';
 import { AdminView } from './views/AdminView';
 import { collection, getDocs } from 'firebase/firestore';
-import { db, isQuotaExceededError } from './lib/firebase';
+import { db, isQuotaExceededError, getDocsSmart, getDocsFromCache } from './lib/firebase';
 import { initialProducts } from './data/initialProducts';
+import { fallbackProducts } from './data/fallbackProducts';
 import type { Product, Order } from './types';
 import { AlertTriangle, ExternalLink, X } from 'lucide-react';
 
@@ -93,9 +94,12 @@ function MainShop() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Keep-alive Ping to prevent server from sleeping (slowed down by 2 minutes: 6 minutes = 360000ms)
+  // Keep-alive Ping to prevent server from sleeping (only active when tab is visible to prevent unnecessary wakeups)
   useEffect(() => {
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return; // Skip keep-alive ping when tab is hidden/minimized
+      }
       fetch('/api/health')
         .then(res => res.json())
         .catch(() => {});
@@ -104,11 +108,11 @@ function MainShop() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch products with smart caching (Zero continuous Firestore reads for visitors):
-  // 1. Initial render from localStorage (0ms, 0 reads)
-  // 2. Fetch from /api/products (which is server-cached in memory for 5 minutes, 0 Firestore reads)
-  // 3. Fallback to direct Firestore getDocs only if /api/products fails
-  // 4. Listen for 'productsUpdated' custom event to immediately re-fetch with force=true
+  // Fetch products with ultra-efficient zero-quota caching:
+  // 1. Initial render from localStorage (0ms, 0 Firestore reads)
+  // 2. Fetch from /api/products (which has in-memory + HTTP browser caching, 0 Firestore reads)
+  // 3. If API is down or starting up, use existing cached products or IndexedDB cache (0 Firestore reads)
+  // 4. Last-resort fallback to fallbackProducts so web app never crashes or shows empty store
   useEffect(() => {
     let isMounted = true;
 
@@ -133,7 +137,39 @@ function MainShop() {
         console.warn('API /api/products notice:', err);
       }
 
-      // If /api/products was not available (e.g. running client-only dev), try one-time Firestore getDocs
+      // If already populated from localStorage/state, do NOT query Firestore network!
+      const currentCached = localStorage.getItem(PRODUCTS_CACHE_KEY);
+      if (currentCached) {
+        try {
+          const parsed = JSON.parse(currentCached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return; // Already served safely from cache
+          }
+        } catch {}
+      }
+
+      // Check IndexedDB local cache first (0 network reads)
+      try {
+        const cachedSnap = await getDocsFromCache(collection(db, 'products'));
+        if (!cachedSnap.empty && isMounted) {
+          const list: Product[] = [];
+          cachedSnap.forEach((d) => {
+            const item = d.data() as Product;
+            list.push({ ...item, productId: item.productId || d.id });
+          });
+          list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          const cleanList = deduplicateProducts(list);
+          setProducts(cleanList);
+          try {
+            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
+          } catch {}
+          return;
+        }
+      } catch {
+        // Cache miss
+      }
+
+      // Final fallback: only query network if completely uninitialized
       try {
         const snap = await getDocs(collection(db, 'products'));
         if (!snap.empty && isMounted) {
@@ -153,6 +189,13 @@ function MainShop() {
       } catch (fbErr: any) {
         if (isQuotaExceededError(fbErr)) {
           if (isMounted) setQuotaExceeded(true);
+        }
+        // Zero-downtime safety net: fallback to local bundled products
+        if (isMounted) {
+          const safeFallback = deduplicateProducts(fallbackProducts || initialProducts || []);
+          if (safeFallback.length > 0) {
+            setProducts(prev => prev.length > 0 ? prev : safeFallback);
+          }
         }
       }
     };

@@ -29,8 +29,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useHomeConfig } from '../context/HomeConfigContext';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db, isQuotaExceededError } from '../lib/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { db, isQuotaExceededError, getDocsSmart } from '../lib/firebase';
 import type { Notification } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 import { isSoundMuted, toggleSoundMute, playClickSound } from '../lib/sound';
@@ -128,8 +128,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const fetchNotificationsOnDemand = async (force = false) => {
     if (!user) return;
     const now = Date.now();
-    // 2-minute cooldown between requests unless manually forced
-    if (!force && now - lastNotifsFetchRef.current < 120000 && notifications.length > 0) {
+    // 5-minute cooldown between requests unless manually forced
+    if (!force && now - lastNotifsFetchRef.current < 300000 && notifications.length > 0) {
       return;
     }
 
@@ -141,7 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         where('uid', '==', user.uid),
         limit(8)
       );
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocsSmart(q);
       const items: Notification[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...(docSnap.data() as Notification) });

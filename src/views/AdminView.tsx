@@ -74,7 +74,7 @@ import {
   orderBy, 
   limit 
 } from 'firebase/firestore';
-import { db, isQuotaExceededError } from '../lib/firebase';
+import { db, isQuotaExceededError, getDocsSmart, getDocSmart } from '../lib/firebase';
 import type { Product, Order, Deposit, ProductCategory, InventoryItem, DeliveryType, DeliverySettings, UserProfile } from '../types';
 import { BLOX_FRUITS_PRESETS, BloxPreset } from '../data/bloxPresets';
 import { HomeConfigManager } from '../components/HomeConfigManager';
@@ -284,7 +284,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [internalProducts, setInternalProducts] = useState<Product[]>([]);
   const products = initialProductsFromProps || internalProducts;
   const setProducts = setProductsFromProps || setInternalProducts;
-  const [adminDataLimit, setAdminDataLimit] = useState<number>(100);
+  const [adminDataLimit, setAdminDataLimit] = useState<number>(30);
   const [tabLastLoaded, setTabLastLoaded] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -466,10 +466,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (!isAdmin) return;
     const now = Date.now();
     const lastLoaded = tabLastLoaded[tab] || 0;
-    // Cache for 10 seconds per tab unless force refreshed so admin gets fresh updates quickly
-    if (!force && now - lastLoaded < 10000) {
+    // Smart cache: 3 minutes per tab unless force refreshed so admin operations don't exhaust daily quota
+    if (!force && now - lastLoaded < 180000) {
       return;
     }
+
+    const fetcher = force ? getDocs : getDocsSmart;
 
     try {
       if (tab === 'dashboard') {
@@ -477,32 +479,32 @@ export const AdminView: React.FC<AdminViewProps> = ({
         let depositsSnap;
         try {
           [ordersSnap, depositsSnap] = await Promise.all([
-            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(adminDataLimit))),
-            getDocs(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(adminDataLimit)))
+            fetcher(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(adminDataLimit))),
+            fetcher(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(adminDataLimit)))
           ]);
         } catch {
           [ordersSnap, depositsSnap] = await Promise.all([
-            getDocs(query(collection(db, 'orders'), limit(adminDataLimit))),
-            getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)))
+            fetcher(query(collection(db, 'orders'), limit(adminDataLimit))),
+            fetcher(query(collection(db, 'deposits'), limit(adminDataLimit)))
           ]);
         }
 
         const oList: Order[] = [];
-        ordersSnap.forEach((d) => oList.push(d.data() as Order));
+        ordersSnap.forEach((d: any) => oList.push(d.data() as Order));
         oList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(oList);
         try { localStorage.setItem('angus_admin_orders', JSON.stringify(oList)); } catch {}
 
         const dList: Deposit[] = [];
-        depositsSnap.forEach((d) => dList.push(d.data() as Deposit));
+        depositsSnap.forEach((d: any) => dList.push(d.data() as Deposit));
         dList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDeposits(dList);
         try { localStorage.setItem('angus_admin_deposits', JSON.stringify(dList)); } catch {}
 
         // Fetch settings if not yet loaded
         if (force || !vipSettings.vipServerLink) {
-          getDoc(doc(db, 'settings', 'delivery')).then((sSnap) => {
-            if (sSnap.exists()) {
+          getDocSmart(doc(db, 'settings', 'delivery')).then((sSnap: any) => {
+            if (sSnap && sSnap.exists()) {
               const data = sSnap.data() as DeliverySettings;
               setVipSettings({
                 vipServerLink: data.vipServerLink || 'https://www.roblox.com/games/2753915549/Blox-Fruits?privateServerLinkCode=angus-vip-trade',
@@ -518,48 +520,48 @@ export const AdminView: React.FC<AdminViewProps> = ({
       } else if (tab === 'orders') {
         let snap;
         try {
-          snap = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
         } catch {
-          snap = await getDocs(query(collection(db, 'orders'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'orders'), limit(adminDataLimit)));
         }
         const list: Order[] = [];
-        snap.forEach((d) => list.push(d.data() as Order));
+        snap.forEach((d: any) => list.push(d.data() as Order));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(list);
         try { localStorage.setItem('angus_admin_orders', JSON.stringify(list)); } catch {}
       } else if (tab === 'deposits') {
         let snap;
         try {
-          snap = await getDocs(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
         } catch {
-          snap = await getDocs(query(collection(db, 'deposits'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'deposits'), limit(adminDataLimit)));
         }
         const list: Deposit[] = [];
-        snap.forEach((d) => list.push(d.data() as Deposit));
+        snap.forEach((d: any) => list.push(d.data() as Deposit));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDeposits(list);
         try { localStorage.setItem('angus_admin_deposits', JSON.stringify(list)); } catch {}
       } else if (tab === 'inventory') {
         let snap;
         try {
-          snap = await getDocs(query(collection(db, 'inventory'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'inventory'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
         } catch {
-          snap = await getDocs(query(collection(db, 'inventory'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'inventory'), limit(adminDataLimit)));
         }
         const list: InventoryItem[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
+        snap.forEach((d: any) => list.push({ id: d.id, ...(d.data() as InventoryItem) }));
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setInventoryItems(list);
         try { localStorage.setItem('angus_admin_inventory', JSON.stringify(list)); } catch {}
       } else if (tab === 'users') {
         let snap;
         try {
-          snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(adminDataLimit)));
         } catch {
-          snap = await getDocs(query(collection(db, 'users'), limit(adminDataLimit)));
+          snap = await fetcher(query(collection(db, 'users'), limit(adminDataLimit)));
         }
         const list: UserProfile[] = [];
-        snap.forEach((d) => list.push({ ...(d.data() as UserProfile) }));
+        snap.forEach((d: any) => list.push({ ...(d.data() as UserProfile) }));
         list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         setSystemUsers(list);
         try { localStorage.setItem('angus_admin_users', JSON.stringify(list)); } catch {}
