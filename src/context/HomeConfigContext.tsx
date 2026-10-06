@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db, getDocSmart, getDocFromCache } from '../lib/firebase';
+import { doc, getDoc, setDoc, getDocFromCache } from 'firebase/firestore';
+import { db, getDocSmart } from '../lib/firebase';
 import type { HomeConfig } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
