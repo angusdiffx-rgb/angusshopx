@@ -195,17 +195,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
-  const handleSeedSampleGacha = async () => {
+  const handlePurgeSampleGacha = async () => {
     setIsSubmittingGacha(true);
     try {
-      const res = await fetch('/api/admin/gacha-accounts/seed-samples', {
+      const res = await fetch('/api/admin/gacha-accounts/purge-samples', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: gachaTargetProduct })
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
       if (data.success) {
-        success('เติมไอดีตัวอย่างสำเร็จ', data.message || 'เพิ่ม 5 ไอดีทดสอบเรียบร้อย');
+        success('ล้างไอดีตัวอย่างสำเร็จ', data.message || `ลบไอดีตัวอย่างแล้ว ${data.count} บัญชี`);
         await loadGachaAccounts();
         window.dispatchEvent(new CustomEvent('productsUpdated'));
       }
@@ -3001,12 +3000,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
               <button
                 type="button"
-                onClick={handleSeedSampleGacha}
+                onClick={handlePurgeSampleGacha}
                 disabled={isSubmittingGacha}
-                className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-purple-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                className="px-3.5 py-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                title="ล้างไอดีตัวอย่างหรือไอดีทดสอบออกจากระบบ"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>+ เติม 5 ไอดีตัวอย่าง</span>
+                <Trash2 className="w-3.5 h-3.5 text-zinc-400" />
+                <span>ล้างไอดีตัวอย่าง (ถ้ามี)</span>
               </button>
             </div>
           </div>
@@ -3177,7 +3177,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="py-12 text-center space-y-2">
                 <KeyRound className="w-10 h-10 text-zinc-600 mx-auto" />
                 <p className="text-sm font-bold text-zinc-300">ยังไม่มีไอดีในสต็อก</p>
-                <p className="text-xs text-zinc-500">กรอกไอดีในช่องด้านบน หรือกดปุ่ม "เติม 5 ไอดีตัวอย่าง" เพื่อเริ่มต้นใช้งาน</p>
+                <p className="text-xs text-zinc-500">กรอกไอดีและรหัสผ่านในช่องด้านบนเพื่อเติมสต็อกพร้อมส่งมอบให้ลูกค้าทันที 24 ชม.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">

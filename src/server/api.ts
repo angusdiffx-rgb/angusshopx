@@ -576,6 +576,176 @@ const handleRedeemAngpao = async (req: Request, res: Response): Promise<void> =>
 apiRouter.post('/wallet/redeem-angpao', handleRedeemAngpao);
 apiRouter.post('/deposit/angpao', handleRedeemAngpao);
 
+// ==========================================
+// Gacha Account Stock & Anti-Sample Management
+// ==========================================
+let inMemoryGachaAccounts: any[] = [];
+
+export function isSampleAccount(username?: string, password?: string): boolean {
+  if (!username) return true;
+  const u = username.toLowerCase().trim();
+  const p = (password || '').toLowerCase().trim();
+  if (u.startsWith('angus_cdk_')) return true;
+  if (u.startsWith('angusblox_')) return true;
+  if (u.startsWith('demo_') || u.startsWith('sample_') || u.startsWith('test_')) return true;
+  if (u === 'user_test' || u === 'admin_test') return true;
+  if (p === 'bloxmaster#2026' || p === 'swordking#9912' || p === 'pirateace#4821' || p === 'dragonslash#771' || p === 'bloxfruit#1029') return true;
+  return false;
+}
+
+export async function purgeSampleGachaAccounts(): Promise<number> {
+  let purgedCount = 0;
+  try {
+    const gachaColl = collection(db, 'gacha_accounts');
+    const snap = await getDocs(query(gachaColl, limit(500)));
+    for (const d of snap.docs) {
+      const data = d.data();
+      if (isSampleAccount(data.username, data.password)) {
+        await deleteDoc(doc(db, 'gacha_accounts', d.id));
+        purgedCount++;
+      }
+    }
+  } catch (err) {
+    console.warn('Purge sample accounts firestore notice:', err);
+  }
+
+  const prevLen = inMemoryGachaAccounts.length;
+  inMemoryGachaAccounts = inMemoryGachaAccounts.filter(a => !isSampleAccount(a.username, a.password));
+  purgedCount += Math.max(0, prevLen - inMemoryGachaAccounts.length);
+
+  try {
+    const remainingSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', 'prod_gacha_cdk_35'), where('status', '==', 'available')));
+    const realCount = remainingSnap.docs.filter(d => !isSampleAccount(d.data().username, d.data().password)).length;
+    await updateDoc(doc(db, 'products', 'prod_gacha_cdk_35'), {
+      stock: realCount,
+      updatedAt: new Date().toISOString()
+    });
+    invalidateServerProductsCache();
+  } catch {}
+
+  return purgedCount;
+}
+
+export async function checkAvailableGachaStock(productId: string, requiredQuantity: number): Promise<{ available: boolean; count: number }> {
+  const gachaColl = collection(db, 'gacha_accounts');
+  let availableList: any[] = [];
+
+  try {
+    const snap = await getDocs(query(gachaColl, where('status', '==', 'available'), limit(300)));
+    snap.forEach((d) => {
+      const data = d.data();
+      if (!isSampleAccount(data.username, data.password)) {
+        availableList.push({ id: d.id, ...data });
+      }
+    });
+  } catch (e: any) {
+    console.warn('Check gacha stock query fallback:', e?.message);
+  }
+
+  for (const mem of inMemoryGachaAccounts) {
+    if (mem.status === 'available' && !isSampleAccount(mem.username, mem.password)) {
+      if (!availableList.some(a => a.id === mem.id)) {
+        availableList.push(mem);
+      }
+    }
+  }
+
+  let matching = availableList.filter(a => a.productId === productId);
+  if (matching.length < requiredQuantity && (productId === 'prod_gacha_cdk_35' || matching.length === 0)) {
+    matching = availableList;
+  }
+
+  return {
+    available: matching.length >= requiredQuantity,
+    count: matching.length
+  };
+}
+
+export async function claimAvailableGachaAccounts(
+  productId: string, 
+  quantity: number, 
+  orderId: string, 
+  uid: string
+): Promise<{ success: boolean; error?: string; claimed: any[] }> {
+  const gachaColl = collection(db, 'gacha_accounts');
+  let availableList: any[] = [];
+
+  try {
+    const snap = await getDocs(query(gachaColl, where('status', '==', 'available'), limit(300)));
+    snap.forEach((d) => {
+      const data = d.data();
+      if (!isSampleAccount(data.username, data.password)) {
+        availableList.push({ id: d.id, ...data });
+      }
+    });
+  } catch (e: any) {
+    console.warn('Fetch available gacha accounts notice:', e?.message);
+  }
+
+  for (const mem of inMemoryGachaAccounts) {
+    if (mem.status === 'available' && !isSampleAccount(mem.username, mem.password)) {
+      if (!availableList.some(a => a.id === mem.id)) {
+        availableList.push(mem);
+      }
+    }
+  }
+
+  let matching = availableList.filter(a => a.productId === productId);
+  if (matching.length < quantity && (productId === 'prod_gacha_cdk_35' || matching.length === 0)) {
+    matching = availableList;
+  }
+
+  if (matching.length < quantity) {
+    return {
+      success: false,
+      error: `สินค้าไอดีในสต็อกไม่เพียงพอ (ต้องการ ${quantity} บัญชี แต่ในระบบเหลือพร้อมส่ง ${matching.length} บัญชี) กรุณารอแอดมินเติมไอดี`,
+      claimed: []
+    };
+  }
+
+  const selected = matching.slice(0, quantity);
+  const nowIso = new Date().toISOString();
+
+  for (const acc of selected) {
+    acc.status = 'sold';
+    acc.orderId = orderId;
+    acc.soldToUid = uid;
+    acc.soldAt = nowIso;
+
+    try {
+      await updateDoc(doc(db, 'gacha_accounts', acc.id), {
+        status: 'sold',
+        orderId,
+        soldToUid: uid,
+        soldAt: nowIso,
+        updatedAt: nowIso
+      });
+    } catch (err) {
+      console.warn('Update sold gacha account error:', err);
+    }
+
+    const memIdx = inMemoryGachaAccounts.findIndex(m => m.id === acc.id);
+    if (memIdx !== -1) {
+      inMemoryGachaAccounts[memIdx] = { ...inMemoryGachaAccounts[memIdx], ...acc };
+    }
+  }
+
+  try {
+    const remainingCount = Math.max(0, matching.length - quantity);
+    const prodRef = doc(db, 'products', productId);
+    await updateDoc(prodRef, {
+      stock: remainingCount,
+      updatedAt: nowIso
+    });
+    invalidateServerProductsCache();
+  } catch {}
+
+  return {
+    success: true,
+    claimed: selected
+  };
+}
+
 // 2. Server-Side Checkout with Balance Deduction, Stock check & Digital Delivery
 apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -600,6 +770,43 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
     const nowIso = new Date().toISOString();
     const orderId = `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // 0. Pre-verify real stock for any account items to NEVER sell without real IDs
+    const accountItems = items.filter((it: any) => 
+      it.deliveryType === 'account_code' ||
+      it.productId === 'prod_gacha_cdk_35' ||
+      it.category === 'ไอดี' ||
+      (it.name && (it.name.includes('สุ่มไก่ตัน') || it.name.includes('ไก่ตัน') || it.name.includes('สุ่มไอดี')))
+    );
+
+    for (const accItem of accountItems) {
+      const reqQty = Math.max(1, Number(accItem.quantity) || 1);
+      const stockCheck = await checkAvailableGachaStock(accItem.productId, reqQty);
+      if (!stockCheck.available) {
+        res.status(400).json({
+          success: false,
+          error: 'OUT_OF_STOCK',
+          message: `ขออภัย สินค้าไอดี "${accItem.name || 'สุ่มไก่ตัน'}" ในสต็อกหมดชั่วคราว (เหลือ ${stockCheck.count} บัญชี) กรุณารอแอดมินเติมไอดี`
+        });
+        return;
+      }
+    }
+
+    // Claim real accounts from stock for this order
+    const claimedAccountsByProductId: Record<string, any[]> = {};
+    for (const accItem of accountItems) {
+      const reqQty = Math.max(1, Number(accItem.quantity) || 1);
+      const claimRes = await claimAvailableGachaAccounts(accItem.productId, reqQty, orderId, uid);
+      if (!claimRes.success) {
+        res.status(400).json({
+          success: false,
+          error: 'OUT_OF_STOCK',
+          message: claimRes.error || 'สินค้าไอดีในสต็อกไม่เพียงพอ'
+        });
+        return;
+      }
+      claimedAccountsByProductId[accItem.productId] = claimRes.claimed;
+    }
 
     let orderTotal = 0;
     let finalOrder: any = null;
@@ -796,8 +1003,10 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         const isAccountItem = 
           item.deliveryType === 'account_code' || 
           item.productId === 'prod_gacha_cdk_35' || 
+          (item as any).category === 'ไอดี' ||
           item.name?.includes('สุ่มไก่ตัน') || 
-          item.name?.includes('ไก่ตัน');
+          item.name?.includes('ไก่ตัน') ||
+          item.name?.includes('สุ่มไอดี');
 
         const isItemService = 
           !isAccountItem && (
@@ -830,12 +1039,19 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           if (!instructions) {
             instructions = 'นำ Username และ Password ด้านบนไปเข้าสู่ระบบในเกม Roblox เพื่อเข้าเล่นได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัยสูงสุด';
           }
-          if (!finalClaimCode) {
-            const randSuffix = Math.floor(1000 + Math.random() * 9000);
-            const randPass = Math.floor(100000 + Math.random() * 900000);
-            accountUser = `AngusBlox_${randSuffix}`;
-            accountPass = `CdkMaster#${randPass}`;
-            finalClaimCode = `${accountUser} : ${accountPass}`;
+          
+          // Use real accounts claimed from stock pool
+          const claimedForThis = claimedAccountsByProductId[item.productId] || [];
+          if (claimedForThis.length > 0) {
+            accountUser = claimedForThis[0].username;
+            accountPass = claimedForThis[0].password;
+            if (claimedForThis.length === 1) {
+              finalClaimCode = `${claimedForThis[0].username} : ${claimedForThis[0].password}`;
+            } else {
+              finalClaimCode = claimedForThis.map((a: any, idx: number) => `ไอดี #${idx + 1}: ${a.username} : ${a.password}`).join('\n');
+            }
+          } else if (customClaimCode) {
+            finalClaimCode = customClaimCode;
           }
         } else if (!instructions) {
           if (item.deliveryType === 'gamepass') {
@@ -847,7 +1063,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           }
         }
 
-        const claimCode = finalClaimCode || customClaimCode || `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const claimCode = finalClaimCode || customClaimCode || (isAccountItem ? 'กรุณาติดต่อแอดมินเพื่อรับรหัสผ่าน' : `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
         const instructionsTitle = item.instructionsTitle?.trim() || (isAccountItem ? 'วิธีใช้งานไอดี Roblox ที่ได้รับ' : isItemService ? 'ขั้นตอนบริการฟาร์ม' : globalInstructionsTitle);
         const serverLinkTitle = item.serverLinkTitle?.trim() || (isAccountItem ? 'เข้าเล่นเกม Blox Fruits' : isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
         const claimCodeTitle = item.claimCodeTitle?.trim() || (isAccountItem ? 'ข้อมูลไอดี Roblox (Username : Password)' : isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
@@ -1581,14 +1797,14 @@ apiRouter.post('/admin/update-home-config', async (req: Request, res: Response):
   }
 });
 
-// In-memory fallback cache for Gacha Accounts to prevent any index errors or Firestore hiccups
-let inMemoryGachaAccounts: any[] = [];
-
 // 8. Gacha Account Stock Management (กรอกไอดีไก่ตันใน Admin)
 apiRouter.get('/admin/gacha-accounts', async (req: Request, res: Response): Promise<void> => {
   try {
     const { productId } = req.query;
     const gachaColl = collection(db, 'gacha_accounts');
+    
+    // Purge any lingering sample accounts in the background
+    purgeSampleGachaAccounts().catch(() => {});
     
     // Avoid composite index requirement by querying without multiple inequalities/orderBys
     let snap;
@@ -1605,15 +1821,19 @@ apiRouter.get('/admin/gacha-accounts', async (req: Request, res: Response): Prom
 
     const list: any[] = [];
     snap.forEach((d) => {
-      list.push({
-        id: d.id,
-        ...d.data()
-      });
+      const data = d.data();
+      // Exclude sample accounts completely
+      if (!isSampleAccount(data.username, data.password)) {
+        list.push({
+          id: d.id,
+          ...data
+        });
+      }
     });
 
-    // Merge with any inMemory accounts not in list
+    // Merge with any inMemory accounts not in list (filter out samples)
     for (const mem of inMemoryGachaAccounts) {
-      if (!list.some(a => a.id === mem.id)) {
+      if (!isSampleAccount(mem.username, mem.password) && !list.some(a => a.id === mem.id)) {
         if (!productId || mem.productId === String(productId)) {
           list.push(mem);
         }
@@ -1632,8 +1852,8 @@ apiRouter.get('/admin/gacha-accounts', async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     console.error('Get Gacha Accounts Error:', error);
-    // Return inMemory fallback on error
-    const fallbackList = [...inMemoryGachaAccounts];
+    // Return inMemory fallback on error (filter out samples)
+    const fallbackList = inMemoryGachaAccounts.filter(a => !isSampleAccount(a.username, a.password));
     res.json({
       success: true,
       accounts: fallbackList,
@@ -1797,49 +2017,43 @@ apiRouter.post('/admin/gacha-accounts/bulk-delete', async (req: Request, res: Re
 });
 
 apiRouter.post('/admin/gacha-accounts/seed-samples', async (req: Request, res: Response): Promise<void> => {
+  res.status(400).json({
+    success: false,
+    message: 'ระบบปิดการสร้างไอดีตัวอย่างแล้ว เพื่อป้องกันไม่ให้ไอดีตัวอย่างปนในสต็อกจริงของลูกค้า'
+  });
+});
+
+apiRouter.post('/admin/gacha-accounts/purge-samples', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { productId = 'prod_gacha_cdk_35' } = req.body;
-    const sampleAccounts = [
-      { username: 'Angus_CDK_Master01', password: 'BloxMaster#2026' },
-      { username: 'Angus_CDK_Godly02', password: 'SwordKing#9912' },
-      { username: 'Angus_CDK_Mythic03', password: 'PirateAce#4821' },
-      { username: 'Angus_CDK_Shadow04', password: 'DragonSlash#771' },
-      { username: 'Angus_CDK_Legend05', password: 'BloxFruit#1029' }
-    ];
-
-    const nowIso = new Date().toISOString();
-    for (const acc of sampleAccounts) {
-      const docId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      await setDoc(doc(db, 'gacha_accounts', docId), sanitizeForFirestore({
-        id: docId,
-        productId,
-        username: acc.username,
-        password: acc.password,
-        rawLine: `${acc.username}:${acc.password}`,
-        status: 'available',
-        createdAt: nowIso
-      }));
-    }
-
-    // Update product stock
-    try {
-      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', productId), where('status', '==', 'available')));
-      const availableCount = gachaSnap.size;
-      const prodRef = doc(db, 'products', productId);
-      await updateDoc(prodRef, { stock: availableCount, updatedAt: nowIso });
-    } catch {}
-
-    invalidateServerProductsCache();
-
-    res.json({ success: true, message: 'เติมไอดีตัวอย่างเข้าสู่สต็อกเรียบร้อยแล้ว 5 บัญชี' });
+    const count = await purgeSampleGachaAccounts();
+    res.json({
+      success: true,
+      count,
+      message: `ล้างไอดีตัวอย่างออกจากระบบเรียบร้อยแล้ว (${count} บัญชี)`
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Seed/Ensure CDK 35 THB Product exists in Firestore
+// Seed/Ensure CDK 35 THB Product exists in Firestore with real stock
 export async function ensureCdkGachaProduct(): Promise<void> {
   try {
+    // Purge any lingering sample accounts from database on startup
+    await purgeSampleGachaAccounts();
+
+    // Calculate real available stock from gacha_accounts
+    let realAvailableCount = 0;
+    try {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
+      gachaSnap.forEach((d) => {
+        const data = d.data();
+        if ((data.productId === 'prod_gacha_cdk_35' || !data.productId) && !isSampleAccount(data.username, data.password)) {
+          realAvailableCount++;
+        }
+      });
+    } catch {}
+
     const prodRef = doc(db, 'products', 'prod_gacha_cdk_35');
     const snap = await getDoc(prodRef);
     if (!snap.exists()) {
@@ -1853,7 +2067,7 @@ export async function ensureCdkGachaProduct(): Promise<void> {
         price: 35,
         oldPrice: 79,
         image: '/images/blox/cursed_dual_katana.png',
-        stock: 50,
+        stock: realAvailableCount,
         isActive: true,
         isFeatured: true,
         isBestSeller: true,
@@ -1868,8 +2082,12 @@ export async function ensureCdkGachaProduct(): Promise<void> {
       }));
       invalidateServerProductsCache();
     } else {
-      // Ensure category is 'ไอดี'
-      await updateDoc(prodRef, { category: 'ไอดี', updatedAt: new Date().toISOString() });
+      // Ensure category is 'ไอดี' and stock matches real available accounts
+      await updateDoc(prodRef, { 
+        category: 'ไอดี', 
+        stock: realAvailableCount,
+        updatedAt: new Date().toISOString() 
+      });
       invalidateServerProductsCache();
     }
   } catch (err) {

@@ -11,7 +11,7 @@ export const fallbackProducts: Product[] = [
     price: 35,
     oldPrice: 79,
     image: '/images/blox/cursed_dual_katana.png',
-    stock: 50,
+    stock: 0,
     isActive: true,
     isFeatured: true,
     isBestSeller: true,

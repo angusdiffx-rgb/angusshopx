@@ -24,6 +24,7 @@ export interface Product {
   description: string;
   shortDescription: string;
   category: ProductCategory;
+  subCategory?: string;
   price: number;
   oldPrice?: number;
   image: string;
@@ -343,3 +344,63 @@ export interface HomeConfig {
   updatedAt?: string;
   updatedBy?: string;
 }
+
+export interface ServiceSubCategory {
+  id: string;
+  name: string;
+  enName: string;
+  icon: string;
+  description: string;
+}
+
+export const SERVICE_SUBCATEGORY_LIST: ServiceSubCategory[] = [
+  {
+    id: 'ฟาร์มทั่วไป',
+    name: 'ฟาร์มทั่วไป',
+    enName: 'General Farm',
+    icon: '⚡',
+    description: 'ฟาร์มเลเวล มาสเตอรี่ เบลี่ และเงินเขียว'
+  },
+  {
+    id: 'หาของโลก 1',
+    name: 'หาของโลก 1',
+    enName: 'Sea 1 Items',
+    icon: '🌊',
+    description: 'ดาบเซเบอร์ ปืนใหญ่ บาซูก้า และของแรร์โลกหนึ่ง'
+  },
+  {
+    id: 'หาของโลก 2',
+    name: 'หาของโลก 2',
+    enName: 'Sea 2 Items',
+    icon: '⚔️',
+    description: 'ดาบเร็นโกคุ มิดไนท์เบลด และทรูทริปเปิ้ลคาตานะ'
+  },
+  {
+    id: 'หาของโลก 3',
+    name: 'หาของโลก 3',
+    enName: 'Sea 3 Items',
+    icon: '👑',
+    description: 'ดาบคู่ CDK เคียวโซล กีต้าร์โซล และดาบทูชิตะ'
+  },
+  {
+    id: 'ลงดัน & ตื่นผล',
+    name: 'ลงดัน & ตื่นผล',
+    enName: 'Raid & Awakening',
+    icon: '🔥',
+    description: 'ลงดันเจี้ยน ฟาร์มชิป ปลุกพลังผลปีศาจทุกขั้น'
+  },
+  {
+    id: 'ล่าบอส & สัตว์ทะเล',
+    name: 'ล่าบอส & สัตว์ทะเล',
+    enName: 'Boss & Sea Events',
+    icon: '🐉',
+    description: 'ล่า Sea Beast สัตว์อสูรทะเล บอสลีเวียธาน'
+  },
+  {
+    id: 'ทำเผ่า & ไซบอร์ก/กูล/V4',
+    name: 'ทำเผ่า & V4',
+    enName: 'Race & V4 Awakening',
+    icon: '✨',
+    description: 'ทำเผ่าไซบอร์ก กูล และปลุกพลังเผ่า V4 ทุกเผ่า'
+  }
+];
