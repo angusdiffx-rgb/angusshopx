@@ -104,21 +104,69 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
                       {item.selectedOption ? ` • [${item.selectedOption}]` : ''}
                     </p>
                     {item.claimCode && (
-                      <div className="mt-1.5 p-2 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] font-mono text-amber-300">
-                        <span className="text-[10px] text-zinc-400 block">{item.claimCodeTitle || 'ข้อมูลไอดี / รหัสรับของ'}:</span>
-                        <div className="font-bold flex items-center justify-between gap-1 mt-0.5 select-all">
-                          <span className="break-all">{item.claimCode}</span>
+                      <div className="mt-2 p-3 rounded-2xl bg-[#090614] border border-amber-500/40 text-xs font-mono text-amber-300 space-y-2">
+                        <div className="flex items-center justify-between gap-1 border-b border-amber-500/20 pb-1">
+                          <span className="text-[10px] text-amber-300 font-bold tracking-wide">
+                            {item.claimCodeTitle || 'ข้อมูลไอดี Roblox (Username : Password)'}
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(item.claimCode || '');
                               playClickSound();
                             }}
-                            className="text-[10px] text-amber-400 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-0.5 rounded cursor-pointer shrink-0"
+                            className="text-[10px] text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 px-2 py-0.5 rounded-lg cursor-pointer shrink-0 font-sans"
                           >
-                            คัดลอก
+                            คัดลอกทั้งหมด
                           </button>
                         </div>
+                        {item.claimCode.includes(':') ? (
+                          <div className="space-y-1.5 pt-0.5">
+                            {(() => {
+                              const parts = item.claimCode.split(':');
+                              const u = parts[0]?.trim() || '';
+                              const p = parts.slice(1).join(':')?.trim() || '';
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between gap-2 bg-[#120F1D] px-2.5 py-1.5 rounded-xl border border-white/5">
+                                    <div className="truncate">
+                                      <span className="text-zinc-500 text-[10px] mr-1.5 font-sans">User:</span>
+                                      <strong className="text-white select-all">{u}</strong>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(u);
+                                        playClickSound();
+                                      }}
+                                      className="text-[10px] text-zinc-400 hover:text-white bg-white/5 px-2 py-0.5 rounded cursor-pointer shrink-0 font-sans"
+                                    >
+                                      คัดลอก
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2 bg-[#120F1D] px-2.5 py-1.5 rounded-xl border border-white/5">
+                                    <div className="truncate">
+                                      <span className="text-zinc-500 text-[10px] mr-1.5 font-sans">Pass:</span>
+                                      <strong className="text-amber-300 select-all">{p}</strong>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(p);
+                                        playClickSound();
+                                      }}
+                                      className="text-[10px] text-amber-400 hover:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded cursor-pointer shrink-0 font-sans"
+                                    >
+                                      คัดลอก
+                                    </button>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="font-bold select-all break-all">{item.claimCode}</div>
+                        )}
                       </div>
                     )}
                   </div>

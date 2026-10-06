@@ -580,6 +580,55 @@ apiRouter.post('/deposit/angpao', handleRedeemAngpao);
 // Gacha Account Stock & Anti-Sample Management
 // ==========================================
 let inMemoryGachaAccounts: any[] = [];
+let inMemoryInventory: any[] = [];
+
+export function isAccountProduct(item: any): boolean {
+  if (!item) return false;
+  const name = String(item.name || '').toLowerCase();
+  const category = String(item.category || '');
+  const deliveryType = String(item.deliveryType || '');
+  const productId = String(item.productId || '');
+
+  return Boolean(
+    deliveryType === 'account_code' ||
+    productId === 'prod_gacha_cdk_35' ||
+    productId.includes('gacha') ||
+    category === 'ไอดี' ||
+    category === 'สุ่มไอดี' ||
+    category === 'ไอดีไก่ตัน' ||
+    name.includes('สุ่ม') ||
+    name.includes('ไก่ตัน') ||
+    name.includes('ไอดี')
+  );
+}
+
+export function isServiceProduct(item: any): boolean {
+  if (!item) return false;
+  if (isAccountProduct(item)) return false; // Any account item is NEVER a service item!
+
+  const name = String(item.name || '');
+  const category = String(item.category || '');
+  const deliveryType = String(item.deliveryType || '');
+
+  return (
+    deliveryType === 'service' ||
+    deliveryType === 'manual_service' ||
+    category === 'บริการ' ||
+    name.includes('ฟาร์ม') ||
+    name.includes('เงินเขียว') ||
+    name.includes('Beli') ||
+    name.includes('บริการ') ||
+    name.includes('มาสเตอร์') ||
+    name.includes('Mastery') ||
+    name.includes('ฮาคิ') ||
+    name.includes('Haki') ||
+    name.includes('เควส') ||
+    name.includes('ค่าหัว') ||
+    name.includes('Bounty') ||
+    name.includes('Combat') ||
+    name.includes('คอมแบท')
+  );
+}
 
 export function isSampleAccount(username?: string, password?: string): boolean {
   if (!username) return true;
@@ -661,12 +710,10 @@ export async function checkAvailableGachaStock(productId: string, requiredQuanti
   };
 }
 
-export async function claimAvailableGachaAccounts(
+export async function selectAvailableGachaAccounts(
   productId: string, 
-  quantity: number, 
-  orderId: string, 
-  uid: string
-): Promise<{ success: boolean; error?: string; claimed: any[] }> {
+  quantity: number
+): Promise<{ success: boolean; error?: string; selected: any[] }> {
   const gachaColl = collection(db, 'gacha_accounts');
   let availableList: any[] = [];
 
@@ -699,51 +746,64 @@ export async function claimAvailableGachaAccounts(
     return {
       success: false,
       error: `สินค้าไอดีในสต็อกไม่เพียงพอ (ต้องการ ${quantity} บัญชี แต่ในระบบเหลือพร้อมส่ง ${matching.length} บัญชี) กรุณารอแอดมินเติมไอดี`,
-      claimed: []
+      selected: []
     };
   }
 
-  const selected = matching.slice(0, quantity);
-  const nowIso = new Date().toISOString();
-
-  for (const acc of selected) {
-    acc.status = 'sold';
-    acc.orderId = orderId;
-    acc.soldToUid = uid;
-    acc.soldAt = nowIso;
-
-    try {
-      await updateDoc(doc(db, 'gacha_accounts', acc.id), {
-        status: 'sold',
-        orderId,
-        soldToUid: uid,
-        soldAt: nowIso,
-        updatedAt: nowIso
-      });
-    } catch (err) {
-      console.warn('Update sold gacha account error:', err);
-    }
-
-    const memIdx = inMemoryGachaAccounts.findIndex(m => m.id === acc.id);
-    if (memIdx !== -1) {
-      inMemoryGachaAccounts[memIdx] = { ...inMemoryGachaAccounts[memIdx], ...acc };
-    }
-  }
-
-  try {
-    const remainingCount = Math.max(0, matching.length - quantity);
-    const prodRef = doc(db, 'products', productId);
-    await updateDoc(prodRef, {
-      stock: remainingCount,
-      updatedAt: nowIso
-    });
-    invalidateServerProductsCache();
-  } catch {}
-
   return {
     success: true,
-    claimed: selected
+    selected: matching.slice(0, quantity)
   };
+}
+
+export async function syncOrphanedGachaAccounts(): Promise<number> {
+  let restored = 0;
+  try {
+    const snap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'sold')));
+    for (const d of snap.docs) {
+      const data = d.data();
+      if (data.orderId) {
+        try {
+          const ordDoc = await getDoc(doc(db, 'orders', data.orderId));
+          if (!ordDoc.exists()) {
+            // Order was aborted or failed! Revert account to available!
+            await updateDoc(doc(db, 'gacha_accounts', d.id), {
+              status: 'available',
+              orderId: null,
+              soldToUid: null,
+              soldAt: null,
+              updatedAt: new Date().toISOString()
+            });
+            const memIdx = inMemoryGachaAccounts.findIndex(m => m.id === d.id);
+            if (memIdx !== -1) {
+              inMemoryGachaAccounts[memIdx].status = 'available';
+              delete inMemoryGachaAccounts[memIdx].orderId;
+            }
+            restored++;
+          }
+        } catch {}
+      }
+    }
+
+    if (restored > 0) {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
+      let realCount = 0;
+      gachaSnap.forEach(d => {
+        const data = d.data();
+        if ((data.productId === 'prod_gacha_cdk_35' || !data.productId) && !isSampleAccount(data.username, data.password)) {
+          realCount++;
+        }
+      });
+      await updateDoc(doc(db, 'products', 'prod_gacha_cdk_35'), {
+        stock: realCount,
+        updatedAt: new Date().toISOString()
+      });
+      invalidateServerProductsCache();
+    }
+  } catch (err) {
+    console.warn('syncOrphanedGachaAccounts notice:', err);
+  }
+  return restored;
 }
 
 // 2. Server-Side Checkout with Balance Deduction, Stock check & Digital Delivery
@@ -772,44 +832,27 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
     const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     // 0. Pre-verify real stock for any account items to NEVER sell without real IDs
-    const accountItems = items.filter((it: any) => 
-      it.deliveryType === 'account_code' ||
-      it.productId === 'prod_gacha_cdk_35' ||
-      it.category === 'ไอดี' ||
-      (it.name && (it.name.includes('สุ่มไก่ตัน') || it.name.includes('ไก่ตัน') || it.name.includes('สุ่มไอดี')))
-    );
+    const accountItems = items.filter(isAccountProduct);
 
-    for (const accItem of accountItems) {
-      const reqQty = Math.max(1, Number(accItem.quantity) || 1);
-      const stockCheck = await checkAvailableGachaStock(accItem.productId, reqQty);
-      if (!stockCheck.available) {
-        res.status(400).json({
-          success: false,
-          error: 'OUT_OF_STOCK',
-          message: `ขออภัย สินค้าไอดี "${accItem.name || 'สุ่มไก่ตัน'}" ในสต็อกหมดชั่วคราว (เหลือ ${stockCheck.count} บัญชี) กรุณารอแอดมินเติมไอดี`
-        });
-        return;
-      }
-    }
-
-    // Claim real accounts from stock for this order
+    // Pre-select accounts in memory (DO NOT update Firestore or product stock before transaction!)
     const claimedAccountsByProductId: Record<string, any[]> = {};
     for (const accItem of accountItems) {
       const reqQty = Math.max(1, Number(accItem.quantity) || 1);
-      const claimRes = await claimAvailableGachaAccounts(accItem.productId, reqQty, orderId, uid);
-      if (!claimRes.success) {
+      const selectRes = await selectAvailableGachaAccounts(accItem.productId, reqQty);
+      if (!selectRes.success || selectRes.selected.length < reqQty) {
         res.status(400).json({
           success: false,
           error: 'OUT_OF_STOCK',
-          message: claimRes.error || 'สินค้าไอดีในสต็อกไม่เพียงพอ'
+          message: selectRes.error || `ขออภัย สินค้าไอดี "${accItem.name || 'สุ่มไก่ตัน'}" ในสต็อกหมดชั่วคราว กรุณารอแอดมินเติมไอดี`
         });
         return;
       }
-      claimedAccountsByProductId[accItem.productId] = claimRes.claimed;
+      claimedAccountsByProductId[accItem.productId] = selectRes.selected;
     }
 
     let orderTotal = 0;
     let finalOrder: any = null;
+    const createdInventoryItems: any[] = [];
 
     await runTransaction(db, async (transaction) => {
       // 1. Fetch and verify user balance
@@ -844,7 +887,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
 
       // 2. Fetch all products to verify real server prices and stock
       let calculatedSubtotal = 0;
-      const verifiedItems = [];
+      const verifiedItems: any[] = [];
 
       for (const item of items) {
         const prodRef = doc(db, 'products', item.productId);
@@ -892,6 +935,8 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           ? `${prodData.name} [${item.selectedOption}${item.targetNote ? `: ${item.targetNote}` : ''}]`
           : (item.name || prodData.name || '');
 
+        const isItemAccount = isAccountProduct(item) || isAccountProduct(prodData);
+
         verifiedItems.push({
           productId: prodData.productId || item.productId || '',
           name: finalItemName,
@@ -901,7 +946,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
           price: serverPrice || 0,
           quantity: reqQty,
           image: item.image || prodData.image || '',
-          deliveryType: prodData.deliveryType || 'fruit',
+          deliveryType: isItemAccount ? 'account_code' : (prodData.deliveryType || 'fruit'),
           deliveryInstructions: prodData.deliveryInstructions || prodData.instructions || '',
           instructionsTitle: prodData.instructionsTitle || '',
           tradeServerLink: prodData.tradeServerLink || prodData.serverLink || '',
@@ -932,29 +977,153 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       });
 
       // 4. Check if order contains service products (EXCLUDE account purchases so passwords are not requested)
-      const hasServiceItems = verifiedItems.some(it => 
-        it.deliveryType !== 'account_code' && (
-          it.deliveryType === 'service' || 
-          it.deliveryType === 'manual_service' || 
-          it.name?.includes('ฟาร์ม') || 
-          it.name?.includes('เงินเขียว') || 
-          it.name?.includes('บริการ') ||
-          (it.name?.includes('CDK') && !it.name?.includes('สุ่ม')) ||
-          it.name?.includes('โอเด้ง') ||
-          it.name?.includes('ฮาคิ') ||
-          it.name?.includes('Haki') ||
-          it.name?.includes('เผ่า') ||
-          it.name?.includes('V4') ||
-          it.name?.includes('Combat') ||
-          it.name?.includes('คอมแบท') ||
-          it.name?.includes('เควส') ||
-          it.name?.includes('ค่าหัว') ||
-          it.name?.includes('Bounty') ||
-          it.name?.includes('Honor')
-        )
-      );
+      const hasServiceItems = verifiedItems.some(it => isServiceProduct(it));
 
-      // 5. Create Order Record
+      // 5. Deliver to Inventory (and populate credentials in verifiedItems)
+      for (const item of verifiedItems) {
+        const isAccountItem = isAccountProduct(item);
+        const isItemService = isServiceProduct(item);
+
+        const customInstructions = item.deliveryInstructions?.trim();
+        const customTradeServer = item.tradeServerLink?.trim();
+        const customClaimCode = item.claimCode?.trim();
+
+        let tradeServer = customTradeServer || (isAccountItem ? 'https://www.roblox.com/games/2753915549/Blox-Fruits' : globalVipLink);
+        let instructions = customInstructions || globalInstructions || '';
+        if (isAccountItem && !instructions) {
+          instructions = 'นำ Username และ Password ด้านบนไปเข้าสู่ระบบในเกม Roblox เพื่อเข้าเล่นได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัยสูงสุด';
+        }
+
+        if (isAccountItem) {
+          // Use real accounts claimed from stock pool
+          const claimedForThis = claimedAccountsByProductId[item.productId] || [];
+          if (claimedForThis.length > 0) {
+            // Populate credentials directly into item for receipt display
+            item.claimCode = claimedForThis.length === 1 
+              ? `${claimedForThis[0].username} : ${claimedForThis[0].password}` 
+              : claimedForThis.map((a: any, idx: number) => `ไอดี #${idx + 1}: ${a.username} : ${a.password}`).join('\n');
+            item.accountUser = claimedForThis[0].username;
+            item.accountPass = claimedForThis[0].password;
+            item.deliveredAccounts = claimedForThis.map((a: any) => ({ username: a.username, password: a.password }));
+
+            // Create individual inventory item for EACH claimed account
+            for (let idx = 0; idx < claimedForThis.length; idx++) {
+              const claimedAcc = claimedForThis[idx];
+              const invId = `inv_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`;
+              const invRef = doc(db, 'inventory', invId);
+
+              const invData = sanitizeForFirestore({
+                inventoryId: invId,
+                id: invId,
+                uid,
+                userEmail: userDoc.data().email || '',
+                productId: item.productId,
+                orderId,
+                productName: claimedForThis.length > 1 ? `${item.name} (ไอดี #${idx + 1})` : item.name,
+                quantity: 1,
+                status: 'ready',
+                deliveryType: 'account_code',
+                image: item.image || '/images/blox/cursed_dual_katana.png',
+                claimCode: `${claimedAcc.username} : ${claimedAcc.password}`,
+                claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+                instructions,
+                instructionsTitle: item.instructionsTitle?.trim() || 'วิธีใช้งานไอดี Roblox ที่ได้รับ',
+                serverLink: tradeServer,
+                tradeServerLink: tradeServer,
+                serverLinkTitle: item.serverLinkTitle?.trim() || 'เข้าเล่นเกม Blox Fruits',
+                metadata: {
+                  robloxUsername: claimedAcc.username,
+                  accountUser: claimedAcc.username,
+                  serviceAccountUsername: claimedAcc.username,
+                  serviceAccountPassword: claimedAcc.password,
+                  accountPass: claimedAcc.password,
+                  accountCredentials: `${claimedAcc.username} : ${claimedAcc.password}`,
+                  rawLine: claimedAcc.rawLine || `${claimedAcc.username}:${claimedAcc.password}`,
+                  isAccountProduct: true,
+                  instructions,
+                  instructionsTitle: item.instructionsTitle?.trim() || 'วิธีใช้งานไอดี Roblox ที่ได้รับ',
+                  tradeServerLink: tradeServer,
+                  serverLink: tradeServer,
+                  serverLinkTitle: item.serverLinkTitle?.trim() || 'เข้าเล่นเกม Blox Fruits',
+                  code: `${claimedAcc.username} : ${claimedAcc.password}`,
+                  claimCode: `${claimedAcc.username} : ${claimedAcc.password}`,
+                  claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+                  deliveredAt: nowIso
+                },
+                createdAt: nowIso,
+                updatedAt: nowIso
+              });
+
+              transaction.set(invRef, invData);
+              createdInventoryItems.push(invData);
+            }
+            continue;
+          }
+        }
+
+        // Standard delivery for Non-account or fallback
+        const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const invRef = doc(db, 'inventory', invId);
+
+        if (!instructions) {
+          if (item.deliveryType === 'gamepass') {
+            instructions = 'ระบบได้ส่งของขวัญ Gamepass เข้าสู่บัญชี Roblox ของท่านเรียบร้อยแล้ว';
+          } else if (isItemService) {
+            instructions = 'ทีมงานได้รับข้อมูลไอดี/รหัสผ่านแล้ว และกำลังดำเนินการฟาร์มให้ตามคิวอย่างปลอดภัย ปิดระบบยืนยัน 2 ชั้นชั่วคราวเพื่อความรวดเร็ว';
+          } else {
+            instructions = 'เข้าสู่เซิร์ฟเวอร์ VIP ผ่านลิงก์ด้านล่างเพื่อรับสินค้าผ่านระบบ Trade ในเกมกับบอท AngusShop';
+          }
+        }
+
+        const claimCode = customClaimCode || (isAccountItem ? 'กรุณาติดต่อแอดมินเพื่อรับรหัสผ่าน' : `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+        const instructionsTitle = item.instructionsTitle?.trim() || (isAccountItem ? 'วิธีใช้งานไอดี Roblox ที่ได้รับ' : isItemService ? 'ขั้นตอนบริการฟาร์ม' : globalInstructionsTitle);
+        const serverLinkTitle = item.serverLinkTitle?.trim() || (isAccountItem ? 'เข้าเล่นเกม Blox Fruits' : isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
+        const claimCodeTitle = item.claimCodeTitle?.trim() || (isAccountItem ? 'ข้อมูลไอดี Roblox (Username : Password)' : isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
+
+        const invData = sanitizeForFirestore({
+          inventoryId: invId,
+          id: invId,
+          uid,
+          userEmail: userDoc.data().email || '',
+          productId: item.productId,
+          orderId,
+          productName: item.name,
+          quantity: item.quantity,
+          status: 'ready',
+          deliveryType: item.deliveryType,
+          image: item.image || '',
+          claimCode,
+          claimCodeTitle,
+          instructions,
+          instructionsTitle,
+          serverLink: tradeServer,
+          tradeServerLink: tradeServer,
+          serverLinkTitle,
+          metadata: {
+            robloxUsername: robloxUsername || '',
+            serviceAccountUsername: isItemService ? (serviceAccountUsername || robloxUsername || '') : '',
+            serviceAccountPassword: isItemService ? (serviceAccountPassword || '') : '',
+            accountCredentials: isAccountItem ? claimCode : '',
+            isServiceOrder: isItemService,
+            instructions,
+            instructionsTitle,
+            tradeServerLink: tradeServer,
+            serverLink: tradeServer,
+            serverLinkTitle,
+            code: claimCode,
+            claimCode,
+            claimCodeTitle,
+            deliveredAt: nowIso
+          },
+          createdAt: nowIso,
+          updatedAt: nowIso
+        });
+
+        transaction.set(invRef, invData);
+        createdInventoryItems.push(invData);
+      }
+
+      // 6. Create Order Record
       finalOrder = sanitizeForFirestore({
         orderId,
         uid,
@@ -981,7 +1150,7 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       const orderRef = doc(db, 'orders', orderId);
       transaction.set(orderRef, finalOrder);
 
-      // 6. Create Wallet Transaction for purchase
+      // 7. Create Wallet Transaction for purchase
       const txRef = doc(db, 'wallet_transactions', txId);
       transaction.set(txRef, sanitizeForFirestore({
         transactionId: txId,
@@ -994,118 +1163,6 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
         description: `ชำระคำสั่งซื้อ #${orderId} (${verifiedItems.length} รายการ)`,
         createdAt: nowIso
       }));
-
-      // 7. Deliver to Inventory
-      for (const item of verifiedItems) {
-        const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        const invRef = doc(db, 'inventory', invId);
-
-        const isAccountItem = 
-          item.deliveryType === 'account_code' || 
-          item.productId === 'prod_gacha_cdk_35' || 
-          (item as any).category === 'ไอดี' ||
-          item.name?.includes('สุ่มไก่ตัน') || 
-          item.name?.includes('ไก่ตัน') ||
-          item.name?.includes('สุ่มไอดี');
-
-        const isItemService = 
-          !isAccountItem && (
-            item.deliveryType === 'service' || 
-            item.deliveryType === 'manual_service' || 
-            item.name?.includes('ฟาร์ม') || 
-            item.name?.includes('เงินเขียว') || 
-            item.name?.includes('บริการ') ||
-            (item.name?.includes('CDK') && !item.name?.includes('สุ่ม')) ||
-            item.name?.includes('โอเด้ง') ||
-            item.name?.includes('ฮาคิ') ||
-            item.name?.includes('Haki') ||
-            item.name?.includes('เผ่า') ||
-            item.name?.includes('V4')
-          );
-
-        const customInstructions = item.deliveryInstructions?.trim();
-        const customTradeServer = item.tradeServerLink?.trim();
-        const customClaimCode = item.claimCode?.trim();
-
-        let tradeServer = customTradeServer || globalVipLink;
-        let instructions = customInstructions || globalInstructions || '';
-        
-        let accountUser = '';
-        let accountPass = '';
-        let finalClaimCode = customClaimCode;
-
-        if (isAccountItem) {
-          tradeServer = customTradeServer || 'https://www.roblox.com/games/2753915549/Blox-Fruits';
-          if (!instructions) {
-            instructions = 'นำ Username และ Password ด้านบนไปเข้าสู่ระบบในเกม Roblox เพื่อเข้าเล่นได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัยสูงสุด';
-          }
-          
-          // Use real accounts claimed from stock pool
-          const claimedForThis = claimedAccountsByProductId[item.productId] || [];
-          if (claimedForThis.length > 0) {
-            accountUser = claimedForThis[0].username;
-            accountPass = claimedForThis[0].password;
-            if (claimedForThis.length === 1) {
-              finalClaimCode = `${claimedForThis[0].username} : ${claimedForThis[0].password}`;
-            } else {
-              finalClaimCode = claimedForThis.map((a: any, idx: number) => `ไอดี #${idx + 1}: ${a.username} : ${a.password}`).join('\n');
-            }
-          } else if (customClaimCode) {
-            finalClaimCode = customClaimCode;
-          }
-        } else if (!instructions) {
-          if (item.deliveryType === 'gamepass') {
-            instructions = 'ระบบได้ส่งของขวัญ Gamepass เข้าสู่บัญชี Roblox ของท่านเรียบร้อยแล้ว';
-          } else if (isItemService) {
-            instructions = 'ทีมงานได้รับข้อมูลไอดี/รหัสผ่านแล้ว และกำลังดำเนินการฟาร์มให้ตามคิวอย่างปลอดภัย ปิดระบบยืนยัน 2 ชั้นชั่วคราวเพื่อความรวดเร็ว';
-          } else {
-            instructions = 'เข้าสู่เซิร์ฟเวอร์ VIP ผ่านลิงก์ด้านล่างเพื่อรับสินค้าผ่านระบบ Trade ในเกมกับบอท AngusShop';
-          }
-        }
-
-        const claimCode = finalClaimCode || customClaimCode || (isAccountItem ? 'กรุณาติดต่อแอดมินเพื่อรับรหัสผ่าน' : `${globalPrefix}${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
-        const instructionsTitle = item.instructionsTitle?.trim() || (isAccountItem ? 'วิธีใช้งานไอดี Roblox ที่ได้รับ' : isItemService ? 'ขั้นตอนบริการฟาร์ม' : globalInstructionsTitle);
-        const serverLinkTitle = item.serverLinkTitle?.trim() || (isAccountItem ? 'เข้าเล่นเกม Blox Fruits' : isItemService ? 'ติดต่อแอดมินฟาร์ม' : globalServerLinkTitle);
-        const claimCodeTitle = item.claimCodeTitle?.trim() || (isAccountItem ? 'ข้อมูลไอดี Roblox (Username : Password)' : isItemService ? 'รหัสคิวฟาร์ม' : globalClaimCodeTitle);
-
-        transaction.set(invRef, sanitizeForFirestore({
-          inventoryId: invId,
-          uid,
-          userEmail: userDoc.data().email || '',
-          productId: item.productId,
-          orderId,
-          productName: item.name,
-          quantity: item.quantity,
-          status: 'ready',
-          deliveryType: item.deliveryType,
-          image: item.image || '',
-          claimCode,
-          claimCodeTitle,
-          instructions,
-          instructionsTitle,
-          serverLink: tradeServer,
-          tradeServerLink: tradeServer,
-          serverLinkTitle,
-          metadata: {
-            robloxUsername: accountUser || robloxUsername || '',
-            serviceAccountUsername: accountUser || (isItemService ? (serviceAccountUsername || robloxUsername || '') : ''),
-            serviceAccountPassword: accountPass || (isItemService ? (serviceAccountPassword || '') : ''),
-            accountCredentials: isAccountItem ? claimCode : '',
-            isServiceOrder: isItemService,
-            instructions,
-            instructionsTitle,
-            tradeServerLink: tradeServer,
-            serverLink: tradeServer,
-            serverLinkTitle,
-            code: claimCode,
-            claimCode,
-            claimCodeTitle,
-            deliveredAt: nowIso
-          },
-          createdAt: nowIso,
-          updatedAt: nowIso
-        }));
-      }
 
       // 8. Create Notification
       const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -1121,6 +1178,36 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       }));
     });
 
+    // Save newly created inventory items into server in-memory list
+    for (const inv of createdInventoryItems) {
+      inMemoryInventory.unshift(inv);
+    }
+
+    // Mark claimed accounts as sold in Firestore & memory AFTER transaction successfully commits
+    for (const [prodId, accounts] of Object.entries(claimedAccountsByProductId)) {
+      for (const acc of accounts) {
+        acc.status = 'sold';
+        acc.orderId = orderId;
+        acc.soldToUid = uid;
+        acc.soldAt = nowIso;
+        try {
+          await updateDoc(doc(db, 'gacha_accounts', acc.id), {
+            status: 'sold',
+            orderId,
+            soldToUid: uid,
+            soldAt: nowIso,
+            updatedAt: nowIso
+          });
+        } catch (e) {
+          console.warn('Mark sold gacha account notice:', e);
+        }
+        const memIdx = inMemoryGachaAccounts.findIndex(m => m.id === acc.id);
+        if (memIdx !== -1) {
+          inMemoryGachaAccounts[memIdx] = { ...inMemoryGachaAccounts[memIdx], ...acc };
+        }
+      }
+    }
+
     // Invalidate and update server cache immediately so newly purchased products reflect reduced stock
     if (serverProductsCache && Array.isArray(serverProductsCache.data)) {
       for (const it of items) {
@@ -1135,7 +1222,8 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
     res.json({
       success: true,
       message: 'สั่งซื้อสินค้าและส่งมอบเข้าคลังเรียบร้อยแล้ว',
-      order: finalOrder
+      order: finalOrder,
+      inventoryItems: createdInventoryItems
     });
   } catch (error: any) {
     console.error('Checkout Error:', error);
@@ -1156,6 +1244,46 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       error: 'CHECKOUT_FAILED',
       message: error.message || 'การสั่งซื้อไม่สำเร็จ'
     });
+  }
+});
+
+// 3. User Inventory Endpoint with In-Memory Caching & Firestore Fallback
+apiRouter.get('/inventory', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { uid } = req.query;
+    if (!uid) {
+      res.json({ success: true, items: [] });
+      return;
+    }
+
+    const uidStr = String(uid);
+    let list: any[] = [];
+
+    try {
+      const snap = await getDocs(query(collection(db, 'inventory'), where('uid', '==', uidStr), limit(100)));
+      snap.forEach((d) => {
+        list.push({ id: d.id, ...d.data() });
+      });
+    } catch (e: any) {
+      console.warn('Firestore inventory fetch fallback:', e?.message);
+    }
+
+    // Merge in-memory delivered items for this user
+    for (const mem of inMemoryInventory) {
+      if (mem.uid === uidStr && !list.some(it => it.id === mem.id || it.inventoryId === mem.inventoryId)) {
+        list.push(mem);
+      }
+    }
+
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    res.json({
+      success: true,
+      items: list
+    });
+  } catch (err: any) {
+    console.error('Inventory route error:', err);
+    const fallbackList = inMemoryInventory.filter(mem => mem.uid === String(req.query.uid));
+    res.json({ success: true, items: fallbackList });
   }
 });
 
@@ -1803,8 +1931,9 @@ apiRouter.get('/admin/gacha-accounts', async (req: Request, res: Response): Prom
     const { productId } = req.query;
     const gachaColl = collection(db, 'gacha_accounts');
     
-    // Purge any lingering sample accounts in the background
-    purgeSampleGachaAccounts().catch(() => {});
+    // Purge sample accounts and restore any accounts from aborted/failed orders
+    await purgeSampleGachaAccounts().catch(() => {});
+    await syncOrphanedGachaAccounts().catch(() => {});
     
     // Avoid composite index requirement by querying without multiple inequalities/orderBys
     let snap;
@@ -2016,6 +2145,60 @@ apiRouter.post('/admin/gacha-accounts/bulk-delete', async (req: Request, res: Re
   }
 });
 
+// Restore a sold account back to available
+apiRouter.post('/admin/gacha-accounts/:id/restore', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    let targetProductId = 'prod_gacha_cdk_35';
+    try {
+      const accDoc = await getDoc(doc(db, 'gacha_accounts', id));
+      if (accDoc.exists()) {
+        targetProductId = accDoc.data().productId || targetProductId;
+      }
+    } catch {}
+
+    try {
+      await updateDoc(doc(db, 'gacha_accounts', id), {
+        status: 'available',
+        orderId: null,
+        soldToUid: null,
+        soldAt: null,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (e: any) {
+      console.warn('Restore doc notice:', e?.message);
+    }
+
+    const idx = inMemoryGachaAccounts.findIndex(m => m.id === id);
+    if (idx !== -1) {
+      inMemoryGachaAccounts[idx].status = 'available';
+      delete inMemoryGachaAccounts[idx].orderId;
+    }
+
+    // Recalculate stock
+    try {
+      const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', targetProductId), where('status', '==', 'available')));
+      const availableCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === targetProductId && a.status === 'available').length);
+      const prodRef = doc(db, 'products', targetProductId);
+      await updateDoc(prodRef, { stock: availableCount, updatedAt: new Date().toISOString() });
+    } catch {}
+
+    invalidateServerProductsCache();
+    res.json({ success: true, message: 'คืนไอดีสู่สต็อกพร้อมส่งเรียบร้อยแล้ว' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+apiRouter.post('/admin/gacha-accounts/sync-orphans', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const restored = await syncOrphanedGachaAccounts();
+    res.json({ success: true, restored, message: `ตรวจเช็คและคืนไอดีสู่สต็อกสำเร็จ ${restored} บัญชี` });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 apiRouter.post('/admin/gacha-accounts/seed-samples', async (req: Request, res: Response): Promise<void> => {
   res.status(400).json({
     success: false,
@@ -2041,6 +2224,7 @@ export async function ensureCdkGachaProduct(): Promise<void> {
   try {
     // Purge any lingering sample accounts from database on startup
     await purgeSampleGachaAccounts();
+    await syncOrphanedGachaAccounts();
 
     // Calculate real available stock from gacha_accounts
     let realAvailableCount = 0;

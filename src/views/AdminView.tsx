@@ -43,6 +43,7 @@ import {
   Gift,
   QrCode,
   Wallet,
+  RotateCcw,
   Flame,
   Palette,
   Zap,
@@ -212,6 +213,40 @@ export const AdminView: React.FC<AdminViewProps> = ({
       toastError('ข้อผิดพลาด', e.message);
     } finally {
       setIsSubmittingGacha(false);
+    }
+  };
+
+  const handleRestoreGachaAccount = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/gacha-accounts/${id}/restore`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        success('คืนสต็อกสำเร็จ', 'เปลี่ยนสถานะไอดีเป็นพร้อมส่งเรียบร้อยแล้ว');
+        await loadGachaAccounts();
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+      } else {
+        toastError('ไม่สามารถคืนสต็อกได้', data.message);
+      }
+    } catch (e: any) {
+      toastError('ข้อผิดพลาด', e.message);
+    }
+  };
+
+  const handleSyncOrphansGacha = async () => {
+    try {
+      const res = await fetch('/api/admin/gacha-accounts/sync-orphans', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        success('ตรวจสอบเสร็จสิ้น', data.message || `กู้คืน ${data.restored} บัญชี`);
+        await loadGachaAccounts();
+        window.dispatchEvent(new CustomEvent('productsUpdated'));
+      }
+    } catch (e: any) {
+      toastError('ข้อผิดพลาด', e.message);
     }
   };
 

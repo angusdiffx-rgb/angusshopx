@@ -67,34 +67,75 @@ export const InventoryView: React.FC = () => {
     else if (!items.length) setLoading(true);
 
     try {
-      const q = query(
-        collection(db, 'inventory'),
-        where('uid', '==', user.uid),
-        limit(displayLimit)
-      );
-      const snapshot = await getDocs(q);
-      const list: InventoryItem[] = [];
-      snapshot.forEach((d) => {
-        list.push({ id: d.id, ...(d.data() as InventoryItem) });
-      });
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setItems(list);
+      let list: InventoryItem[] = [];
+
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(list));
-        sessionStorage.setItem(cacheTimeKey, String(now));
-      } catch {}
-    } catch (err) {
-      console.warn('Inventory fetch notice:', err);
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+        const q = query(
+          collection(db, 'inventory'),
+          where('uid', '==', user.uid),
+          limit(displayLimit)
+        );
+        const snapshot = await getDocs(q);
+        snapshot.forEach((d) => {
+          list.push({ id: d.id, ...(d.data() as InventoryItem) });
+        });
+      } catch (err) {
+        console.warn('Inventory fetch firestore notice:', err);
+      }
+
+    // Always fetch from server API if Firestore returned empty or had an issue
+    if (list.length === 0) {
+      try {
+        const res = await fetch(`/api/inventory?uid=${user.uid}`);
+        if (res.ok) {
+          const apiData = await res.json();
+          if (Array.isArray(apiData.items)) {
+            list = apiData.items;
+          }
+        }
+      } catch (e) {
+        console.warn('API inventory fetch error:', e);
+      }
     }
-  };
+
+    // Merge with any cached items in sessionStorage
+    try {
+      const cachedStr = sessionStorage.getItem(cacheKey);
+      if (cachedStr) {
+        const cachedList: InventoryItem[] = JSON.parse(cachedStr);
+        for (const c of cachedList) {
+          if (!list.some(it => (it.id && it.id === c.id) || (it.inventoryId && it.inventoryId === c.inventoryId))) {
+            list.push(c);
+          }
+        }
+      }
+    } catch {}
+
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    setItems(list);
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify(list));
+      sessionStorage.setItem(cacheTimeKey, String(now));
+    } catch {}
+  } catch (err) {
+    console.warn('Inventory fetch notice:', err);
+  } finally {
+    setLoading(false);
+    setIsRefreshing(false);
+  }
+};
 
   useEffect(() => {
     fetchInventory();
 
-    const handleUpdate = () => {
+    const handleUpdate = (e?: any) => {
+      if (e?.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setItems(prev => {
+          const detailList = e.detail;
+          const merged = [...detailList, ...prev.filter(p => !detailList.some((d: any) => (d.inventoryId && d.inventoryId === p.inventoryId) || (d.id && d.id === p.id)))];
+          return merged;
+        });
+      }
       fetchInventory(true);
     };
     window.addEventListener('inventoryUpdated', handleUpdate);
@@ -383,46 +424,61 @@ export const InventoryView: React.FC = () => {
                         </button>
                       </div>
 
-                      {claimCode.includes(':') ? (
-                        <div className="space-y-1.5 font-mono text-xs">
-                          {(() => {
-                            const [u, p] = claimCode.split(':').map(s => s.trim());
-                            return (
-                              <>
+                      {(() => {
+                        const rawCode = String(claimCode || '').trim();
+                        const metaUser = item.metadata?.robloxUsername || item.metadata?.accountUser || item.metadata?.serviceAccountUsername;
+                        const metaPass = item.metadata?.serviceAccountPassword || item.metadata?.accountPass;
+                        
+                        let u = metaUser || '';
+                        let p = metaPass || '';
+                        
+                        if (!u && rawCode.includes(':')) {
+                          const parts = rawCode.split(':');
+                          u = parts[0]?.trim() || '';
+                          p = parts.slice(1).join(':')?.trim() || '';
+                        }
+
+                        if (u || p) {
+                          return (
+                            <div className="space-y-1.5 font-mono text-xs">
+                              {u && (
                                 <div className="flex items-center justify-between gap-2 bg-[#120F1D] px-2.5 py-1.5 rounded-xl border border-white/5">
                                   <div className="truncate">
-                                    <span className="text-zinc-500 text-[10px] mr-1.5">User:</span>
+                                    <span className="text-zinc-500 text-[10px] mr-1.5 font-sans">Username:</span>
                                     <strong className="text-white select-all">{u}</strong>
                                   </div>
                                   <button
-                                    onClick={() => handleCopyCode(u, `${item.id}_u`)}
+                                    onClick={() => handleCopyCode(u, `${item.id || item.inventoryId}_u`)}
                                     className="text-[10px] text-zinc-400 hover:text-white bg-white/5 px-2 py-0.5 rounded cursor-pointer shrink-0"
                                   >
-                                    {copiedId === `${item.id}_u` ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                                    {copiedId === `${item.id || item.inventoryId}_u` ? 'คัดลอกแล้ว' : 'คัดลอก'}
                                   </button>
                                 </div>
-
+                              )}
+                              {p && (
                                 <div className="flex items-center justify-between gap-2 bg-[#120F1D] px-2.5 py-1.5 rounded-xl border border-white/5">
                                   <div className="truncate">
-                                    <span className="text-zinc-500 text-[10px] mr-1.5">Pass:</span>
+                                    <span className="text-zinc-500 text-[10px] mr-1.5 font-sans">Password:</span>
                                     <strong className="text-amber-300 select-all">{p}</strong>
                                   </div>
                                   <button
-                                    onClick={() => handleCopyCode(p, `${item.id}_p`)}
+                                    onClick={() => handleCopyCode(p, `${item.id || item.inventoryId}_p`)}
                                     className="text-[10px] text-amber-400 hover:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded cursor-pointer shrink-0"
                                   >
-                                    {copiedId === `${item.id}_p` ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                                    {copiedId === `${item.id || item.inventoryId}_p` ? 'คัดลอกแล้ว' : 'คัดลอก'}
                                   </button>
                                 </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      ) : (
-                        <div className="font-mono text-xs sm:text-sm font-bold text-amber-300 select-all truncate">
-                          {claimCode}
-                        </div>
-                      )}
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="font-mono text-xs sm:text-sm font-bold text-amber-300 select-all truncate">
+                            {claimCode}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 

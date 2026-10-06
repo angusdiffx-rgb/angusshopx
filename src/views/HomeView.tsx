@@ -202,7 +202,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               price: homeConfig.webBannerHighlightPrice ?? 35,
               oldPrice: homeConfig.webBannerHighlightOldPrice ?? 79,
               image: '/images/blox/cursed_dual_katana.png',
-              stock: 50,
+              stock: 0,
               isActive: true,
               isFeatured: true,
               isBestSeller: true,

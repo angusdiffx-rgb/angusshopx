@@ -46,22 +46,47 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Check if cart contains any service/farm items (exclude account purchases)
+  // Helper to accurately identify account / gacha / random ID products
+  const isAccountProduct = (item: any) => {
+    if (!item) return false;
+    const name = String(item.name || '').toLowerCase();
+    const category = String(item.category || '');
+    const deliveryType = String(item.deliveryType || '');
+    const productId = String(item.productId || '');
+
+    return Boolean(
+      deliveryType === 'account_code' ||
+      productId === 'prod_gacha_cdk_35' ||
+      productId.includes('gacha') ||
+      category === 'ไอดี' ||
+      category === 'สุ่มไอดี' ||
+      category === 'ไอดีไก่ตัน' ||
+      name.includes('สุ่ม') ||
+      name.includes('ไก่ตัน') ||
+      name.includes('ไอดี')
+    );
+  };
+
+  // Check if cart contains ONLY account/gacha items (สุ่มไอดี / ไก่ตัน) - No input required!
+  const isOnlyAccountItems = items.length > 0 && items.every(isAccountProduct);
+
   const hasServiceItems = items.some(item => 
-    item.deliveryType !== 'account_code' && (
-      item.category === 'บริการ' ||
+    !isAccountProduct(item) && (
       item.deliveryType === 'service' || 
       item.deliveryType === 'manual_service' ||
+      item.category === 'บริการ' ||
       item.name?.includes('ฟาร์ม') ||
       item.name?.includes('เงินเขียว') ||
       item.name?.includes('Beli') ||
       item.name?.includes('บริการ') ||
-      (item.name?.includes('CDK') && !item.name?.includes('สุ่ม')) ||
       item.name?.includes('โอเด้ง') ||
       item.name?.includes('ฮาคิ') ||
       item.name?.includes('Haki') ||
-      item.name?.includes('เผ่า') ||
-      item.name?.includes('V4')
+      item.name?.includes('Combat') ||
+      item.name?.includes('คอมแบท') ||
+      item.name?.includes('เควส') ||
+      item.name?.includes('ค่าหัว') ||
+      item.name?.includes('Bounty')
     )
   );
 
@@ -134,8 +159,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const remainingBalance = currentBalance - payableTotal;
 
   const handleConfirmOrder = async () => {
-    // Regular Roblox username validation
-    if (!robloxUsername.trim()) {
+    // Regular Roblox username validation ONLY if not purely account items
+    if (!isOnlyAccountItems && !robloxUsername.trim()) {
       toastError('ระบุชื่อ Roblox', 'กรุณากรอกชื่อตัวละคร Roblox (Username) เพื่อให้ทีมงานส่งมอบสินค้า');
       return;
     }
@@ -162,13 +187,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     setCheckoutError(null);
 
     try {
+      const resolvedRobloxUsername = robloxUsername.trim() || (isOnlyAccountItems ? (user.displayName || user.email || 'Customer') : '');
       const response = await fetch('/api/order/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uid: user.uid,
           items,
-          robloxUsername: robloxUsername.trim(),
+          robloxUsername: resolvedRobloxUsername,
           serviceAccountUsername: hasServiceItems ? (serviceAccountUsername.trim() || robloxUsername.trim()) : undefined,
           serviceAccountPassword: hasServiceItems ? serviceAccountPassword.trim() : undefined,
           note: note.trim(),
@@ -191,11 +217,25 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           } catch {}
         }
         try {
+          // Immediately cache newly delivered inventory items into user's sessionStorage!
+          if (Array.isArray(data.inventoryItems) && data.inventoryItems.length > 0) {
+            try {
+              const existing = JSON.parse(sessionStorage.getItem(`user_inventory_${user.uid}`) || '[]');
+              const merged = [...data.inventoryItems, ...existing.filter((e: any) => !data.inventoryItems.some((d: any) => (d.inventoryId && d.inventoryId === e.inventoryId) || (d.id && d.id === e.id)))];
+              sessionStorage.setItem(`user_inventory_${user.uid}`, JSON.stringify(merged));
+              sessionStorage.setItem(`user_inventory_time_${user.uid}`, String(Date.now()));
+            } catch {
+              sessionStorage.setItem(`user_inventory_${user.uid}`, JSON.stringify(data.inventoryItems));
+              sessionStorage.setItem(`user_inventory_time_${user.uid}`, String(Date.now()));
+            }
+          } else {
+            sessionStorage.removeItem(`user_inventory_${user.uid}`);
+            sessionStorage.removeItem(`user_inventory_time_${user.uid}`);
+          }
+
           // Invalidate user caches
           sessionStorage.removeItem(`user_orders_${user.uid}`);
           sessionStorage.removeItem(`user_orders_time_${user.uid}`);
-          sessionStorage.removeItem(`user_inventory_${user.uid}`);
-          sessionStorage.removeItem(`user_inventory_time_${user.uid}`);
           sessionStorage.removeItem(`user_tx_${user.uid}`);
           sessionStorage.removeItem(`user_tx_time_${user.uid}`);
           sessionStorage.removeItem(`user_stats_${user.uid}`);
@@ -209,7 +249,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         } catch {}
         window.dispatchEvent(new CustomEvent('productsUpdated'));
         window.dispatchEvent(new CustomEvent('ordersUpdated'));
-        window.dispatchEvent(new CustomEvent('inventoryUpdated'));
+        window.dispatchEvent(new CustomEvent('inventoryUpdated', { detail: data.inventoryItems || [] }));
         window.dispatchEvent(new CustomEvent('walletUpdated'));
         window.dispatchEvent(new CustomEvent('accountStatsUpdated'));
         onOrderCompleted(data.order);
@@ -372,55 +412,93 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             </div>
           )}
 
-          {/* Standard Roblox Info Form */}
-          <div className="p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-[#212133]">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300">
-                <User className="w-4 h-4" />
+          {/* Automatic Account Delivery Banner (เมื่อสุ่ม/ซื้อไอดี ไม่ต้องกรอกข้อมูล) */}
+          {isOnlyAccountItems && (
+            <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#181126] via-[#120D22] to-[#0A0714] border-2 border-amber-500/40 shadow-xl shadow-amber-950/20 space-y-3">
+              <div className="flex items-center gap-3 pb-3 border-b border-amber-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>ระบบส่งมอบไอดีอัตโนมัติทันที 24 ชม.</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                      ไม่ต้องกรอกข้อมูล
+                    </span>
+                  </h3>
+                  <p className="text-xs text-amber-300/80">ระบบจะตัดส่งมอบ Username และ Password ของไอดีเข้าคลังของคุณทันที</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-white">ข้อมูลตัวละคร Roblox ผู้รับ</h3>
-                <p className="text-xs text-zinc-400">กรุณาระบุ Username ตัวละครให้ถูกต้อง</p>
+
+              <div className="p-3.5 rounded-2xl bg-[#080511] border border-[#2E2448] text-xs text-zinc-300 space-y-1.5 leading-relaxed">
+                <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                  <span>⚡</span>
+                  <span>ขั้นตอนการรับไอดี:</span>
+                </div>
+                <p className="text-zinc-400 pl-5">
+                  1. กดปุ่ม <strong className="text-white">"ยืนยันชำระเงิน"</strong> ด้านล่างเพื่อทำการสั่งซื้อ
+                </p>
+                <p className="text-zinc-400 pl-5">
+                  2. ระบบจะส่ง Username และ Password เข้าสู่หน้า <strong className="text-white">"คลังสินค้า (Inventory)"</strong> และใบเสร็จของคุณทันที 24 ชม.
+                </p>
+                <p className="text-zinc-400 pl-5">
+                  3. สามารถกดดูรหัสผ่านและคัดลอกไปล็อกอินเข้าเล่นเกม Roblox ได้ทันที
+                </p>
               </div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-200 flex items-center gap-1">
-                ชื่อผู้ใช้ Roblox (Username) <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="เช่น RobloxGamer123 (ไม่ใช่ Display Name)"
-                value={robloxUsername}
-                onChange={(e) => {
-                  setRobloxUsername(e.target.value);
-                  if (hasServiceItems && !serviceAccountUsername) {
-                    setServiceAccountUsername(e.target.value);
-                  }
-                }}
-                className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 transition-colors"
-                required
-              />
-              <p className="text-[11px] text-zinc-400">
-                {hasServiceItems 
-                  ? '* ใช้สำหรับระบุตัวตนในระบบและยืนยันออเดอร์'
-                  : '* บอทและทีมงานจะส่งผลปีศาจผ่านระบบ Trade ใน Private VIP Server ให้กับชื่อนี้'}
-              </p>
-            </div>
+          {/* Standard Roblox Info Form (เฉพาะสินค้าที่ต้องส่งมอบในเกม เช่น ผลปีศาจ/ของเทรด) */}
+          {!isOnlyAccountItems && (
+            <div className="p-4 sm:p-6 rounded-3xl bg-[#11111A] border border-[#212133] space-y-4">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-[#212133]">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white">ข้อมูลตัวละคร Roblox ผู้รับ</h3>
+                  <p className="text-xs text-zinc-400">กรุณาระบุ Username ตัวละครให้ถูกต้อง</p>
+                </div>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-300">
-                หมายเหตุเพิ่มเติมถึงทางร้าน / แอดมิน (ถ้ามี)
-              </label>
-              <textarea
-                rows={2}
-                placeholder="เช่น ระบุสิ่งที่ต้องการฟาร์มมาส (ผล Kitsune, ดาบ CDK, หมัด Godhuman), ขอรับบริการช่วง 18:00 น., หรือรายละเอียดที่ต้องการกำชับ"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
-              />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-200 flex items-center gap-1">
+                  ชื่อผู้ใช้ Roblox (Username) <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น RobloxGamer123 (ไม่ใช่ Display Name)"
+                  value={robloxUsername}
+                  onChange={(e) => {
+                    setRobloxUsername(e.target.value);
+                    if (hasServiceItems && !serviceAccountUsername) {
+                      setServiceAccountUsername(e.target.value);
+                    }
+                  }}
+                  className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 transition-colors"
+                  required
+                />
+                <p className="text-[11px] text-zinc-400">
+                  {hasServiceItems 
+                    ? '* ใช้สำหรับระบุตัวตนในระบบและยืนยันออเดอร์'
+                    : '* บอทและทีมงานจะส่งผลปีศาจผ่านระบบ Trade ใน Private VIP Server ให้กับชื่อนี้'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-300">
+                  หมายเหตุเพิ่มเติมถึงทางร้าน / แอดมิน (ถ้ามี)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="เช่น ระบุสิ่งที่ต้องการฟาร์มมาส (ผล Kitsune, ดาบ CDK, หมัด Godhuman), ขอรับบริการช่วง 18:00 น., หรือรายละเอียดที่ต้องการกำชับ"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full bg-[#0B0B12] border border-[#262638] rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Delivery Process Info */}
           <div className="p-4 sm:p-5 rounded-2xl bg-[#0D0D16] border border-[#202030] space-y-2 text-xs">
@@ -564,8 +642,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 </>
               ) : isBalanceSufficient ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>ยืนยันชำระเงิน ฿{payableTotal.toLocaleString()}</span>
+                  {isOnlyAccountItems ? <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>
+                    {isOnlyAccountItems 
+                      ? `⚡ ยืนยันชำระเงินและรับไอดีทันที ฿${payableTotal.toLocaleString()} (ไม่ต้องกรอกข้อมูล)` 
+                      : `ยืนยันชำระเงิน ฿${payableTotal.toLocaleString()}`}
+                  </span>
                 </>
               ) : (
                 <>
