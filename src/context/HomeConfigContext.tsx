@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, getDocFromCache } from 'firebase/firestore';
-import { db, getDocSmart } from '../lib/firebase';
+import { auth, db, getDocSmart } from '../lib/firebase';
 import type { HomeConfig } from '../types';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
@@ -187,9 +187,13 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
       // Save via API to invalidate server cache immediately
+      const token = await auth.currentUser?.getIdToken().catch(() => undefined);
       fetch('/api/admin/update-home-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ config: updated })
       }).catch(() => {});
       // Also save directly to Firestore as fallback
@@ -205,9 +209,13 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setHomeConfig(updated);
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
+      const token = await auth.currentUser?.getIdToken().catch(() => undefined);
       fetch('/api/admin/update-home-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ config: updated })
       }).catch(() => {});
       await setDoc(doc(db, 'settings', 'homeConfig'), updated, { merge: true });

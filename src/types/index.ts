@@ -338,6 +338,7 @@ export interface HomeConfig {
   webBannerHighlightSubtitle?: string;
   webBannerHighlightPrice?: number;
   webBannerHighlightOldPrice?: number;
+  webBannerHighlightImage?: string;
   webBannerHighlightBadge?: string;
   webBannerHighlightButtonText?: string;
   webBannerTag1?: string;

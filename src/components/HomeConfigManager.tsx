@@ -25,17 +25,17 @@ import {
   Monitor,
   Play,
   Headphones,
-  ShieldCheck,
   Flame,
   Clock
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { useToast } from '../context/ToastContext';
 import { useHomeConfig } from '../context/HomeConfigContext';
 import { HomeConfig, TrendingFruitItem, PromoShowcaseCard } from '../types';
 import { BLOX_FRUITS_PRESETS, DEFAULT_HOME_CONFIG, BloxPreset } from '../data/bloxPresets';
 import { BloxImage } from './BloxImage';
+import { BloxPresetPickerModal } from './BloxPresetPickerModal';
 import { parseYoutubeUrl, POPULAR_MUSIC_PRESETS } from '../lib/youtube';
 
 export const HomeConfigManager: React.FC = () => {
@@ -45,6 +45,7 @@ export const HomeConfigManager: React.FC = () => {
   const [config, setConfig] = useState<HomeConfig>(homeConfig);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isHighlightPresetPickerOpen, setIsHighlightPresetPickerOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'web_promo_banner' | 'all' | 'desktop_banner' | 'logo' | 'hero' | 'categories' | 'trending' | 'promo'>('web_promo_banner');
 
   // Sync with context if updated externally
@@ -56,7 +57,7 @@ export const HomeConfigManager: React.FC = () => {
 
   // Preset picker modal state
   const [presetModalTarget, setPresetModalTarget] = useState<{
-    type: 'trending' | 'promoCard1' | 'promoCard2';
+    type: 'trending' | 'promoCard1' | 'promoCard2' | 'highlight';
     index?: number;
   } | null>(null);
   const [presetSearch, setPresetSearch] = useState('');
@@ -68,9 +69,13 @@ export const HomeConfigManager: React.FC = () => {
     try {
       await saveFullHomeConfig(config);
       // Also call server API as background fallback/logging
+      const token = await auth.currentUser?.getIdToken().catch(() => undefined);
       fetch('/api/admin/update-home-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ config })
       }).catch(() => {});
 
@@ -243,6 +248,11 @@ export const HomeConfigManager: React.FC = () => {
           img: preset.url,
           keyword: preset.th.replace(/\s*\(.*?\)/, '')
         }
+      }));
+    } else if (presetModalTarget.type === 'highlight') {
+      setConfig(prev => ({
+        ...prev,
+        webBannerHighlightImage: preset.url
       }));
     }
 
@@ -514,16 +524,31 @@ export const HomeConfigManager: React.FC = () => {
 
                 {/* Highlight Card Preview */}
                 <div className="p-3 bg-gradient-to-b from-[#130B24] to-[#0A0614] border-t border-purple-500/25 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-500/40 p-1 flex items-center justify-center shrink-0">
-                      <img src="/images/blox/cursed_dual_katana.png" alt="Icon" className="w-full h-full object-contain" />
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="relative w-11 h-11 rounded-xl bg-purple-950/80 border border-purple-500/40 p-1 flex items-center justify-center shrink-0 shadow-md">
+                      <img 
+                        src={config.webBannerHighlightImage || '/images/blox/dark_coat.png'} 
+                        alt="Icon" 
+                        className="w-full h-full object-contain drop-shadow" 
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/images/blox/dark_coat.png'; }}
+                      />
+                      <span className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.2 rounded-full shadow">
+                        {config.webBannerHighlightPrice ?? 35}฿
+                      </span>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-black text-white truncate">
-                        {config.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท'}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-white truncate">
+                          {config.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท'}
+                        </span>
+                        {(config.webBannerHighlightBadge || 'พร้อมส่งอัตโนมัติ') && (
+                          <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
+                            {config.webBannerHighlightBadge || 'พร้อมส่งอัตโนมัติ'}
+                          </span>
+                        )}
                       </div>
                       <div className="text-[10px] text-zinc-400 truncate">
-                        {config.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
+                        {config.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2800 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
                       </div>
                     </div>
                   </div>
@@ -541,11 +566,23 @@ export const HomeConfigManager: React.FC = () => {
                 </div>
 
                 {/* Guarantee Tags Preview */}
-                <div className="grid grid-cols-4 gap-1 p-1.5 bg-[#08040F] border-t border-purple-500/15 text-[9px] text-zinc-400 text-center font-medium">
-                  <div className="truncate">{config.webBannerTag1 || 'สุ่มผลปีศาจหายาก'}</div>
-                  <div className="truncate">{config.webBannerTag2 || 'ปลอดภัย 100% อัตโนมัติ'}</div>
-                  <div className="truncate">{config.webBannerTag3 || 'ราคาถูก เริ่มต้น 20-35฿'}</div>
-                  <div className="truncate">{config.webBannerTag4 || 'บริการตลอด 24 ชม.'}</div>
+                <div className="grid grid-cols-4 gap-1 p-2 bg-[#08040F] border-t border-purple-500/15 text-[9px] text-zinc-400 text-center font-medium">
+                  <div className="truncate flex items-center justify-center gap-0.5">
+                    <Sparkles className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                    <span>{config.webBannerTag1 || '✦ สุ่มผลปีศาจหายาก'}</span>
+                  </div>
+                  <div className="truncate flex items-center justify-center gap-0.5">
+                    <ShieldCheck className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                    <span>{config.webBannerTag2 || '🛡 ปลอดภัย 100% อัตโนมัติ'}</span>
+                  </div>
+                  <div className="truncate flex items-center justify-center gap-0.5">
+                    <Flame className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                    <span>{config.webBannerTag3 || '🔥 ราคาถูก เริ่มต้น 20-35฿'}</span>
+                  </div>
+                  <div className="truncate flex items-center justify-center gap-0.5">
+                    <Clock className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                    <span>{config.webBannerTag4 || '🕒 บริการตลอด 24 ชม.'}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -679,73 +716,214 @@ export const HomeConfigManager: React.FC = () => {
 
           {/* Highlight Product & Pricing Card Settings */}
           <div className="p-4 rounded-xl bg-[#0D0D17] border border-[#212133] space-y-4">
-            <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
-              <ShoppingBag className="w-3.5 h-3.5 text-cyan-400" />
-              <span>3. การ์ดสินค้าโปรโมชั่นด้านล่างแบนเนอร์ (Highlight Product & Price)</span>
-            </h4>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5 text-cyan-400" />
+                <span>3. การ์ดสินค้าโปรโมชั่นไฮไลท์ด้านล่างแบนเนอร์ (Highlight Product & Price Card)</span>
+              </h4>
+              <span className="text-[11px] text-zinc-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded-full">
+                แสดงผลแถบล่างใต้แบนเนอร์หลักหน้าแรก
+              </span>
+            </div>
 
+            {/* Sub-section: รูปภาพไอคอนสินค้า (Highlight Icon/Image) */}
+            <div className="p-3.5 rounded-xl bg-[#141422] border border-[#26263B] space-y-3">
+              <label className="text-xs text-cyan-300 font-bold flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>รูปภาพไอคอนสินค้าไฮไลท์ (Icon / Image)</span>
+              </label>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                {/* Current Image Preview */}
+                <div className="relative w-16 h-16 rounded-2xl bg-[#0A0614] border-2 border-purple-500/50 p-1 flex items-center justify-center shrink-0 shadow-lg group">
+                  <img
+                    src={config.webBannerHighlightImage || '/images/blox/dark_coat.png'}
+                    alt="Highlight Preview"
+                    className="w-full h-full object-contain"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/images/blox/dark_coat.png'; }}
+                  />
+                  <div className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded bg-amber-500 text-[8px] font-black text-black shadow">
+                    {config.webBannerHighlightPrice ?? 35}฿
+                  </div>
+                </div>
+
+                <div className="flex-1 w-full space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={config.webBannerHighlightImage || ''}
+                      onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightImage: e.target.value }))}
+                      placeholder="เช่น /images/blox/dark_coat.png หรือ https://.../image.png"
+                      className="flex-1 px-3 py-2 rounded-xl bg-[#1A1A2E] border border-[#2E2E48] text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsHighlightPresetPickerOpen(true)}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow shrink-0 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>เลือกผล/ไอเทม</span>
+                    </button>
+                    <label className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 transition-all">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">อัปโหลด</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 2 * 1024 * 1024) {
+                              toastError('ขนาดไฟล์เกิน 2MB');
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const base64 = event.target?.result as string;
+                              setConfig(prev => ({ ...prev, webBannerHighlightImage: base64 }));
+                              success('อัปโหลดรูปไอคอนสำเร็จ');
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Quick Preset Selector Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-zinc-400 font-semibold mr-1">ปุ่มลัดเลือกรูปไว:</span>
+                    {[
+                      { name: '🧥 Dark Coat', url: '/images/blox/dark_coat.png' },
+                      { name: '⚔️ ดาบคู่ CDK', url: '/images/blox/cursed_dual_katana.png' },
+                      { name: '🦊 คิตสึเนะ', url: '/images/blox/kitsune.png' },
+                      { name: '👊 ก็อดฮิวแมน', url: '/images/blox/godhuman.png' },
+                      { name: '🎸 กีตาร์โซล', url: '/images/blox/soul_guitar.png' },
+                      { name: '🍩 โมจิ', url: '/images/blox/dough.png' },
+                      { name: '🐲 มังกร', url: '/images/blox/dragon.png' },
+                      { name: '🗡️ โยรุ (Yoru)', url: '/images/blox/yoru.png' },
+                    ].map((item) => (
+                      <button
+                        key={item.url}
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, webBannerHighlightImage: item.url }))}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                          (config.webBannerHighlightImage || '/images/blox/dark_coat.png') === item.url
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
+                            : 'bg-[#1c1c2e] hover:bg-[#25253d] text-zinc-300 border border-[#2b2b42]'
+                        }`}
+                      >
+                        {item.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Inputs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-zinc-300 font-semibold block mb-1">ชื่อสินค้าไฮไลท์ (Title)</label>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  ชื่อสินค้าไฮไลท์ (Title)
+                </label>
                 <input
                   type="text"
                   value={config.webBannerHighlightTitle ?? '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท'}
                   onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightTitle: e.target.value }))}
                   placeholder="เช่น ⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท"
-                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-300 font-semibold block mb-1">คำอธิบายสินค้า (Subtitle)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-zinc-300 font-semibold">
+                    ป้ายกำกับสถานะ (Status Badge)
+                  </label>
+                  <div className="flex gap-1">
+                    {['พร้อมส่งอัตโนมัติ', '⚡ ส่งด่วน', '🔥 แนะนำ', '✨ โอกาสสูง'].map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, webBannerHighlightBadge: b }))}
+                        className="text-[9px] text-zinc-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                      >
+                        +{b}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <input
                   type="text"
-                  value={config.webBannerHighlightSubtitle ?? 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
+                  value={config.webBannerHighlightBadge ?? 'พร้อมส่งอัตโนมัติ'}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightBadge: e.target.value }))}
+                  placeholder="เช่น พร้อมส่งอัตโนมัติ หรือ ส่งด่วน 24 ชม."
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  คำอธิบายสินค้าไฮไลท์ (Subtitle / Description)
+                </label>
+                <input
+                  type="text"
+                  value={config.webBannerHighlightSubtitle ?? 'การันตีดาบคู่ CDK เลเวล Max 2800 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
                   onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightSubtitle: e.target.value }))}
-                  placeholder="คำอธิบายสั้นๆ..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  placeholder="คำอธิบายสั้นๆ แสดงใต้ชื่อสินค้า..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-300 font-semibold block mb-1">ราคาโปรโมชั่น (บาท)</label>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  ราคาโปรโมชั่น (บาท)
+                </label>
                 <input
                   type="number"
                   value={config.webBannerHighlightPrice ?? 35}
                   onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightPrice: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-300 font-semibold block mb-1">ราคาปกติ/ราคาเต็ม (บาท - ขีดฆ่า)</label>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  ราคาปกติ / ราคาเต็ม (บาท - ขีดฆ่า)
+                </label>
                 <input
                   type="number"
                   value={config.webBannerHighlightOldPrice ?? 79}
                   onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightOldPrice: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-300 font-semibold block mb-1">ข้อความปุ่มซื้อด่วน</label>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  ข้อความปุ่มกดสั่งซื้อด่วน (Button Text)
+                </label>
                 <input
                   type="text"
                   value={config.webBannerHighlightButtonText ?? 'สุ่มเลย ฿35'}
                   onChange={(e) => setConfig(prev => ({ ...prev, webBannerHighlightButtonText: e.target.value }))}
                   placeholder="เช่น สุ่มเลย ฿35 หรือ ซื้อทันที"
-                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-300 font-semibold block mb-1">ปลายทางเมื่อคลิกแบนเนอร์ (Link)</label>
+                <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                  ปลายทางเมื่อกดสั่งซื้อ (Product ID หรือ Link)
+                </label>
                 <input
                   type="text"
                   value={config.webBannerLink ?? 'prod_gacha_cdk_35'}
                   onChange={(e) => setConfig(prev => ({ ...prev, webBannerLink: e.target.value }))}
                   placeholder="เช่น prod_gacha_cdk_35 หรือ shop หรือ URL"
-                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
             </div>
@@ -2231,6 +2409,19 @@ export const HomeConfigManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Blox Preset Picker Modal for Highlight Product Icon */}
+      <BloxPresetPickerModal
+        isOpen={isHighlightPresetPickerOpen}
+        onClose={() => setIsHighlightPresetPickerOpen(false)}
+        selectedUrl={config.webBannerHighlightImage}
+        title="เลือกรูปไอคอนสินค้าไฮไลท์หน้าแรก"
+        onSelect={(preset) => {
+          setConfig(prev => ({ ...prev, webBannerHighlightImage: preset.url }));
+          setIsHighlightPresetPickerOpen(false);
+          success(`เลือกรูป ${preset.th || preset.name} เรียบร้อยแล้ว`);
+        }}
+      />
 
       {/* Floating Save Button on Mobile */}
       <div className="fixed bottom-4 right-4 z-40 sm:hidden">

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Flame, Shield, Zap, Heart, MessageSquare, ExternalLink } from 'lucide-react';
 import { useHomeConfig } from '../context/HomeConfigContext';
+import { useAuth } from '../context/AuthContext';
 import { DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 
 interface FooterProps {
@@ -9,6 +10,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { homeConfig } = useHomeConfig();
+  const { isAdmin } = useAuth();
 
   return (
     <footer className="w-full max-w-[100vw] overflow-x-hidden bg-[#07050F] border-t border-[rgba(168,85,247,0.20)] mt-16 sm:mt-24 [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom] relative">
@@ -102,9 +104,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button onClick={() => onNavigate('orders')} className="hover:text-[#C084FC] transition-colors cursor-pointer">ประวัติคำสั่งซื้อ</button>
               </li>
-              <li>
-                <button onClick={() => onNavigate('admin')} className="hover:text-purple-300 text-purple-400 font-bold transition-colors cursor-pointer flex items-center gap-1">แผงควบคุมแอดมิน</button>
-              </li>
+              {isAdmin && (
+                <li>
+                  <button onClick={() => onNavigate('admin')} className="hover:text-purple-300 text-purple-400 font-bold transition-colors cursor-pointer flex items-center gap-1">แผงควบคุมแอดมิน</button>
+                </li>
+              )}
             </ul>
           </div>
 

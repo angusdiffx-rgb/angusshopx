@@ -57,10 +57,12 @@ import {
   Filter,
   SlidersHorizontal,
   Grid,
-  List
+  List,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useHomeConfig } from '../context/HomeConfigContext';
 import { 
   collection, 
   getDocs, 
@@ -74,8 +76,8 @@ import {
   orderBy, 
   limit 
 } from 'firebase/firestore';
-import { db, isQuotaExceededError, getDocsSmart, getDocSmart } from '../lib/firebase';
-import type { Product, Order, Deposit, ProductCategory, InventoryItem, DeliveryType, DeliverySettings, UserProfile, Role, OrderStatus } from '../types';
+import { auth, db, isQuotaExceededError, getDocsSmart, getDocSmart } from '../lib/firebase';
+import type { Product, Order, Deposit, ProductCategory, InventoryItem, DeliveryType, DeliverySettings, UserProfile, Role, OrderStatus, HomeConfig } from '../types';
 import { BLOX_FRUITS_PRESETS, BloxPreset } from '../data/bloxPresets';
 import { HomeConfigManager } from '../components/HomeConfigManager';
 import { BloxPresetPickerModal } from '../components/BloxPresetPickerModal';
@@ -85,17 +87,31 @@ import { DigitalReceiptModal } from '../components/DigitalReceiptModal';
 interface AdminViewProps {
   products?: Product[];
   setProducts?: React.Dispatch<React.SetStateAction<Product[]>>;
+  onNavigate?: (view: string, param?: string) => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({ 
   products: initialProductsFromProps, 
-  setProducts: setProductsFromProps 
+  setProducts: setProductsFromProps,
+  onNavigate
 }) => {
-  const { user, isAdmin, unlockAdminMode } = useAuth();
+  const { user, isAdmin, loading: authLoading, openAuthModal, logoutUser } = useAuth();
   const { success, error: toastError } = useToast();
 
-  const [adminPinInput, setAdminPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
+  // Helper: Secure fetch for /api/admin/* endpoints with Firebase ID token
+  const adminFetch = async (url: string, options: RequestInit = {}) => {
+    let token: string | undefined;
+    try {
+      token = await auth.currentUser?.getIdToken();
+    } catch (e) {
+      console.warn('Failed to retrieve Firebase ID token:', e);
+    }
+    const headers: Record<string, string> = {
+      ...((options.headers as Record<string, string>) || {}),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    return fetch(url, { ...options, headers });
+  };
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'gacha' | 'inventory' | 'deposits' | 'orders' | 'home_config' | 'users'>('dashboard');
 
@@ -110,10 +126,35 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [confirmDeleteGachaId, setConfirmDeleteGachaId] = useState<string | null>(null);
   const [isBulkDeletingGacha, setIsBulkDeletingGacha] = useState(false);
 
+  // Home Config & Highlight Card Quick Editor State
+  const { homeConfig, saveFullHomeConfig } = useHomeConfig();
+  const [isEditingHighlightCard, setIsEditingHighlightCard] = useState(false);
+  const [highlightCardDraft, setHighlightCardDraft] = useState<Partial<HomeConfig>>({});
+  const [isSavingHighlightCard, setIsSavingHighlightCard] = useState(false);
+  const [isHighlightPresetPickerOpen, setIsHighlightPresetPickerOpen] = useState(false);
+
+  const handleSaveHighlightCard = async () => {
+    setIsSavingHighlightCard(true);
+    try {
+      const mergedConfig = {
+        ...homeConfig,
+        ...highlightCardDraft,
+        updatedAt: new Date().toISOString()
+      };
+      await saveFullHomeConfig(mergedConfig);
+      success('บันทึกข้อมูลการ์ดโปรโมชั่นหน้าแรกเรียบร้อยแล้ว!');
+      setIsEditingHighlightCard(false);
+    } catch (err: any) {
+      toastError('ไม่สามารถบันทึกได้', err.message);
+    } finally {
+      setIsSavingHighlightCard(false);
+    }
+  };
+
   const loadGachaAccounts = async () => {
     setIsLoadingGacha(true);
     try {
-      const res = await fetch(`/api/admin/gacha-accounts?productId=${gachaTargetProduct}`);
+      const res = await adminFetch(`/api/admin/gacha-accounts?productId=${gachaTargetProduct}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.accounts)) {
         setGachaAccounts(data.accounts);
@@ -133,7 +174,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
     setIsSubmittingGacha(true);
     try {
-      const res = await fetch('/api/admin/gacha-accounts', {
+      const res = await adminFetch('/api/admin/gacha-accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -163,7 +204,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       setGachaAccounts(prev => prev.filter(a => a.id !== id));
       setConfirmDeleteGachaId(null);
 
-      const res = await fetch(`/api/admin/gacha-accounts/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/gacha-accounts/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         success('ลบไอดีแล้ว', 'ลบไอดีออกจากสต็อกเรียบร้อย');
@@ -181,7 +222,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleClearSoldGacha = async () => {
     setIsBulkDeletingGacha(true);
     try {
-      const res = await fetch('/api/admin/gacha-accounts/bulk-delete', {
+      const res = await adminFetch('/api/admin/gacha-accounts/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ onlySold: true, productId: gachaTargetProduct })
@@ -202,7 +243,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handlePurgeSampleGacha = async () => {
     setIsSubmittingGacha(true);
     try {
-      const res = await fetch('/api/admin/gacha-accounts/purge-samples', {
+      const res = await adminFetch('/api/admin/gacha-accounts/purge-samples', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -221,7 +262,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const handleRestoreGachaAccount = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/gacha-accounts/${id}/restore`, {
+      const res = await adminFetch(`/api/admin/gacha-accounts/${id}/restore`, {
         method: 'POST'
       });
       const data = await res.json();
@@ -239,7 +280,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const handleSyncOrphansGacha = async () => {
     try {
-      const res = await fetch('/api/admin/gacha-accounts/sync-orphans', {
+      const res = await adminFetch('/api/admin/gacha-accounts/sync-orphans', {
         method: 'POST'
       });
       const data = await res.json();
@@ -634,7 +675,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+      await adminFetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       setTabLastLoaded({});
       await loadTabData(activeTab, true);
       success('รีเฟรชข้อมูลสำเร็จ', 'ดึงข้อมูลล่าสุดเรียบร้อยแล้ว');
@@ -684,73 +725,86 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
   }, [user, systemUsers.length]);
 
-  if (!isAdmin) {
-    const handleUnlockAdmin = (e?: React.FormEvent) => {
-      if (e) e.preventDefault();
-      const pin = adminPinInput.trim();
-      if (!pin || pin === '1234' || pin === 'admin' || pin === 'admin888' || pin === 'angus' || pin === '2026') {
-        unlockAdminMode(pin || '1234');
-        success('เข้าสู่ระบบแอดมินสำเร็จ', 'เปิดใช้งานสิทธิ์แอดมินเรียบร้อยแล้ว');
-      } else {
-        setPinError('รหัส PIN ไม่ถูกต้อง (PIN เริ่มต้น: 1234)');
-      }
-    };
+  if (authLoading) {
+    return (
+      <div className="max-w-md mx-auto py-24 px-4 text-center">
+        <div className="p-8 rounded-3xl bg-[#120D22] border border-purple-500/20 shadow-2xl flex flex-col items-center justify-center space-y-4">
+          <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-purple-300 font-medium">กำลังตรวจสอบสิทธิ์ผู้ดูแลระบบ...</p>
+        </div>
+      </div>
+    );
+  }
 
+  if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto py-20 px-4 text-center">
-        <div className="p-6 sm:p-8 rounded-3xl bg-[#120D22] border border-purple-500/40 shadow-2xl space-y-5 text-left">
-          <div className="flex items-center gap-3 border-b border-purple-500/20 pb-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0">
-              <ShieldCheck className="w-6 h-6" />
+        <div className="p-6 sm:p-8 rounded-3xl bg-[#120D22] border border-rose-500/40 shadow-2xl space-y-5 text-left">
+          <div className="flex items-center gap-3 border-b border-rose-500/20 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0 shadow-[0_0_20px_rgba(244,63,94,0.3)]">
+              <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">เข้าสู่ระบบแผงควบคุมแอดมิน</h2>
-              <p className="text-xs text-purple-300/80">Admin Dashboard Access</p>
+              <h2 className="text-base sm:text-lg font-bold text-white">
+                {user ? 'ปฏิเสธการเข้าถึง (Access Denied)' : 'เข้าสู่ระบบสำหรับแอดมินเท่านั้น'}
+              </h2>
+              <p className="text-xs text-rose-300/80">Admin Restricted Area</p>
             </div>
           </div>
 
-          <form onSubmit={handleUnlockAdmin} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300 flex items-center justify-between">
-                <span>รหัส PIN แอดมิน:</span>
-                <span className="text-[10px] text-amber-400">PIN ค่าเริ่มต้น: 1234</span>
-              </label>
-              <input
-                type="password"
-                value={adminPinInput}
-                onChange={(e) => {
-                  setAdminPinInput(e.target.value);
-                  setPinError('');
-                }}
-                placeholder="กรอก PIN เช่น 1234"
-                className="w-full bg-[#080511] border border-[#2E2448] focus:border-purple-400 focus:ring-1 focus:ring-purple-400 rounded-xl px-3.5 py-2.5 text-white font-mono text-center text-sm tracking-widest placeholder:text-zinc-600 focus:outline-none"
-              />
-              {pinError && (
-                <p className="text-[11px] text-rose-400 font-medium">{pinError}</p>
-              )}
-            </div>
+          <div className="space-y-3 py-2 text-sm text-zinc-300">
+            {user ? (
+              <>
+                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  บัญชีปัจจุบันของคุณ <span className="font-semibold text-rose-300 font-mono text-xs bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">{user.email || user.displayName}</span> ไม่มีสิทธิ์เข้าถึงระบบผู้ดูแลระบบ
+                </p>
+                <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-[11px] text-rose-200">
+                  ระบบจำกัดสิทธิ์เฉพาะบัญชีผู้ดูแลร้านค้าที่ได้รับอนุญาตเท่านั้น หากคุณเป็นเจ้าของร้าน กรุณาออกจากระบบและเข้าสู่ระบบด้วยอีเมลแอดมิน
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  หน้านี้สงวนไว้สำหรับผู้ดูแลระบบ AngusShop เท่านั้น ไม่อนุญาตให้บุคคลทั่วไปเข้าถึง
+                </p>
+                <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-[11px] text-purple-200">
+                  กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบ (Admin) เพื่อเข้าใช้งานแผงควบคุมร้านค้า
+                </div>
+              </>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
+            {!user ? (
               <button
-                type="submit"
+                type="button"
+                onClick={() => openAuthModal('login')}
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 <KeyRound className="w-4 h-4" />
-                <span>ยืนยันเข้าสู่ระบบแอดมิน</span>
+                <span>เข้าสู่ระบบด้วยบัญชีแอดมิน</span>
               </button>
-
+            ) : (
               <button
                 type="button"
-                onClick={() => {
-                  unlockAdminMode('1234');
-                  success('เข้าสู่ระบบแอดมินสำเร็จ', 'เปิดใช้งานสิทธิ์แอดมินเรียบร้อยแล้ว');
+                onClick={async () => {
+                  await logoutUser();
+                  openAuthModal('login');
                 }}
-                className="w-full py-2 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 text-xs font-semibold cursor-pointer transition-all"
+                className="w-full py-2.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold text-xs shadow-lg shadow-rose-600/30 cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                ⚡ เข้าใช้งานทันที (Admin Quick Access)
+                <span>ออกจากระบบเพื่อสลับบัญชี</span>
               </button>
-            </div>
-          </form>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onNavigate ? onNavigate('home') : (window.location.href = '/')}
+              className="w-full py-2 rounded-xl bg-[#1C142E] hover:bg-[#251A3E] border border-purple-500/20 text-zinc-300 text-xs font-semibold cursor-pointer transition-all"
+            >
+              กลับสู่หน้าร้านค้า
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -828,7 +882,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleClearAllProducts = async () => {
     setIsClearingAll(true);
     try {
-      const res = await fetch('/api/admin/clear-all-products', { method: 'POST' });
+      const res = await adminFetch('/api/admin/clear-all-products', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         setProducts([]);
@@ -887,7 +941,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       await setDoc(doc(db, 'products', productId), productPayload);
       setProducts((prev) => [productPayload, ...prev]);
       window.dispatchEvent(new CustomEvent('productsUpdated'));
-      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+      adminFetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       success('เพิ่มสินค้าแล้ว', `เพิ่ม ${newProduct.name} ลงในร้านค้าสำเร็จ`);
       setIsAddModalOpen(false);
     } catch (err: any) {
@@ -1010,7 +1064,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       }
 
       if (!updatedOnClient) {
-        const res = await fetch('/api/admin/update-product', {
+        const res = await adminFetch('/api/admin/update-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1031,7 +1085,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         )
       );
       window.dispatchEvent(new CustomEvent('productsUpdated'));
-      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+      adminFetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
 
       success('อัปเดตสินค้าสำเร็จ', `บันทึกข้อมูลและรูปภาพของ "${selectedProduct.name}" เรียบร้อยแล้ว`);
       setIsEditModalOpen(false);
@@ -1055,7 +1109,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       const prodRef = doc(db, 'products', product.productId);
       await updateDoc(prodRef, { stock: newStock, updatedAt: new Date().toISOString() });
     } catch (clientErr) {
-      await fetch('/api/admin/update-product', {
+      await adminFetch('/api/admin/update-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.productId, stock: newStock, updatedAt: new Date().toISOString() }),
@@ -1136,7 +1190,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       }
 
       if (!updatedOnClient) {
-        const res = await fetch('/api/admin/update-product', {
+        const res = await adminFetch('/api/admin/update-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1164,7 +1218,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       }
 
       window.dispatchEvent(new CustomEvent('productsUpdated'));
-      fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+      adminFetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
 
       success('บันทึกรูปภาพสำเร็จ', `อัปเดตรูปภาพของ "${quickImageProduct.name}" เรียบร้อยแล้ว`);
       setIsQuickImageModalOpen(false);
@@ -1468,7 +1522,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       // 1. Delete on server first to guarantee Cloud Firestore doc is deleted & server cache invalidated
       let serverSuccess = false;
       try {
-        const res = await fetch('/api/admin/delete-product', {
+        const res = await adminFetch('/api/admin/delete-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productId: targetId }),
@@ -1500,7 +1554,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       });
 
       // 4. Invalidate cache on server and notify app
-      await fetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
+      await adminFetch('/api/admin/refresh-cache', { method: 'POST' }).catch(() => {});
       window.dispatchEvent(new CustomEvent('productsUpdated'));
       success('ลบสินค้าสำเร็จ', `ลบ "${targetName}" ออกจากระบบเรียบร้อยแล้ว`);
       setProductToDelete(null);
@@ -1516,7 +1570,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleDeduplicateProducts = async () => {
     setIsDeduplicating(true);
     try {
-      const res = await fetch('/api/admin/deduplicate-products', { method: 'POST' });
+      const res = await adminFetch('/api/admin/deduplicate-products', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         // Refresh products list
@@ -3111,6 +3165,127 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <Trash2 className="w-3.5 h-3.5 text-zinc-400" />
                 <span>ล้างไอดีตัวอย่าง (ถ้ามี)</span>
               </button>
+            </div>
+          </div>
+
+          {/* Linked Homepage Highlight Banner Card */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#161028] via-[#120D22] to-[#0D0819] border-2 border-purple-500/40 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center text-purple-300 shrink-0">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-2">
+                    <span>การ์ดโปรโมชั่นหน้าแรก (Homepage Highlight Banner)</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                      {homeConfig.webBannerHighlightBadge || 'พร้อมส่งอัตโนมัติ'}
+                    </span>
+                  </h4>
+                  <p className="text-xs text-zinc-400">
+                    ข้อมูลนี้จะแสดงผลเป็นแถบโปรโมชั่นหลักใต้แบนเนอร์ที่ลูกค้าเห็นบนหน้าแรกของเว็บ
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHighlightCardDraft({
+                      webBannerHighlightImage: homeConfig.webBannerHighlightImage || '/images/blox/dark_coat.png',
+                      webBannerHighlightBadge: homeConfig.webBannerHighlightBadge || 'พร้อมส่งอัตโนมัติ',
+                      webBannerHighlightTitle: homeConfig.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
+                      webBannerHighlightSubtitle: homeConfig.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2800 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.',
+                      webBannerHighlightPrice: homeConfig.webBannerHighlightPrice ?? 35,
+                      webBannerHighlightOldPrice: homeConfig.webBannerHighlightOldPrice ?? 79,
+                      webBannerHighlightButtonText: homeConfig.webBannerHighlightButtonText || '⚡ สุ่มเลย ฿35',
+                      webBannerTag1: homeConfig.webBannerTag1 || '✦ สุ่มผลปีศาจหายาก',
+                      webBannerTag2: homeConfig.webBannerTag2 || '🛡 ปลอดภัย 100% อัตโนมัติ',
+                      webBannerTag3: homeConfig.webBannerTag3 || '🔥 ราคาถูก เริ่มต้น 20-35฿',
+                      webBannerTag4: homeConfig.webBannerTag4 || '🕒 บริการตลอด 24 ชม.',
+                      webBannerLink: homeConfig.webBannerLink || 'prod_gacha_cdk_35',
+                    });
+                    setIsEditingHighlightCard(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-xs font-black flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>แก้ไขข้อมูลการ์ดนี้</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('home_config')}
+                  className="px-3.5 py-2 rounded-xl bg-[#231A3A] hover:bg-[#2F2350] border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>ไปที่แท็บตกแต่งหน้าแรก</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Visual Card */}
+            <div className="rounded-xl border border-purple-500/30 bg-[#0E091B] overflow-hidden">
+              <div className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-12 h-12 rounded-xl bg-purple-950/80 border border-purple-500/50 p-1 flex items-center justify-center shrink-0">
+                    <img
+                      src={homeConfig.webBannerHighlightImage || '/images/blox/dark_coat.png'}
+                      alt="Icon"
+                      className="w-full h-full object-contain drop-shadow"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/blox/dark_coat.png'; }}
+                    />
+                    <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-[8px] font-black text-black shadow">
+                      {homeConfig.webBannerHighlightPrice ?? 35}฿
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-black text-white truncate">
+                        {homeConfig.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท'}
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                        {homeConfig.webBannerHighlightBadge || 'พร้อมส่งอัตโนมัติ'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 truncate mt-0.5">
+                      {homeConfig.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2800 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 shrink-0">
+                  <div className="text-right">
+                    {(homeConfig.webBannerHighlightOldPrice ?? 79) > (homeConfig.webBannerHighlightPrice ?? 35) && (
+                      <span className="text-[10px] text-zinc-500 line-through block">฿{homeConfig.webBannerHighlightOldPrice ?? 79}</span>
+                    )}
+                    <span className="text-base font-black text-cyan-400 block">฿{homeConfig.webBannerHighlightPrice ?? 35}</span>
+                  </div>
+                  <span className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white font-black text-xs shadow">
+                    {homeConfig.webBannerHighlightButtonText || `สุ่มเลย ฿${homeConfig.webBannerHighlightPrice ?? 35}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* 4 Guarantee tags preview */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-2 bg-[#08040F] border-t border-purple-500/20 text-[10px] text-zinc-400 font-medium text-center">
+                <div className="truncate flex items-center justify-center gap-1">
+                  <Sparkles className="w-3 h-3 text-purple-400" />
+                  <span>{homeConfig.webBannerTag1 || '✦ สุ่มผลปีศาจหายาก'}</span>
+                </div>
+                <div className="truncate flex items-center justify-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span>{homeConfig.webBannerTag2 || '🛡 ปลอดภัย 100% อัตโนมัติ'}</span>
+                </div>
+                <div className="truncate flex items-center justify-center gap-1">
+                  <Flame className="w-3 h-3 text-amber-400" />
+                  <span>{homeConfig.webBannerTag3 || '🔥 ราคาถูก เริ่มต้น 20-35฿'}</span>
+                </div>
+                <div className="truncate flex items-center justify-center gap-1">
+                  <Clock className="w-3 h-3 text-cyan-400" />
+                  <span>{homeConfig.webBannerTag4 || '🕒 บริการตลอด 24 ชม.'}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -6465,6 +6640,303 @@ export const AdminView: React.FC<AdminViewProps> = ({
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
         order={receiptOrder}
+      />
+
+      {/* Modal: Quick Edit Highlight Card from Admin */}
+      {isEditingHighlightCard && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+          onClick={() => setIsEditingHighlightCard(false)}
+        >
+          <div 
+            className="bg-[#12121E] border border-purple-500/40 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl shadow-purple-950/60 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-[#212133] flex items-center justify-between bg-[#151524]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center text-purple-300 shrink-0">
+                  <Edit3 className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <span>แก้ไขข้อมูลการ์ดโปรโมชั่นหน้าแรก</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    เปลี่ยนชื่อ, รูปไอคอน, ป้ายสถานะ, ราคา และคำอธิบายที่แสดงบนหน้าแรกของร้านค้า
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingHighlightCard(false)}
+                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+              {/* Image selector */}
+              <div className="p-3.5 rounded-xl bg-[#161626] border border-[#26263B] space-y-2.5">
+                <label className="text-xs text-cyan-300 font-bold flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>รูปไอคอนสินค้า (Icon Image)</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-14 h-14 rounded-xl bg-[#0B0716] border border-purple-500/50 p-1 flex items-center justify-center shrink-0">
+                    <img
+                      src={highlightCardDraft.webBannerHighlightImage || '/images/blox/dark_coat.png'}
+                      alt="Icon"
+                      className="w-full h-full object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/blox/dark_coat.png'; }}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={highlightCardDraft.webBannerHighlightImage || ''}
+                        onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightImage: e.target.value }))}
+                        placeholder="URL รูปภาพ เช่น /images/blox/dark_coat.png"
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-[#1D1D30] border border-[#2F2F4A] text-xs text-white focus:outline-none focus:border-cyan-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsHighlightPresetPickerOpen(true)}
+                        className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>เลือกผล</span>
+                      </button>
+                      <label className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>อัปโหลด</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 2 * 1024 * 1024) {
+                                toastError('ขนาดไฟล์เกิน 2MB');
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightImage: ev.target?.result as string }));
+                                success('อัปโหลดรูปสำเร็จ');
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { name: 'Dark Coat', url: '/images/blox/dark_coat.png' },
+                        { name: 'ดาบคู่ CDK', url: '/images/blox/cursed_dual_katana.png' },
+                        { name: 'คิตสึเนะ', url: '/images/blox/kitsune.png' },
+                        { name: 'ก็อดฮิวแมน', url: '/images/blox/godhuman.png' },
+                        { name: 'กีตาร์โซล', url: '/images/blox/soul_guitar.png' },
+                        { name: 'โมจิ', url: '/images/blox/dough.png' },
+                      ].map(p => (
+                        <button
+                          key={p.url}
+                          type="button"
+                          onClick={() => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightImage: p.url }))}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1C1C2C] hover:bg-[#28283E] text-zinc-300 border border-[#2B2B40] cursor-pointer"
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Title & Badge */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                    ชื่อสินค้าไฮไลท์ (Title)
+                  </label>
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerHighlightTitle ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightTitle: e.target.value }))}
+                    placeholder="เช่น ⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท"
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-zinc-300 font-semibold">ป้ายสถานะ (Badge)</label>
+                    <div className="flex gap-1">
+                      {['พร้อมส่งอัตโนมัติ', '⚡ ส่งด่วน', '🔥 แนะนำ'].map(b => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightBadge: b }))}
+                          className="text-[9px] text-zinc-400 hover:text-emerald-300 cursor-pointer"
+                        >
+                          +{b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerHighlightBadge ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightBadge: e.target.value }))}
+                    placeholder="เช่น พร้อมส่งอัตโนมัติ"
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                    คำอธิบายสินค้า (Subtitle / Description)
+                  </label>
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerHighlightSubtitle ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightSubtitle: e.target.value }))}
+                    placeholder="เช่น การันตีดาบคู่ CDK เลเวล Max 2800 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม."
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                    ราคาโปรโมชั่น (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={highlightCardDraft.webBannerHighlightPrice ?? 35}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightPrice: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                    ราคาปกติ / ขีดฆ่า (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={highlightCardDraft.webBannerHighlightOldPrice ?? 79}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightOldPrice: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                    ข้อความปุ่มกดสั่งซื้อ (Button Text)
+                  </label>
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerHighlightButtonText ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightButtonText: e.target.value }))}
+                    placeholder="เช่น ⚡ สุ่มเลย ฿35"
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-300 font-semibold block mb-1">
+                    ปลายทางสั่งซื้อ (Product ID หรือ Link)
+                  </label>
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerLink ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerLink: e.target.value }))}
+                    placeholder="เช่น prod_gacha_cdk_35"
+                    className="w-full px-3 py-2 rounded-xl bg-[#161624] border border-[#2E2E44] text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* 4 Guarantee tags */}
+              <div className="p-3.5 rounded-xl bg-[#161626] border border-[#26263B] space-y-2.5">
+                <label className="text-xs text-emerald-300 font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>แท็กการันตี 4 ข้อด้านล่าง (Guarantee Tags)</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerTag1 ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerTag1: e.target.value }))}
+                    placeholder="แท็ก 1"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#1E1E32] border border-[#2F2F4B] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerTag2 ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerTag2: e.target.value }))}
+                    placeholder="แท็ก 2"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#1E1E32] border border-[#2F2F4B] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerTag3 ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerTag3: e.target.value }))}
+                    placeholder="แท็ก 3"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#1E1E32] border border-[#2F2F4B] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <input
+                    type="text"
+                    value={highlightCardDraft.webBannerTag4 ?? ''}
+                    onChange={(e) => setHighlightCardDraft(prev => ({ ...prev, webBannerTag4: e.target.value }))}
+                    placeholder="แท็ก 4"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#1E1E32] border border-[#2F2F4B] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#212133] bg-[#151524] flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsEditingHighlightCard(false)}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveHighlightCard}
+                disabled={isSavingHighlightCard}
+                className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-purple-600/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isSavingHighlightCard ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blox Preset Picker Modal for Highlight Card in Admin */}
+      <BloxPresetPickerModal
+        isOpen={isHighlightPresetPickerOpen}
+        onClose={() => setIsHighlightPresetPickerOpen(false)}
+        selectedUrl={highlightCardDraft.webBannerHighlightImage}
+        title="เลือกรูปไอคอนการ์ดโปรโมชั่น"
+        onSelect={(preset) => {
+          setHighlightCardDraft(prev => ({ ...prev, webBannerHighlightImage: preset.url }));
+          setIsHighlightPresetPickerOpen(false);
+          success(`เลือกรูป ${preset.th || preset.name} สำเร็จ`);
+        }}
       />
 
     </div>

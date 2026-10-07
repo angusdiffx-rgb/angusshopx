@@ -233,34 +233,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const [localAdminOverride, setLocalAdminOverride] = useState<boolean>(() => {
+  // Security cleanup: Immediately purge any legacy insecure backdoor keys
+  useEffect(() => {
     try {
-      return localStorage.getItem('angus_admin_unlocked') === 'true';
-    } catch {
-      return false;
-    }
-  });
+      localStorage.removeItem('angus_admin_unlocked');
+    } catch {}
+  }, []);
 
   const unlockAdminMode = (_passcode?: string): boolean => {
-    try {
-      localStorage.setItem('angus_admin_unlocked', 'true');
-    } catch {}
-    setLocalAdminOverride(true);
-    return true;
+    // Deprecated insecure method: Admin access requires authenticating with an authorized admin account
+    return false;
   };
 
   const lockAdminMode = () => {
     try {
       localStorage.removeItem('angus_admin_unlocked');
     } catch {}
-    setLocalAdminOverride(false);
   };
 
   const fbEmailLower = (firebaseUser?.email || '').toLowerCase().trim();
-  const isAdmin = user?.role === 'admin' || 
-    fbEmailLower === 'otinrealxz@gmail.com' || 
-    fbEmailLower === 'angusdiffx@gmail.com' ||
-    localAdminOverride;
+  const userEmailLower = (user?.email || '').toLowerCase().trim();
+  const isAdmin = Boolean(
+    (firebaseUser || user) && (
+      user?.role === 'admin' || 
+      fbEmailLower === 'otinrealxz@gmail.com' || 
+      fbEmailLower === 'angusdiffx@gmail.com' ||
+      userEmailLower === 'otinrealxz@gmail.com' ||
+      userEmailLower === 'angusdiffx@gmail.com'
+    )
+  );
 
   return (
     <AuthContext.Provider

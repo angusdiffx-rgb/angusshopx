@@ -1367,6 +1367,89 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
   }
 });
 
+// ==========================================
+// ADMIN AUTHENTICATION MIDDLEWARE
+// Strictly validates Firebase Admin access
+// ==========================================
+const verifyAdminAuth = async (req: Request, res: Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'ไม่อนุญาตให้เข้าถึง: ต้องเข้าสู่ระบบด้วยสิทธิ์ผู้ดูแลระบบเท่านั้น (Admin token required)'
+    });
+  }
+
+  const token = authHeader.split('Bearer ')[1]?.trim();
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'ไม่อนุญาตให้เข้าถึง: โทเค็นไม่ถูกต้อง (Invalid token)'
+    });
+  }
+
+  try {
+    const apiKey = process.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey;
+    const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: token })
+    });
+
+    if (!lookupRes.ok) {
+      return res.status(401).json({
+        success: false,
+        message: 'การตรวจสอบสิทธิ์ล้มเหลว: โทเค็นหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'
+      });
+    }
+
+    const lookupData = await lookupRes.json() as any;
+    const userInfo = lookupData.users?.[0];
+    if (!userInfo) {
+      return res.status(401).json({
+        success: false,
+        message: 'ไม่พบข้อมูลผู้ใช้งาน'
+      });
+    }
+
+    const email = (userInfo.email || '').toLowerCase().trim();
+    const uid = userInfo.localId;
+
+    // Master Admin Emails
+    const isMasterAdmin = email === 'otinrealxz@gmail.com' || email === 'angusdiffx@gmail.com';
+    if (isMasterAdmin) {
+      (req as any).adminUser = { uid, email, role: 'admin' };
+      return next();
+    }
+
+    // Role check in Firestore
+    const userDocRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userDocRef);
+    if (userSnap.exists() && userSnap.data()?.role === 'admin') {
+      (req as any).adminUser = { uid, email, role: 'admin' };
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'ปฏิเสธการเข้าถึง: บัญชีของคุณไม่มีสิทธิ์ผู้ดูแลระบบ (Forbidden - Admin Role Required)'
+    });
+  } catch (err: any) {
+    console.error('Admin token verification error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์แอดมิน'
+    });
+  }
+};
+
+apiRouter.use((req: Request, res: Response, next: express.NextFunction) => {
+  if (req.path.startsWith('/admin')) {
+    return verifyAdminAuth(req, res, next);
+  }
+  next();
+});
+
 // AI Promotional Banner Generator Endpoint
 apiRouter.post('/admin/generate-banner', async (req: Request, res: Response): Promise<void> => {
   try {

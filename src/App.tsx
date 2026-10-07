@@ -517,6 +517,7 @@ function MainShop() {
           <AdminView 
             products={products} 
             setProducts={setProducts} 
+            onNavigate={handleNavigate}
           />
         )}
       </main>

@@ -212,10 +212,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
             const badge2 = homeConfig.webBannerBadge2 || 'เริ่มต้น 20-35 บาท';
             const shopBtnText = homeConfig.webBannerShopButtonText || '🛒 เข้าร้านเลย!';
             const highlightTitle = homeConfig.webBannerHighlightTitle || '⚔️ สุ่มไก่ตันดาบคู่ (CDK) 35 บาท';
-            const highlightSubtitle = homeConfig.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.';
+            const highlightSubtitle = homeConfig.webBannerHighlightSubtitle || 'การันตีดาบคู่ CDK เลเวล Max 2800 สเตตัสตัน ส่งมอบไอดีและรหัสผ่านทันที 24 ชม.';
             const currentPrice = homeConfig.webBannerHighlightPrice !== undefined ? homeConfig.webBannerHighlightPrice : (cdkProduct.price || 35);
             const oldPrice = homeConfig.webBannerHighlightOldPrice !== undefined ? homeConfig.webBannerHighlightOldPrice : (cdkProduct.oldPrice || 79);
             const buyButtonText = homeConfig.webBannerHighlightButtonText || `สุ่มเลย ฿${currentPrice}`;
+            const highlightImage = homeConfig.webBannerHighlightImage || cdkProduct.image || '/images/blox/dark_coat.png';
+            const highlightBadge = homeConfig.webBannerHighlightBadge !== undefined ? homeConfig.webBannerHighlightBadge : 'พร้อมส่งอัตโนมัติ';
 
             const handleBannerClick = () => {
               playClickSound();
@@ -288,7 +290,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-purple-950/70 border border-purple-500/40 p-1 flex items-center justify-center shrink-0 shadow-lg">
                         <BloxImage
-                          src={cdkProduct.image || '/images/blox/cursed_dual_katana.png'}
+                          src={highlightImage}
                           alt={highlightTitle}
                           productName={highlightTitle}
                           className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(168,85,247,0.8)]"
@@ -305,9 +307,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           >
                             {highlightTitle}
                           </span>
-                          <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            พร้อมส่งอัตโนมัติ
-                          </span>
+                          {highlightBadge && (
+                            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              {highlightBadge}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-zinc-400 truncate mt-0.5">
                           {highlightSubtitle}

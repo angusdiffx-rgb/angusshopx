@@ -286,21 +286,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   );
                 })}
-                <button
-                  onClick={() => onNavigate('admin')}
-                  className={`relative whitespace-nowrap shrink-0 flex items-center gap-1.5 px-2.5 xl:px-3.5 py-1.5 xl:py-2 rounded-xl text-xs xl:text-[13px] font-bold transition-all duration-200 cursor-pointer ${
-                    currentView === 'admin'
-                      ? 'text-[#C084FC] bg-purple-600/35 border border-purple-500/60 shadow-[0_0_20px_rgba(168,85,247,0.35)]'
-                      : 'text-purple-400 hover:text-purple-200 hover:bg-purple-950/40 hover:border hover:border-purple-500/30 border border-transparent'
-                  }`}
-                  title="แผงควบคุมระบบแอดมิน (Admin Dashboard)"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-[#C084FC] shrink-0" />
-                  <span className="whitespace-nowrap">แอดมิน</span>
-                  {currentView === 'admin' && (
-                    <span className="absolute -bottom-1 left-2.5 right-2.5 h-[2px] bg-gradient-to-r from-[#A855F7] to-[#C084FC] rounded-full shadow-[0_0_8px_#C084FC]" />
-                  )}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => onNavigate('admin')}
+                    className={`relative whitespace-nowrap shrink-0 flex items-center gap-1.5 px-2.5 xl:px-3.5 py-1.5 xl:py-2 rounded-xl text-xs xl:text-[13px] font-bold transition-all duration-200 cursor-pointer ${
+                      currentView === 'admin'
+                        ? 'text-[#C084FC] bg-purple-600/35 border border-purple-500/60 shadow-[0_0_20px_rgba(168,85,247,0.35)]'
+                        : 'text-purple-400 hover:text-purple-200 hover:bg-purple-950/40 hover:border hover:border-purple-500/30 border border-transparent'
+                    }`}
+                    title="แผงควบคุมระบบแอดมิน (Admin Dashboard)"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-[#C084FC] shrink-0" />
+                    <span className="whitespace-nowrap">แอดมิน</span>
+                    {currentView === 'admin' && (
+                      <span className="absolute -bottom-1 left-2.5 right-2.5 h-[2px] bg-gradient-to-r from-[#A855F7] to-[#C084FC] rounded-full shadow-[0_0_8px_#C084FC]" />
+                    )}
+                  </button>
+                )}
               </nav>
             </div>
 
@@ -915,29 +917,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <ChevronRight className="w-4 h-4 text-zinc-600" />
                   </button>
 
-                  {/* Admin Trigger */}
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      onNavigate('admin');
-                    }}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all cursor-pointer ${
-                      currentView === 'admin'
-                        ? 'bg-purple-600/30 border border-purple-500 text-white'
-                        : 'bg-[#1C142E] border border-purple-500/30 text-purple-300 hover:bg-[#251A3E]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-purple-500/30 text-purple-300 flex items-center justify-center shrink-0">
-                        <ShieldCheck className="w-4 h-4" />
+                  {/* Admin Trigger (Admins ONLY) */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onNavigate('admin');
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-2xl text-left transition-all cursor-pointer ${
+                        currentView === 'admin'
+                          ? 'bg-purple-600/30 border border-purple-500 text-white'
+                          : 'bg-[#1C142E] border border-purple-500/30 text-purple-300 hover:bg-[#251A3E]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-purple-500/30 text-purple-300 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold">แผงควบคุมแอดมิน (Admin Dashboard)</div>
+                          <div className="text-[10px] text-purple-300/70">จัดการสินค้า สลิปเติมเงิน และออเดอร์</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-xs font-bold">แผงควบคุมแอดมิน (Admin Dashboard)</div>
-                        <div className="text-[10px] text-purple-300/70">จัดการสินค้า สลิปเติมเงิน และออเดอร์</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-purple-400" />
-                  </button>
+                      <ChevronRight className="w-4 h-4 text-purple-400" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Community & Discord Quick Links */}

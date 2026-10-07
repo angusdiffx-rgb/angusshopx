@@ -216,29 +216,31 @@ export const AccountView: React.FC<AccountViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Admin Panel Quick Link */}
-      <div className="p-4 sm:p-6 rounded-3xl bg-[#1F1735] border border-purple-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
-            <Shield className="w-5 h-5" />
+      {/* Admin Panel Quick Link (Visible to Admin ONLY) */}
+      {isAdmin && (
+        <div className="p-4 sm:p-6 rounded-3xl bg-[#1F1735] border border-purple-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                <span>แผงควบคุมระบบแอดมิน (Admin Dashboard)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Admin Verified</span>
+              </h4>
+              <p className="text-[11px] sm:text-xs text-purple-300/80">
+                จัดการสินค้า สลิปเติมเงิน คำสั่งซื้อ และคลังสินค้า
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-xs sm:text-sm font-bold text-white">
-              แผงควบคุมระบบแอดมิน (Admin Dashboard)
-              {isAdmin && <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">เปิดใช้งานแล้ว</span>}
-            </h4>
-            <p className="text-[11px] sm:text-xs text-purple-300/80">
-              {isAdmin ? 'จัดการสินค้า สลิปเติมเงิน คำสั่งซื้อ และคลังสินค้า' : 'เข้าสู่ระบบจัดการร้านค้าด้วยสิทธิ์แอดมิน (PIN: 1234)'}
-            </p>
-          </div>
+          <button
+            onClick={() => onNavigate('admin')}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition-all cursor-pointer text-center active:scale-95"
+          >
+            เปิดหน้าแอดมิน
+          </button>
         </div>
-        <button
-          onClick={() => onNavigate('admin')}
-          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition-all cursor-pointer text-center active:scale-95"
-        >
-          {isAdmin ? 'เปิดหน้าแอดมิน' : 'เข้าสู่ระบบแอดมิน'}
-        </button>
-      </div>
+      )}
     </div>
   );
 };
