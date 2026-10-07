@@ -695,10 +695,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                           </div>
                           <div className="flex items-baseline justify-between pt-1 border-t border-white/5">
                             <span className="text-xs font-extrabold text-amber-300">
-                              ฿{item.price.toLocaleString()}
+                              ฿{(item.price || 0).toLocaleString()}
                             </span>
                             <span className="text-[10px] text-zinc-500 line-through">
-                              ฿{item.oldPrice.toLocaleString()}
+                              ฿{(item.oldPrice || 0).toLocaleString()}
                             </span>
                           </div>
                         </button>
@@ -769,7 +769,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     บริการล่าค่าหัว Blox Fruits (Bounty & Honor Hunt)
                   </span>
                   <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black border border-emerald-500/40">
-                    ราคาพิเศษ ฿{product.price.toLocaleString()} บาท
+                    ราคาพิเศษ ฿{(product.price || 0).toLocaleString()} บาท
                   </span>
                 </div>
 

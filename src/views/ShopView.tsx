@@ -352,17 +352,17 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 <div className="text-left sm:text-right">
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-base sm:text-lg font-black text-cyan-400 tabular-nums">
-                      ฿{product.price.toLocaleString()}
+                      ฿{(product.price || 0).toLocaleString()}
                     </span>
                     {product.oldPrice && product.oldPrice > product.price && (
                       <span className="text-xs text-zinc-500 line-through tabular-nums">
-                        ฿{product.oldPrice.toLocaleString()}
+                        ฿{(product.oldPrice || 0).toLocaleString()}
                       </span>
                     )}
                   </div>
                   {product.oldPrice && product.oldPrice > product.price && (
                     <span className="text-[10px] text-rose-400 font-bold">
-                      ประหยัด ฿{(product.oldPrice - product.price).toLocaleString()}
+                      ประหยัด ฿{((product.oldPrice || 0) - (product.price || 0)).toLocaleString()}
                     </span>
                   )}
                 </div>
