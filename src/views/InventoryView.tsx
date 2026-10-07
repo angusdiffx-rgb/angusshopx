@@ -50,18 +50,20 @@ export const InventoryView: React.FC = () => {
     const cacheKey = `user_inventory_${user.uid}`;
     const cacheTimeKey = `user_inventory_time_${user.uid}`;
     const now = Date.now();
-    const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
 
-    if (!force && now - lastTime < 8 * 60 * 1000) {
-      try {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          setItems(JSON.parse(cached));
-          setLoading(false);
-          return;
+    // Check recent delivered items from checkout storage first for zero-delay instant render
+    try {
+      const recentStr = localStorage.getItem(`angus_recent_inventory_${user.uid}`);
+      if (recentStr) {
+        const recentList = JSON.parse(recentStr);
+        if (Array.isArray(recentList) && recentList.length > 0) {
+          setItems(prev => {
+            const merged = [...recentList, ...prev.filter(p => !recentList.some((r: any) => (r.inventoryId && r.inventoryId === p.inventoryId) || (r.id && r.id === p.id)))];
+            return merged;
+          });
         }
-      } catch {}
-    }
+      }
+    } catch {}
 
     if (force) setIsRefreshing(true);
     else if (!items.length) setLoading(true);
@@ -69,6 +71,20 @@ export const InventoryView: React.FC = () => {
     try {
       let list: InventoryItem[] = [];
 
+      // 1. Fetch from server API first (which contains inMemoryInventory + fresh Firestore data)
+      try {
+        const res = await fetch(`/api/inventory?uid=${user.uid}`);
+        if (res.ok) {
+          const apiData = await res.json();
+          if (Array.isArray(apiData.items) && apiData.items.length > 0) {
+            list = apiData.items;
+          }
+        }
+      } catch (e) {
+        console.warn('API inventory fetch error:', e);
+      }
+
+      // 2. Also query Firestore collection 'inventory'
       try {
         const q = query(
           collection(db, 'inventory'),
@@ -77,53 +93,43 @@ export const InventoryView: React.FC = () => {
         );
         const snapshot = await getDocsSmart(q);
         snapshot.forEach((d: any) => {
-          list.push({ id: d.id, ...(d.data() as InventoryItem) });
+          const dData = { id: d.id, ...(d.data() as InventoryItem) };
+          if (!list.some(it => (it.id && it.id === dData.id) || (it.inventoryId && it.inventoryId === dData.inventoryId))) {
+            list.push(dData);
+          }
         });
       } catch (err) {
         console.warn('Inventory fetch firestore notice:', err);
       }
 
-    // Always fetch from server API if Firestore returned empty or had an issue
-    if (list.length === 0) {
+      // 3. Merge with any recent items from checkout in localStorage
       try {
-        const res = await fetch(`/api/inventory?uid=${user.uid}`);
-        if (res.ok) {
-          const apiData = await res.json();
-          if (Array.isArray(apiData.items)) {
-            list = apiData.items;
+        const recentStr = localStorage.getItem(`angus_recent_inventory_${user.uid}`);
+        if (recentStr) {
+          const recentList = JSON.parse(recentStr);
+          if (Array.isArray(recentList)) {
+            for (const r of recentList) {
+              if (!list.some(it => (it.id && it.id === r.id) || (it.inventoryId && it.inventoryId === r.inventoryId))) {
+                list.unshift(r);
+              }
+            }
           }
         }
-      } catch (e) {
-        console.warn('API inventory fetch error:', e);
-      }
+      } catch {}
+
+      list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setItems(list);
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(list));
+        sessionStorage.setItem(cacheTimeKey, String(now));
+      } catch {}
+    } catch (err) {
+      console.warn('Inventory fetch notice:', err);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
-
-    // Merge with any cached items in sessionStorage
-    try {
-      const cachedStr = sessionStorage.getItem(cacheKey);
-      if (cachedStr) {
-        const cachedList: InventoryItem[] = JSON.parse(cachedStr);
-        for (const c of cachedList) {
-          if (!list.some(it => (it.id && it.id === c.id) || (it.inventoryId && it.inventoryId === c.inventoryId))) {
-            list.push(c);
-          }
-        }
-      }
-    } catch {}
-
-    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-    setItems(list);
-    try {
-      sessionStorage.setItem(cacheKey, JSON.stringify(list));
-      sessionStorage.setItem(cacheTimeKey, String(now));
-    } catch {}
-  } catch (err) {
-    console.warn('Inventory fetch notice:', err);
-  } finally {
-    setLoading(false);
-    setIsRefreshing(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchInventory();

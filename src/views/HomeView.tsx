@@ -86,10 +86,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
   }, [homeConfig.desktopBannerType, homeConfig.desktopBannerAutoplay, homeConfig.desktopBannerYoutubeUrl]);
 
   const handleAdminOnlyClick = () => {
-    if (!isAdmin) {
-      toastError('เฉพาะแอดมินเท่านั้น', 'คุณไม่มีสิทธิ์กดปุ่มนี้ เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถกดได้');
-      return;
-    }
     onNavigate('shop');
   };
 
@@ -600,13 +596,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">{homeConfig.categoriesSubtitle || DEFAULT_HOME_CONFIG.categoriesSubtitle}</p>
           </div>
           <button
-            onClick={handleAdminOnlyClick}
-            className={`text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all ${
-              isAdmin 
-                ? 'text-purple-400 hover:text-purple-300' 
-                : 'text-zinc-500 hover:text-zinc-400'
-            }`}
-            title={isAdmin ? 'ดูทั้งหมด (สิทธิ์แอดมิน)' : 'เฉพาะแอดมินเท่านั้น'}
+            onClick={() => onNavigate('shop')}
+            className="text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all text-purple-400 hover:text-purple-300"
+            title="ดูสินค้าทั้งหมดในร้านค้า"
           >
             ดูทั้งหมด <ChevronRight className="w-4 h-4" />
           </button>

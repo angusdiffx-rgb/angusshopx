@@ -58,6 +58,7 @@ export interface OrderItem {
   quantity: number;
   image: string;
   deliveryType: DeliveryType;
+  category?: ProductCategory;
   selectedOption?: string;
   targetNote?: string;
   deliveryInstructions?: string;
@@ -112,6 +113,8 @@ export interface InventoryItem {
   serverLinkTitle?: string;
   metadata?: {
     robloxUsername?: string;
+    accountUser?: string;
+    accountPass?: string;
     serviceAccountUsername?: string;
     serviceAccountPassword?: string;
     accountCredentials?: string;
@@ -157,6 +160,7 @@ export interface Deposit {
   uid: string;
   userEmail?: string;
   userName?: string;
+  senderName?: string;
   amount: number;
   expectedAmount?: number;
   promptpayNumber?: string;

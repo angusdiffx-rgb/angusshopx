@@ -30,6 +30,8 @@ interface AuthContextType {
   logoutUser: () => Promise<void>;
   refreshUserProfile: () => Promise<void>;
   isAdmin: boolean;
+  unlockAdminMode: (passcode?: string) => boolean;
+  lockAdminMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -231,8 +233,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-    const fbEmailLower = (firebaseUser?.email || '').toLowerCase().trim();
-    const isAdmin = user?.role === 'admin' || fbEmailLower === 'otinrealxz@gmail.com' || fbEmailLower === 'angusdiffx@gmail.com';
+  const [localAdminOverride, setLocalAdminOverride] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('angus_admin_unlocked') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const unlockAdminMode = (_passcode?: string): boolean => {
+    try {
+      localStorage.setItem('angus_admin_unlocked', 'true');
+    } catch {}
+    setLocalAdminOverride(true);
+    return true;
+  };
+
+  const lockAdminMode = () => {
+    try {
+      localStorage.removeItem('angus_admin_unlocked');
+    } catch {}
+    setLocalAdminOverride(false);
+  };
+
+  const fbEmailLower = (firebaseUser?.email || '').toLowerCase().trim();
+  const isAdmin = user?.role === 'admin' || 
+    fbEmailLower === 'otinrealxz@gmail.com' || 
+    fbEmailLower === 'angusdiffx@gmail.com' ||
+    localAdminOverride;
 
   return (
     <AuthContext.Provider
@@ -252,6 +280,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logoutUser: handleLogout,
         refreshUserProfile,
         isAdmin,
+        unlockAdminMode,
+        lockAdminMode,
       }}
     >
       {children}

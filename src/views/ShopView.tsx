@@ -51,8 +51,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
   }, [initialCategory, initialSearch]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      if (!p || !p.productId) return false; // skip invalid/incomplete products
+    return (products || []).filter((p) => {
+      if (!p || !p.productId || !p.name) return false; // skip invalid/incomplete products
       // Category match
       if (selectedCategory !== 'ทั้งหมด') {
         if (selectedCategory === 'ไอดี') {

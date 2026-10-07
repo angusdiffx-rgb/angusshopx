@@ -102,6 +102,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button onClick={() => onNavigate('orders')} className="hover:text-[#C084FC] transition-colors cursor-pointer">ประวัติคำสั่งซื้อ</button>
               </li>
+              <li>
+                <button onClick={() => onNavigate('admin')} className="hover:text-purple-300 text-purple-400 font-bold transition-colors cursor-pointer flex items-center gap-1">แผงควบคุมแอดมิน</button>
+              </li>
             </ul>
           </div>
 

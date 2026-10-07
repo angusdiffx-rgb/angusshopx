@@ -112,9 +112,11 @@ export const VisualCategorySelector: React.FC<VisualCategorySelectorProps> = ({
     const map: Record<string, number> = {
       'ทั้งหมด': products.length
     };
-    products.forEach((p) => {
-      const isAccount = p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || p.name.includes('ไก่ตัน') || p.name.includes('สุ่ม');
-      const catKey = isAccount ? 'ไอดี' : p.category;
+    (products || []).forEach((p) => {
+      if (!p) return;
+      const pName = String(p.name || '').toLowerCase();
+      const isAccount = p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || pName.includes('ไก่ตัน') || pName.includes('สุ่ม');
+      const catKey = isAccount ? 'ไอดี' : (p.category || 'อื่นๆ');
       map[catKey] = (map[catKey] || 0) + 1;
     });
     return map;

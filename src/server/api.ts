@@ -594,13 +594,18 @@ export function isAccountProduct(item: any): boolean {
   return Boolean(
     deliveryType === 'account_code' ||
     productId === 'prod_gacha_cdk_35' ||
+    productId === 'prod_gacha_darkcoat_godhuman_99' ||
     productId.includes('gacha') ||
+    productId.includes('darkcoat') ||
     category === 'ไอดี' ||
     category === 'สุ่มไอดี' ||
     category === 'ไอดีไก่ตัน' ||
     name.includes('สุ่ม') ||
     name.includes('ไก่ตัน') ||
-    name.includes('ไอดี')
+    name.includes('ไอดี') ||
+    name.includes('ผ้าคลุมหนวดดำ') ||
+    name.includes('หนวดดำ') ||
+    name.includes('ดาบคู่')
   );
 }
 
@@ -632,49 +637,13 @@ export function isServiceProduct(item: any): boolean {
   );
 }
 
-export function isSampleAccount(username?: string, password?: string): boolean {
-  if (!username) return true;
-  const u = username.toLowerCase().trim();
-  const p = (password || '').toLowerCase().trim();
-  if (u.startsWith('angus_cdk_')) return true;
-  if (u.startsWith('angusblox_')) return true;
-  if (u.startsWith('demo_') || u.startsWith('sample_') || u.startsWith('test_')) return true;
-  if (u === 'user_test' || u === 'admin_test') return true;
-  if (p === 'bloxmaster#2026' || p === 'swordking#9912' || p === 'pirateace#4821' || p === 'dragonslash#771' || p === 'bloxfruit#1029') return true;
+export function isSampleAccount(username?: string, _password?: string): boolean {
+  if (!username || !username.trim()) return true;
   return false;
 }
 
 export async function purgeSampleGachaAccounts(): Promise<number> {
-  let purgedCount = 0;
-  try {
-    const gachaColl = collection(db, 'gacha_accounts');
-    const snap = await getDocs(query(gachaColl, limit(500)));
-    for (const d of snap.docs) {
-      const data = d.data();
-      if (isSampleAccount(data.username, data.password)) {
-        await deleteDoc(doc(db, 'gacha_accounts', d.id));
-        purgedCount++;
-      }
-    }
-  } catch (err) {
-    console.warn('Purge sample accounts firestore notice:', err);
-  }
-
-  const prevLen = inMemoryGachaAccounts.length;
-  inMemoryGachaAccounts = inMemoryGachaAccounts.filter(a => !isSampleAccount(a.username, a.password));
-  purgedCount += Math.max(0, prevLen - inMemoryGachaAccounts.length);
-
-  try {
-    const remainingSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', 'prod_gacha_cdk_35'), where('status', '==', 'available')));
-    const realCount = remainingSnap.docs.filter(d => !isSampleAccount(d.data().username, d.data().password)).length;
-    await updateDoc(doc(db, 'products', 'prod_gacha_cdk_35'), {
-      stock: realCount,
-      updatedAt: new Date().toISOString()
-    });
-    invalidateServerProductsCache();
-  } catch {}
-
-  return purgedCount;
+  return 0; // Do not purge accounts added by admin!
 }
 
 export async function checkAvailableGachaStock(productId: string, requiredQuantity: number): Promise<{ available: boolean; count: number }> {
@@ -682,7 +651,7 @@ export async function checkAvailableGachaStock(productId: string, requiredQuanti
   let availableList: any[] = [];
 
   try {
-    const snap = await getDocs(query(gachaColl, where('status', '==', 'available'), limit(300)));
+    const snap = await getDocs(query(gachaColl, where('status', '==', 'available'), limit(500)));
     snap.forEach((d) => {
       const data = d.data();
       if (!isSampleAccount(data.username, data.password)) {
@@ -702,6 +671,13 @@ export async function checkAvailableGachaStock(productId: string, requiredQuanti
   }
 
   let matching = availableList.filter(a => a.productId === productId);
+  if (matching.length < requiredQuantity) {
+    if (productId === 'prod_gacha_cdk_35') {
+      matching = availableList.filter(a => !a.productId || a.productId === 'prod_gacha_cdk_35');
+    } else if (productId === 'prod_gacha_darkcoat_godhuman_99') {
+      matching = availableList.filter(a => a.productId === 'prod_gacha_darkcoat_godhuman_99');
+    }
+  }
   if (matching.length < requiredQuantity && (productId === 'prod_gacha_cdk_35' || matching.length === 0)) {
     matching = availableList;
   }
@@ -720,7 +696,7 @@ export async function selectAvailableGachaAccounts(
   let availableList: any[] = [];
 
   try {
-    const snap = await getDocs(query(gachaColl, where('status', '==', 'available'), limit(300)));
+    const snap = await getDocs(query(gachaColl, where('status', '==', 'available'), limit(500)));
     snap.forEach((d) => {
       const data = d.data();
       if (!isSampleAccount(data.username, data.password)) {
@@ -740,7 +716,14 @@ export async function selectAvailableGachaAccounts(
   }
 
   let matching = availableList.filter(a => a.productId === productId);
-  if (matching.length < quantity && (productId === 'prod_gacha_cdk_35' || matching.length === 0)) {
+  if (matching.length < quantity) {
+    if (productId === 'prod_gacha_cdk_35') {
+      matching = availableList.filter(a => !a.productId || a.productId === 'prod_gacha_cdk_35');
+    } else if (productId === 'prod_gacha_darkcoat_godhuman_99') {
+      matching = availableList.filter(a => a.productId === 'prod_gacha_darkcoat_godhuman_99');
+    }
+  }
+  if (matching.length < quantity && availableList.length >= quantity) {
     matching = availableList;
   }
 
@@ -1318,10 +1301,20 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     const list: any[] = [];
     snap.forEach((d) => {
       const item = d.data();
-      list.push({
-        ...item,
-        productId: item.productId || d.id
-      });
+      const pId = item.productId || d.id;
+      let resolvedItem = item;
+      if (!resolvedItem.name) {
+        const fallback = fallbackProducts.find((f: any) => f.productId === pId);
+        if (fallback) {
+          resolvedItem = { ...fallback, ...resolvedItem };
+        }
+      }
+      if (resolvedItem.name && typeof resolvedItem.name === 'string') {
+        list.push({
+          ...resolvedItem,
+          productId: pId
+        });
+      }
     });
 
     list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
@@ -2237,29 +2230,31 @@ apiRouter.post('/admin/gacha-accounts/purge-samples', async (req: Request, res: 
   }
 });
 
-// Seed/Ensure CDK 35 THB Product exists in Firestore with real stock
-export async function ensureCdkGachaProduct(): Promise<void> {
+// Seed/Ensure Gacha Products exist in Firestore with real stock
+export async function ensureGachaProducts(): Promise<void> {
   try {
-    // Purge any lingering sample accounts from database on startup
-    await purgeSampleGachaAccounts();
     await syncOrphanedGachaAccounts();
 
-    // Calculate real available stock from gacha_accounts
-    let realAvailableCount = 0;
+    // 1. Ensure CDK 35 THB
+    let cdkAvailableCount = 0;
+    let darkCoatAvailableCount = 0;
+
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
       gachaSnap.forEach((d) => {
         const data = d.data();
-        if ((data.productId === 'prod_gacha_cdk_35' || !data.productId) && !isSampleAccount(data.username, data.password)) {
-          realAvailableCount++;
+        if (data.productId === 'prod_gacha_darkcoat_godhuman_99') {
+          darkCoatAvailableCount++;
+        } else if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
+          cdkAvailableCount++;
         }
       });
     } catch {}
 
-    const prodRef = doc(db, 'products', 'prod_gacha_cdk_35');
-    const snap = await getDoc(prodRef);
-    if (!snap.exists()) {
-      await setDoc(prodRef, sanitizeForFirestore({
+    const cdkRef = doc(db, 'products', 'prod_gacha_cdk_35');
+    const cdkSnap = await getDoc(cdkRef);
+    if (!cdkSnap.exists()) {
+      await setDoc(cdkRef, sanitizeForFirestore({
         productId: 'prod_gacha_cdk_35',
         name: 'สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
         slug: 'gacha-cdk-35-baht',
@@ -2269,7 +2264,7 @@ export async function ensureCdkGachaProduct(): Promise<void> {
         price: 35,
         oldPrice: 79,
         image: '/images/blox/cursed_dual_katana.png',
-        stock: realAvailableCount,
+        stock: cdkAvailableCount,
         isActive: true,
         isFeatured: true,
         isBestSeller: true,
@@ -2282,21 +2277,56 @@ export async function ensureCdkGachaProduct(): Promise<void> {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }));
-      invalidateServerProductsCache();
     } else {
-      // Ensure category is 'ไอดี' and stock matches real available accounts
-      await updateDoc(prodRef, { 
+      await updateDoc(cdkRef, { 
         category: 'ไอดี', 
-        stock: realAvailableCount,
+        stock: cdkAvailableCount,
         updatedAt: new Date().toISOString() 
       });
-      invalidateServerProductsCache();
     }
+
+    // 2. Ensure Dark Coat + CDK + Guitar + Red Fruit + Godhuman 99 THB
+    const darkCoatRef = doc(db, 'products', 'prod_gacha_darkcoat_godhuman_99');
+    const darkCoatSnap = await getDoc(darkCoatRef);
+    if (!darkCoatSnap.exists()) {
+      await setDoc(darkCoatRef, sanitizeForFirestore({
+        productId: 'prod_gacha_darkcoat_godhuman_99',
+        name: 'ผ้าคลุมหนวดดำ+ดาบคู่+กีตาร์+สุ่มผลแดง+หมัดก็อด 99 บาท',
+        slug: 'darkcoat-cdk-guitar-godhuman-99',
+        description: 'สุ่มไอดีไก่ตัน Blox Fruits เลเวล Max 2550 การันตีผ้าคลุมหนวดดำ (Dark Coat) + ดาบคู่ Cursed Dual Katana (CDK) + กีตาร์ Soul Guitar + สุ่มผลแดงตื่น + หมัดก็อดฮิวแมน (Godhuman) สเตตัสตัน ครบเซ็ตพร้อมเล่น ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+        shortDescription: 'ผ้าคลุมหนวดดำ + ดาบคู่ CDK + กีตาร์ Soul Guitar + สุ่มผลแดง + หมัดก็อด เลเวล Max 2550 ส่งมอบอัตโนมัติ 24 ชม.',
+        category: 'ไอดี',
+        price: 99,
+        oldPrice: 199,
+        image: '/images/blox/dark_coat.png',
+        stock: darkCoatAvailableCount,
+        isActive: true,
+        isFeatured: true,
+        isBestSeller: true,
+        deliveryType: 'account_code',
+        rarity: 'Mythical',
+        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+        claimCode: '',
+        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+    } else {
+      await updateDoc(darkCoatRef, {
+        category: 'ไอดี',
+        price: 99,
+        stock: darkCoatAvailableCount,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    invalidateServerProductsCache();
   } catch (err) {
-    console.error('ensureCdkGachaProduct error:', err);
+    console.error('ensureGachaProducts error:', err);
   }
 }
 
 // Call on startup
-ensureCdkGachaProduct().catch(() => {});
+ensureGachaProducts().catch(() => {});
 

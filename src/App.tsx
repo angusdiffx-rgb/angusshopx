@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
@@ -39,15 +39,15 @@ export const deduplicateProducts = (list: Product[]): Product[] => {
   const result: Product[] = [];
 
   for (const item of list) {
-    if (!item || !item.productId) continue;
+    if (!item || !item.productId || !item.name || typeof item.name !== 'string') continue;
     const idKey = item.productId.trim().toLowerCase();
-    const nameKey = (item.name || '').trim().toLowerCase();
+    const nameKey = item.name.trim().toLowerCase();
 
     if (seenIds.has(idKey)) continue;
-    if (nameKey && seenNames.has(nameKey)) continue;
+    if (seenNames.has(nameKey)) continue;
 
     seenIds.add(idKey);
-    if (nameKey) seenNames.add(nameKey);
+    seenNames.add(nameKey);
     result.push(item);
   }
 
@@ -60,19 +60,90 @@ const getInitialProducts = (): Product[] => {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return deduplicateProducts(parsed);
+        const cleaned = deduplicateProducts(parsed);
+        if (cleaned.length > 0) return cleaned;
       }
     }
   } catch (e) {
     // ignore
   }
-  return deduplicateProducts(initialProducts || []);
+  return deduplicateProducts(fallbackProducts || initialProducts || []);
 };
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: any;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('App ErrorBoundary caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#08080C] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white">เกิดข้อผิดพลาดในการแสดงผล</h2>
+          <p className="text-xs text-zinc-400 max-w-md">
+            ระบบพบข้อผิดพลาดชั่วคราว ข้อมูลสินค้าได้รับการอัปเดตใหม่แล้ว กรุณากดปุ่มด้านล่างเพื่อโหลดหน้าร้านใหม่
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                localStorage.removeItem(PRODUCTS_CACHE_KEY);
+                window.location.href = '/';
+              }}
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 cursor-pointer"
+            >
+              รีเฟรชหน้าแรก (Home)
+            </button>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs cursor-pointer"
+            >
+              โหลดหน้าใหม่ (Reload)
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function MainShop() {
   const { addToCart } = useCart();
   const { isAdmin } = useAuth();
-  const [currentView, setCurrentView] = useState<string>('home');
+  const [currentView, setCurrentView] = useState<string>(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const v = searchParams.get('view');
+      if (v && ['shop', 'wallet', 'checkout', 'inventory', 'orders', 'account', 'admin'].includes(v)) {
+        return v;
+      }
+    } catch {}
+    return 'home';
+  });
   const [navParam, setNavParam] = useState<string | undefined>(undefined);
   const [products, setProducts] = useState<Product[]>(getInitialProducts);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -226,6 +297,16 @@ function MainShop() {
     }
     setCurrentView(view);
     setNavParam(param);
+    try {
+      const url = new URL(window.location.href);
+      if (view === 'home') {
+        url.searchParams.delete('view');
+      } else {
+        url.searchParams.set('view', view);
+      }
+      url.searchParams.delete('product');
+      window.history.pushState({ view }, '', url.toString());
+    } catch {}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -477,14 +558,16 @@ function MainShop() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <HomeConfigProvider>
-        <CartProvider>
-          <ToastProvider>
-            <MainShop />
-          </ToastProvider>
-        </CartProvider>
-      </HomeConfigProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <HomeConfigProvider>
+          <CartProvider>
+            <ToastProvider>
+              <MainShop />
+            </ToastProvider>
+          </CartProvider>
+        </HomeConfigProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

@@ -57,13 +57,18 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     return Boolean(
       deliveryType === 'account_code' ||
       productId === 'prod_gacha_cdk_35' ||
+      productId === 'prod_gacha_darkcoat_godhuman_99' ||
       productId.includes('gacha') ||
+      productId.includes('darkcoat') ||
       category === 'ไอดี' ||
       category === 'สุ่มไอดี' ||
       category === 'ไอดีไก่ตัน' ||
       name.includes('สุ่ม') ||
       name.includes('ไก่ตัน') ||
-      name.includes('ไอดี')
+      name.includes('ไอดี') ||
+      name.includes('ผ้าคลุมหนวดดำ') ||
+      name.includes('หนวดดำ') ||
+      name.includes('ดาบคู่')
     );
   };
 
@@ -217,9 +222,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           } catch {}
         }
         try {
-          // Immediately cache newly delivered inventory items into user's sessionStorage!
+          // Immediately cache newly delivered inventory items into user's storage!
           if (Array.isArray(data.inventoryItems) && data.inventoryItems.length > 0) {
             try {
+              localStorage.setItem(`angus_recent_inventory_${user.uid}`, JSON.stringify(data.inventoryItems));
               const existing = JSON.parse(sessionStorage.getItem(`user_inventory_${user.uid}`) || '[]');
               const merged = [...data.inventoryItems, ...existing.filter((e: any) => !data.inventoryItems.some((d: any) => (d.inventoryId && d.inventoryId === e.inventoryId) || (d.id && d.id === e.id)))];
               sessionStorage.setItem(`user_inventory_${user.uid}`, JSON.stringify(merged));
