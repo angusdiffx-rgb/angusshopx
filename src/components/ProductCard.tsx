@@ -120,6 +120,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, onB
           </span>
         </div>
 
+        {/* Out-of-stock overlay */}
+        {product.stock <= 0 && (
+          <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none rounded-inherit">
+            <span className="text-red-400 text-xl sm:text-2xl font-black tracking-widest drop-shadow-[0_0_12px_rgba(248,113,113,0.8)] border border-red-500/60 bg-red-950/70 px-4 py-1.5 rounded-xl backdrop-blur-md">
+              หมด
+            </span>
+          </div>
+        )}
+
         {/* Stock status indicator */}
         <div className="absolute bottom-2 left-2 sm:bottom-2.5 sm:left-2.5 z-10 pointer-events-none">
           {product.stock > 0 ? (
