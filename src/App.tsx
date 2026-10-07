@@ -108,15 +108,15 @@ function MainShop() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch products with ultra-efficient zero-quota caching:
-  // 1. Initial render from localStorage (0ms, 0 Firestore reads)
-  // 2. Fetch from /api/products (which has in-memory + HTTP browser caching, 0 Firestore reads)
-  // 3. If API is down or starting up, use existing cached products or IndexedDB cache (0 Firestore reads)
-  // 4. Last-resort fallback to fallbackProducts so web app never crashes or shows empty store
+  // Fetch products:
+  // - localStorage used ONLY for instant initial render via getInitialProducts()
+  // - On every mount: always fetch fresh from /api/products → IndexedDB → Firestore network
+  // - Ensures new/updated Firestore products always appear on the shop page
   useEffect(() => {
     let isMounted = true;
 
     const fetchProducts = async (force = false) => {
+      // Step 1: Try server API (server-side in-memory cache + HTTP browser cache)
       try {
         const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
         if (res.ok) {
@@ -137,18 +137,7 @@ function MainShop() {
         console.warn('API /api/products notice:', err);
       }
 
-      // If already populated from localStorage/state, do NOT query Firestore network!
-      const currentCached = localStorage.getItem(PRODUCTS_CACHE_KEY);
-      if (currentCached) {
-        try {
-          const parsed = JSON.parse(currentCached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return; // Already served safely from cache
-          }
-        } catch {}
-      }
-
-      // Check IndexedDB local cache first (0 network reads)
+      // Step 2: API unavailable — try IndexedDB local Firestore cache (0 network reads)
       try {
         const cachedSnap = await getDocsFromCache(collection(db, 'products'));
         if (!cachedSnap.empty && isMounted) {
@@ -159,17 +148,17 @@ function MainShop() {
           });
           list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
           const cleanList = deduplicateProducts(list);
-          setProducts(cleanList);
+          if (isMounted) setProducts(cleanList);
           try {
             localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
           } catch {}
           return;
         }
       } catch {
-        // Cache miss
+        // IndexedDB cache miss — continue to network
       }
 
-      // Final fallback: only query network if completely uninitialized
+      // Step 3: Fetch from Firestore network directly
       try {
         const snap = await getDocs(collection(db, 'products'));
         if (!snap.empty && isMounted) {
@@ -180,8 +169,10 @@ function MainShop() {
           });
           list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
           const cleanList = deduplicateProducts(list);
-          setProducts(cleanList);
-          setQuotaExceeded(false);
+          if (isMounted) {
+            setProducts(cleanList);
+            setQuotaExceeded(false);
+          }
           try {
             localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
           } catch {}
@@ -190,7 +181,7 @@ function MainShop() {
         if (isQuotaExceededError(fbErr)) {
           if (isMounted) setQuotaExceeded(true);
         }
-        // Zero-downtime safety net: fallback to local bundled products
+        // Step 4: Zero-downtime safety net — show bundled fallback if nothing else loaded
         if (isMounted) {
           const safeFallback = deduplicateProducts(fallbackProducts || initialProducts || []);
           if (safeFallback.length > 0) {
