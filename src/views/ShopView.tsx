@@ -52,10 +52,12 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      if (!p || !p.productId) return false; // skip invalid/incomplete products
       // Category match
       if (selectedCategory !== 'ทั้งหมด') {
         if (selectedCategory === 'ไอดี') {
-          const isAccount = p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || p.name.includes('ไก่ตัน') || p.name.includes('สุ่ม');
+          const pName = (p.name || '').toLowerCase();
+          const isAccount = p.category === 'ไอดี' || (p.category as string) === 'ไอเทม' || p.deliveryType === 'account_code' || pName.includes('ไก่ตัน') || pName.includes('สุ่ม');
           if (!isAccount) return false;
         } else if (p.category !== selectedCategory) {
           return false;
@@ -64,9 +66,9 @@ export const ShopView: React.FC<ShopViewProps> = ({
       // Search term
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
-        const matchName = p.name.toLowerCase().includes(query);
-        const matchDesc = p.description?.toLowerCase().includes(query);
-        const matchCategory = p.category?.toLowerCase().includes(query);
+        const matchName = (p.name || '').toLowerCase().includes(query);
+        const matchDesc = (p.description || '').toLowerCase().includes(query);
+        const matchCategory = (p.category || '').toLowerCase().includes(query);
         if (!matchName && !matchDesc && !matchCategory) return false;
       }
       // In stock only
@@ -76,8 +78,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
       return true;
     }).sort((a, b) => {
-      if (sortBy === 'price-asc') return a.price - b.price;
-      if (sortBy === 'price-desc') return b.price - a.price;
+      if (sortBy === 'price-asc') return (a.price || 0) - (b.price || 0);
+      if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
       if (sortBy === 'bestseller') return (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0);
       if (sortBy === 'discount') {
         const discA = a.oldPrice && a.oldPrice > a.price ? (a.oldPrice - a.price) / a.oldPrice : 0;
