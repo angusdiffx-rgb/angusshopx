@@ -392,5 +392,28 @@ export const fallbackProducts: Product[] = [
     deliveryInstructions: 'ทีมงานจะฟาร์มล่าค่าหัวจนครบตามระดับที่เลือก',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    productId: 'id-kai-tan-cdk-god-fist-89',
+    name: 'ไก่ตันผ้าคลุมหนวดดำ + ดาบคู่ + หมัดก็อด',
+    slug: 'id-kai-tan-cdk-god-fist-89',
+    description: 'ไอดีไก่ตัน Blox Fruits พร้อมผ้าคลุมหนวดดำ (Black Cape) ดาบคู่ Cursed Dual Katana (CDK) และสไตล์ต่อสู้หมัดก็อด (God Human) เลเวล Max 2550 สเตตัสอัปเต็ม พร้อมเล่น PvP ได้ทันที ส่งมอบ Username และ Password ทันทีหลังชำระเงิน',
+    shortDescription: 'ไก่ตันผ้าคลุมหนวดดำ + CDK + หมัดก็อด เลเวล Max ส่งทันที',
+    category: 'ไอดี',
+    price: 89,
+    oldPrice: 129,
+    image: '/images/blox/cursed_dual_katana.png',
+    stock: 10,
+    isActive: true,
+    isFeatured: true,
+    isBestSeller: false,
+    deliveryType: 'account_code',
+    rarity: 'Legendary',
+    claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+    claimCode: '',
+    deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+    instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z'
   }
 ];
