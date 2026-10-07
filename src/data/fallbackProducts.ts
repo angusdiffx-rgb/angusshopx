@@ -415,5 +415,28 @@ export const fallbackProducts: Product[] = [
     instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    productId: 'id-kai-tan-fist6-red-fruit-20',
+    name: 'ไอดีไก่ตันหมัด6 + สุ่มผลแดง',
+    slug: 'id-kai-tan-fist6-red-fruit-20',
+    description: 'ไอดีไก่ตัน Blox Fruits พร้อมสไตล์ต่อสู้หมัด 6 ทิศ (Electric Claw / Death Step) และสุ่มผลปีศาจสีแดงในเกม เลเวล Max 2550 สเตตัสอัปเต็ม ส่งมอบ Username และ Password ทันทีหลังชำระเงิน',
+    shortDescription: 'ไก่ตันหมัด6 + สุ่มผลแดง เลเวล Max ราคาประหยัด ส่งทันที',
+    category: 'ไอดี',
+    price: 20,
+    oldPrice: 39,
+    image: '/images/blox/cursed_dual_katana.png',
+    stock: 10,
+    isActive: true,
+    isFeatured: false,
+    isBestSeller: false,
+    deliveryType: 'account_code',
+    rarity: 'Rare',
+    claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+    claimCode: '',
+    deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+    instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z'
   }
 ];
