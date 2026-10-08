@@ -129,9 +129,9 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
       } catch {}
 
-      // Fallback: one-time read from Firestore only if API unreachable and cache is empty
+      // Fallback: smart cache-first read from Firestore only if API unreachable and cache is empty
       try {
-        const docSnap = await getDoc(doc(db, 'settings', 'homeConfig'));
+        const docSnap = await getDocSmart(doc(db, 'settings', 'homeConfig'));
         if (docSnap.exists() && isMounted) {
           const data = docSnap.data() as HomeConfig;
           const merged: HomeConfig = {

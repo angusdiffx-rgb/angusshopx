@@ -520,7 +520,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const loadTabData = async (tab: string, force = false) => {
     if (!isAdmin) return;
     const now = Date.now();
-    const lastLoaded = tabLastLoaded[tab] || 0;
+    const lastLoaded = tabLastLoaded[tab] || Number(sessionStorage.getItem(`angus_admin_tab_time_${tab}`) || 0);
     // Smart cache: 3 minutes per tab unless force refreshed so admin operations don't exhaust daily quota
     if (!force && now - lastLoaded < 180000) {
       return;
@@ -639,6 +639,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         return next;
       });
       setTabLastLoaded((prev) => ({ ...prev, [tab]: now }));
+      try { sessionStorage.setItem(`angus_admin_tab_time_${tab}`, String(now)); } catch {}
       setLoading(false);
     } catch (err: any) {
       console.warn(`Error loading tab ${tab}:`, err);

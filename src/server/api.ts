@@ -1,4 +1,6 @@
 import express, { Request, Response, Router } from 'express';
+import fs from 'fs';
+import path from 'path';
 import FormData from 'form-data';
 import { 
   initializeApp, 
@@ -61,18 +63,63 @@ function sanitizeForFirestore<T>(obj: T): T {
   return result as T;
 }
 
-let serverProductsCache: CacheStore<any[]> | null = null;
+const CACHE_DIR = path.join(process.cwd(), '.cache');
+const PRODUCTS_CACHE_FILE = path.join(CACHE_DIR, 'products.json');
+const HOME_CONFIG_CACHE_FILE = path.join(CACHE_DIR, 'home_config.json');
+
+function ensureCacheDir() {
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+  } catch {}
+}
+
+function loadDiskCache<T>(filePath: string, maxAgeMs: number): T | null {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const stat = fs.statSync(filePath);
+    if (Date.now() - stat.mtimeMs > maxAgeMs) return null;
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+function saveDiskCache(filePath: string, data: any) {
+  try {
+    ensureCacheDir();
+    fs.writeFileSync(filePath, JSON.stringify(data), 'utf-8');
+  } catch {}
+}
+
+function removeDiskCache(filePath: string) {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch {}
+}
+
+let serverProductsCache: CacheStore<any[]> | null = (() => {
+  return loadDiskCache<CacheStore<any[]>>(PRODUCTS_CACHE_FILE, 4 * 60 * 60 * 1000);
+})();
 const SERVER_PRODUCTS_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
 
-let serverHomeConfigCache: CacheStore<any> | null = null;
+let serverHomeConfigCache: CacheStore<any> | null = (() => {
+  return loadDiskCache<CacheStore<any>>(HOME_CONFIG_CACHE_FILE, 4 * 60 * 60 * 1000);
+})();
 const SERVER_HOME_CONFIG_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
 
 export const invalidateServerProductsCache = () => {
   serverProductsCache = null;
+  removeDiskCache(PRODUCTS_CACHE_FILE);
 };
 
 export const invalidateServerHomeConfigCache = () => {
   serverHomeConfigCache = null;
+  removeDiskCache(HOME_CONFIG_CACHE_FILE);
 };
 
 // Health Check Endpoint (For keep-alive ping and system monitoring)
@@ -1323,6 +1370,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
       data: list,
       timestamp: now
     };
+    saveDiskCache(PRODUCTS_CACHE_FILE, serverProductsCache);
 
     if (force) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -1951,6 +1999,7 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
       data: configData,
       timestamp: now
     };
+    saveDiskCache(HOME_CONFIG_CACHE_FILE, serverHomeConfigCache);
 
     res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
     res.json({
@@ -2025,9 +2074,8 @@ apiRouter.get('/admin/gacha-accounts', async (req: Request, res: Response): Prom
     const { productId } = req.query;
     const gachaColl = collection(db, 'gacha_accounts');
     
-    // Purge sample accounts and restore any accounts from aborted/failed orders
+    // Purge sample accounts if any
     await purgeSampleGachaAccounts().catch(() => {});
-    await syncOrphanedGachaAccounts().catch(() => {});
     
     // Avoid composite index requirement by querying without multiple inequalities/orderBys
     let snap;

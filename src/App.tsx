@@ -246,15 +246,30 @@ function MainShop() {
           return;
         }
       } catch {
-        // IndexedDB cache miss — continue to network
+        // IndexedDB cache miss
       }
 
-      // Step 3: Fetch from Firestore network directly
+      // Step 2.5: If localStorage already has valid products, serve immediately to preserve Firestore quota
+      if (!force) {
+        try {
+          const cachedStr = localStorage.getItem(PRODUCTS_CACHE_KEY);
+          if (cachedStr) {
+            const parsed = JSON.parse(cachedStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const cleanList = deduplicateProducts(parsed);
+              if (isMounted) setProducts(cleanList);
+              return;
+            }
+          }
+        } catch {}
+      }
+
+      // Step 3: Smart fetch (checks IndexedDB first, only network if needed)
       try {
-        const snap = await getDocs(collection(db, 'products'));
+        const snap = await getDocsSmart(collection(db, 'products'));
         if (!snap.empty && isMounted) {
           const list: Product[] = [];
-          snap.forEach((d) => {
+          snap.forEach((d: any) => {
             const item = d.data() as Product;
             list.push({ ...item, productId: item.productId || d.id });
           });
