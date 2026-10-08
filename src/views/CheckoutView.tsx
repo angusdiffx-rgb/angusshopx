@@ -57,7 +57,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     return Boolean(
       deliveryType === 'account_code' ||
       productId === 'prod_gacha_cdk_35' ||
-      productId === 'prod_gacha_darkcoat_godhuman_99' ||
       productId.includes('gacha') ||
       productId.includes('darkcoat') ||
       category === 'ไอดี' ||

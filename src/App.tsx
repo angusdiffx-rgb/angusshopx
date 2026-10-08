@@ -41,6 +41,7 @@ export const deduplicateProducts = (list: Product[]): Product[] => {
   for (const item of list) {
     if (!item || !item.productId || !item.name || typeof item.name !== 'string') continue;
     const idKey = item.productId.trim().toLowerCase();
+    if (idKey === 'prod_gacha_darkcoat_godhuman_99') continue;
     const nameKey = item.name.trim().toLowerCase();
 
     if (seenIds.has(idKey)) continue;

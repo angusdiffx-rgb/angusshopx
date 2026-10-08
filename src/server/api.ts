@@ -641,7 +641,6 @@ export function isAccountProduct(item: any): boolean {
   return Boolean(
     deliveryType === 'account_code' ||
     productId === 'prod_gacha_cdk_35' ||
-    productId === 'prod_gacha_darkcoat_godhuman_99' ||
     productId.includes('gacha') ||
     productId.includes('darkcoat') ||
     category === 'ไอดี' ||
@@ -721,8 +720,6 @@ export async function checkAvailableGachaStock(productId: string, requiredQuanti
   if (matching.length < requiredQuantity) {
     if (productId === 'prod_gacha_cdk_35') {
       matching = availableList.filter(a => !a.productId || a.productId === 'prod_gacha_cdk_35');
-    } else if (productId === 'prod_gacha_darkcoat_godhuman_99') {
-      matching = availableList.filter(a => a.productId === 'prod_gacha_darkcoat_godhuman_99');
     }
   }
   if (matching.length < requiredQuantity && (productId === 'prod_gacha_cdk_35' || matching.length === 0)) {
@@ -766,8 +763,6 @@ export async function selectAvailableGachaAccounts(
   if (matching.length < quantity) {
     if (productId === 'prod_gacha_cdk_35') {
       matching = availableList.filter(a => !a.productId || a.productId === 'prod_gacha_cdk_35');
-    } else if (productId === 'prod_gacha_darkcoat_godhuman_99') {
-      matching = availableList.filter(a => a.productId === 'prod_gacha_darkcoat_godhuman_99');
     }
   }
   if (matching.length < quantity && availableList.length >= quantity) {
@@ -1349,6 +1344,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     snap.forEach((d) => {
       const item = d.data();
       const pId = item.productId || d.id;
+      if (pId === 'prod_gacha_darkcoat_godhuman_99') return;
       let resolvedItem = item;
       if (!resolvedItem.name) {
         const fallback = fallbackProducts.find((f: any) => f.productId === pId);
@@ -2368,15 +2364,12 @@ export async function ensureGachaProducts(): Promise<void> {
 
     // 1. Ensure CDK 35 THB
     let cdkAvailableCount = 0;
-    let darkCoatAvailableCount = 0;
 
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
       gachaSnap.forEach((d) => {
         const data = d.data();
-        if (data.productId === 'prod_gacha_darkcoat_godhuman_99') {
-          darkCoatAvailableCount++;
-        } else if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
+        if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
           cdkAvailableCount++;
         }
       });
@@ -2416,41 +2409,11 @@ export async function ensureGachaProducts(): Promise<void> {
       });
     }
 
-    // 2. Ensure Dark Coat + CDK + Guitar + Red Fruit + Godhuman 99 THB
-    const darkCoatRef = doc(db, 'products', 'prod_gacha_darkcoat_godhuman_99');
-    const darkCoatSnap = await getDoc(darkCoatRef);
-    if (!darkCoatSnap.exists()) {
-      await setDoc(darkCoatRef, sanitizeForFirestore({
-        productId: 'prod_gacha_darkcoat_godhuman_99',
-        name: 'ผ้าคลุมหนวดดำ+ดาบคู่+กีตาร์+สุ่มผลแดง+หมัดก็อด 99 บาท',
-        slug: 'darkcoat-cdk-guitar-godhuman-99',
-        description: 'สุ่มไอดีไก่ตัน Blox Fruits เลเวล Max 2550 การันตีผ้าคลุมหนวดดำ (Dark Coat) + ดาบคู่ Cursed Dual Katana (CDK) + กีตาร์ Soul Guitar + สุ่มผลแดงตื่น + หมัดก็อดฮิวแมน (Godhuman) สเตตัสตัน ครบเซ็ตพร้อมเล่น ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
-        shortDescription: 'ผ้าคลุมหนวดดำ + ดาบคู่ CDK + กีตาร์ Soul Guitar + สุ่มผลแดง + หมัดก็อด เลเวล Max 2550 ส่งมอบอัตโนมัติ 24 ชม.',
-        category: 'ไอดี',
-        price: 99,
-        oldPrice: 199,
-        image: '/images/blox/dark_coat.png',
-        stock: darkCoatAvailableCount,
-        isActive: true,
-        isFeatured: true,
-        isBestSeller: true,
-        deliveryType: 'account_code',
-        rarity: 'Mythical',
-        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
-        claimCode: '',
-        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
-        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      await updateDoc(darkCoatRef, {
-        category: 'ไอดี',
-        price: 99,
-        stock: darkCoatAvailableCount,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    // 2. Remove deprecated Dark Coat 99 THB product completely from Firestore
+    try {
+      const darkCoatRef = doc(db, 'products', 'prod_gacha_darkcoat_godhuman_99');
+      await deleteDoc(darkCoatRef).catch(() => {});
+    } catch {}
 
     invalidateServerProductsCache();
   } catch (err) {
