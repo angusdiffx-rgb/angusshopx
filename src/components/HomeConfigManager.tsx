@@ -26,7 +26,8 @@ import {
   Play,
   Headphones,
   Flame,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';

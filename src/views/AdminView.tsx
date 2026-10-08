@@ -58,7 +58,8 @@ import {
   SlidersHorizontal,
   Grid,
   List,
-  Clock
+  Clock,
+  Save
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -78,7 +79,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, isQuotaExceededError, getDocsSmart, getDocSmart } from '../lib/firebase';
 import type { Product, Order, Deposit, ProductCategory, InventoryItem, DeliveryType, DeliverySettings, UserProfile, Role, OrderStatus, HomeConfig } from '../types';
-import { BLOX_FRUITS_PRESETS, BloxPreset } from '../data/bloxPresets';
+import { BLOX_FRUITS_PRESETS, BloxPreset, DEFAULT_HOME_CONFIG } from '../data/bloxPresets';
 import { HomeConfigManager } from '../components/HomeConfigManager';
 import { BloxPresetPickerModal } from '../components/BloxPresetPickerModal';
 import { BloxImage } from '../components/BloxImage';
@@ -127,7 +128,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [isBulkDeletingGacha, setIsBulkDeletingGacha] = useState(false);
 
   // Home Config & Highlight Card Quick Editor State
-  const { homeConfig, saveFullHomeConfig } = useHomeConfig();
+  const { homeConfig: rawHomeConfig, saveFullHomeConfig } = useHomeConfig();
+  const homeConfig = rawHomeConfig || DEFAULT_HOME_CONFIG;
   const [isEditingHighlightCard, setIsEditingHighlightCard] = useState(false);
   const [highlightCardDraft, setHighlightCardDraft] = useState<Partial<HomeConfig>>({});
   const [isSavingHighlightCard, setIsSavingHighlightCard] = useState(false);
@@ -343,7 +345,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // Compute duplicate products statistics (same name or same ID)
   const duplicateInfo = useMemo(() => {
     const nameMap: Record<string, Product[]> = {};
-    products.forEach(p => {
+    (Array.isArray(products) ? products : []).forEach(p => {
+      if (!p) return;
       const key = (p.name || '').trim().toLowerCase();
       if (!key) return;
       if (!nameMap[key]) nameMap[key] = [];
@@ -355,7 +358,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       hasDuplicates: dupes.length > 0,
       duplicatedNamesCount: dupes.length,
       extraItemsCount: totalExtra,
-      sampleNames: dupes.slice(0, 3).map(([_, items]) => items[0].name || '')
+      sampleNames: dupes.slice(0, 3).map(([_, items]) => items[0]?.name || '')
     };
   }, [products]);
 
@@ -377,7 +380,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [orders, setOrders] = useState<Order[]>(() => {
     try {
       const saved = localStorage.getItem('angus_admin_orders');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
     } catch { return []; }
   });
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
@@ -387,20 +392,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [deposits, setDeposits] = useState<Deposit[]>(() => {
     try {
       const saved = localStorage.getItem('angus_admin_deposits');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
     } catch { return []; }
   });
   const [depositFilter, setDepositFilter] = useState<'all' | 'truemoney' | 'promptpay'>('all');
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(() => {
     try {
       const saved = localStorage.getItem('angus_admin_inventory');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
     } catch { return []; }
   });
   const [systemUsers, setSystemUsers] = useState<UserProfile[]>(() => {
     try {
       const saved = localStorage.getItem('angus_admin_users');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
     } catch { return []; }
   });
   const [loading, setLoading] = useState(true);
@@ -1680,13 +1691,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // Stats Calculations
-  const totalRevenue = orders
-    .filter((o) => (o.orderStatus || o.status) === 'completed' || (o.orderStatus || o.status) === 'paid')
-    .reduce((acc, o) => acc + ((o.total ?? o.totalAmount) || 0), 0);
+  const totalRevenue = (Array.isArray(orders) ? orders : [])
+    .filter((o) => o && ((o.orderStatus || o.status) === 'completed' || (o.orderStatus || o.status) === 'paid'))
+    .reduce((acc, o) => acc + ((o?.total ?? o?.totalAmount) || 0), 0);
 
-  const totalDepositsAmount = deposits
-    .filter((d) => d.status === 'completed')
-    .reduce((acc, d) => acc + (d.amount || 0), 0);
+  const totalDepositsAmount = (Array.isArray(deposits) ? deposits : [])
+    .filter((d) => d && d.status === 'completed')
+    .reduce((acc, d) => acc + (d?.amount || 0), 0);
 
   return (
     <div className="w-full max-w-[1440px] 2xl:max-w-[1600px] 3xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8 overflow-x-hidden [overscroll-behavior-x:none] [touch-action:pan-y_pinch-zoom]">

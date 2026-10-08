@@ -95,16 +95,23 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   render() {
     if (this.state.hasError) {
+      const errorMessage = this.state.error?.message || String(this.state.error || 'Unknown error');
       return (
-        <div className="min-h-screen bg-[#08080C] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+        <div className="min-h-[70vh] py-16 px-4 bg-[#08080C] text-white flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-lg shadow-rose-500/10">
             <AlertTriangle className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-white">เกิดข้อผิดพลาดในการแสดงผล</h2>
           <p className="text-xs text-zinc-400 max-w-md">
             ระบบพบข้อผิดพลาดชั่วคราว ข้อมูลสินค้าได้รับการอัปเดตใหม่แล้ว กรุณากดปุ่มด้านล่างเพื่อโหลดหน้าร้านใหม่
           </p>
-          <div className="flex items-center gap-3 pt-2">
+          {errorMessage && (
+            <div className="max-w-xl w-full p-3.5 rounded-xl bg-red-950/40 border border-red-500/30 text-left font-mono text-xs text-red-300 break-all select-all shadow-inner">
+              <span className="font-bold text-red-400 block mb-1">รายละเอียดข้อผิดพลาด (Error Details):</span>
+              {errorMessage}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               onClick={() => {
                 localStorage.removeItem(PRODUCTS_CACHE_KEY);
@@ -122,6 +129,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs cursor-pointer"
             >
               โหลดหน้าใหม่ (Reload)
+            </button>
+            <button
+              onClick={() => {
+                try {
+                  Object.keys(localStorage)
+                    .filter(k => k.startsWith('angus_'))
+                    .forEach(k => localStorage.removeItem(k));
+                } catch {}
+                window.location.href = '/';
+              }}
+              className="px-4 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900 border border-red-500/30 text-red-300 font-bold text-xs cursor-pointer"
+            >
+              ล้างแคชระบบ (Clear Cache)
             </button>
           </div>
         </div>
@@ -514,11 +534,13 @@ function MainShop() {
         {currentView === 'account' && <AccountView onNavigate={handleNavigate} />}
 
         {currentView === 'admin' && (
-          <AdminView 
-            products={products} 
-            setProducts={setProducts} 
-            onNavigate={handleNavigate}
-          />
+          <ErrorBoundary>
+            <AdminView 
+              products={products} 
+              setProducts={setProducts} 
+              onNavigate={handleNavigate}
+            />
+          </ErrorBoundary>
         )}
       </main>
 
