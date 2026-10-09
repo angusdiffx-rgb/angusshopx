@@ -223,6 +223,14 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     url: '/images/blox/control.png',
   },
   {
+    name: 'Magnet Fruit',
+    th: 'ผลแม่เหล็ก (Magnet)',
+    category: 'ผลปีศาจ',
+    rarity: 'Mythical',
+    subType: 'Fruit',
+    url: '/images/blox/magnet.png',
+  },
+  {
     name: 'Venom Fruit',
     th: 'ผลพิษ (Venom)',
     category: 'ผลปีศาจ',
@@ -1104,6 +1112,7 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('mammoth') || target.includes('ช้าง') || target.includes('แมมมอธ')) return '/images/blox/mammoth.png';
   if (target.includes('spirit') || target.includes('วิญญาณ')) return '/images/blox/spirit.png';
   if (target.includes('control') || target.includes('คอนโทรล')) return '/images/blox/control.png';
+  if (target.includes('magnet') || target.includes('แม่เหล็ก')) return '/images/blox/magnet.png';
   if (target.includes('venom') || target.includes('พิษ')) return '/images/blox/venom.png';
   if (target.includes('shadow') || target.includes('เงา')) return '/images/blox/shadow.png';
   if (target.includes('gravity') || target.includes('แรงโน้มถ่วง')) return '/images/blox/gravity.png';

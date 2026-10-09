@@ -2364,12 +2364,18 @@ export async function ensureGachaProducts(): Promise<void> {
 
     // 1. Ensure CDK 35 THB
     let cdkAvailableCount = 0;
+    let magnetAvailableCount = 0;
+    let controlAvailableCount = 0;
 
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
       gachaSnap.forEach((d) => {
         const data = d.data();
-        if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
+        if (data.productId === 'prod_gacha_magnet_110') {
+          magnetAvailableCount++;
+        } else if (data.productId === 'prod_gacha_control_50') {
+          controlAvailableCount++;
+        } else if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
           cdkAvailableCount++;
         }
       });
@@ -2409,7 +2415,79 @@ export async function ensureGachaProducts(): Promise<void> {
       });
     }
 
-    // 2. Remove deprecated Dark Coat 99 THB product completely from Firestore
+    // 2. Ensure Magnet in box 110 THB
+    const magnetRef = doc(db, 'products', 'prod_gacha_magnet_110');
+    const magnetSnap = await getDoc(magnetRef);
+    if (!magnetSnap.exists()) {
+      await setDoc(magnetRef, sanitizeForFirestore({
+        productId: 'prod_gacha_magnet_110',
+        name: 'ไก่ตันผลแม่เหล็กในกล่อง 110 บาท',
+        slug: 'gacha-magnet-box-110-baht',
+        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลแม่เหล็ก (Magnet Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลแม่เหล็กในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
+        category: 'ไอดี',
+        price: 110,
+        oldPrice: 220,
+        image: '/images/blox/magnet.png',
+        stock: magnetAvailableCount || 10,
+        isActive: true,
+        isFeatured: true,
+        isBestSeller: true,
+        deliveryType: 'account_code',
+        rarity: 'Mythical',
+        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+        claimCode: '',
+        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+    } else {
+      await updateDoc(magnetRef, {
+        category: 'ไอดี',
+        price: 110,
+        stock: magnetAvailableCount || Number(magnetSnap.data()?.stock ?? 10),
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // 3. Ensure Control in box 50 THB
+    const controlRef = doc(db, 'products', 'prod_gacha_control_50');
+    const controlSnap = await getDoc(controlRef);
+    if (!controlSnap.exists()) {
+      await setDoc(controlRef, sanitizeForFirestore({
+        productId: 'prod_gacha_control_50',
+        name: 'ไก่ตันผลคอนโทรลในกล่อง 50 บาท',
+        slug: 'gacha-control-box-50-baht',
+        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลคอนโทรล (Control Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลคอนโทรลในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
+        category: 'ไอดี',
+        price: 50,
+        oldPrice: 99,
+        image: '/images/blox/control.png',
+        stock: controlAvailableCount || 10,
+        isActive: true,
+        isFeatured: true,
+        isBestSeller: true,
+        deliveryType: 'account_code',
+        rarity: 'Mythical',
+        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+        claimCode: '',
+        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+    } else {
+      await updateDoc(controlRef, {
+        category: 'ไอดี',
+        price: 50,
+        stock: controlAvailableCount || Number(controlSnap.data()?.stock ?? 10),
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // 4. Remove deprecated Dark Coat 99 THB product completely from Firestore
     try {
       const darkCoatRef = doc(db, 'products', 'prod_gacha_darkcoat_godhuman_99');
       await deleteDoc(darkCoatRef).catch(() => {});
