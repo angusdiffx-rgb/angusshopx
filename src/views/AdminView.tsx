@@ -3360,7 +3360,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <option value="prod_gacha_cdk_35">สุ่มไก่ตันดาบคู่ (CDK) 35 บาท</option>
                   <option value="prod_gacha_magnet_110">ไก่ตันผลแม่เหล็กในกล่อง 110 บาท</option>
                   <option value="prod_gacha_control_50">ไก่ตันผลคอนโทรลในกล่อง 50 บาท</option>
-                  {(products || []).filter(p => p && p.productId && p.name && p.productId !== 'prod_gacha_cdk_35' && p.productId !== 'prod_gacha_magnet_110' && p.productId !== 'prod_gacha_control_50' && (p.deliveryType === 'account_code' || String(p.name || '').includes('สุ่ม'))).map(p => (
+                  <option value="prod_gacha_gas_30">ไก่ตันผลแก๊สในกล่อง 30 บาท</option>
+                  {(products || []).filter(p => p && p.productId && p.name && p.productId !== 'prod_gacha_cdk_35' && p.productId !== 'prod_gacha_magnet_110' && p.productId !== 'prod_gacha_control_50' && p.productId !== 'prod_gacha_gas_30' && (p.deliveryType === 'account_code' || String(p.name || '').includes('สุ่ม'))).map(p => (
                     <option key={p.productId} value={p.productId}>{p.name}</option>
                   ))}
                 </select>

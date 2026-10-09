@@ -2366,6 +2366,7 @@ export async function ensureGachaProducts(): Promise<void> {
     let cdkAvailableCount = 0;
     let magnetAvailableCount = 0;
     let controlAvailableCount = 0;
+    let gasAvailableCount = 0;
 
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
@@ -2375,6 +2376,8 @@ export async function ensureGachaProducts(): Promise<void> {
           magnetAvailableCount++;
         } else if (data.productId === 'prod_gacha_control_50') {
           controlAvailableCount++;
+        } else if (data.productId === 'prod_gacha_gas_30') {
+          gasAvailableCount++;
         } else if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
           cdkAvailableCount++;
         }
@@ -2483,6 +2486,42 @@ export async function ensureGachaProducts(): Promise<void> {
         category: 'ไอดี',
         price: 50,
         stock: controlAvailableCount || Number(controlSnap.data()?.stock ?? 10),
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // 4. Ensure Gas in box 30 THB
+    const gasRef = doc(db, 'products', 'prod_gacha_gas_30');
+    const gasSnap = await getDoc(gasRef);
+    if (!gasSnap.exists()) {
+      await setDoc(gasRef, sanitizeForFirestore({
+        productId: 'prod_gacha_gas_30',
+        name: 'ไก่ตันผลแก๊สในกล่อง 30 บาท',
+        slug: 'gacha-gas-box-30-baht',
+        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลแก๊ส (Gas Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลแก๊สในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
+        category: 'ไอดี',
+        price: 30,
+        oldPrice: 60,
+        image: '/images/blox/gas.png',
+        stock: gasAvailableCount || 10,
+        isActive: true,
+        isFeatured: true,
+        isBestSeller: true,
+        deliveryType: 'account_code',
+        rarity: 'Mythical',
+        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+        claimCode: '',
+        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+    } else {
+      await updateDoc(gasRef, {
+        category: 'ไอดี',
+        price: 30,
+        stock: gasAvailableCount || Number(gasSnap.data()?.stock ?? 10),
         updatedAt: new Date().toISOString()
       });
     }
