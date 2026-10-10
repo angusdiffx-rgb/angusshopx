@@ -231,6 +231,14 @@ export const BLOX_FRUITS_PRESETS: BloxPreset[] = [
     url: '/images/blox/magnet.png',
   },
   {
+    name: 'Yeti Fruit',
+    th: 'ผลเยติ (Yeti)',
+    category: 'ผลปีศาจ',
+    rarity: 'Mythical',
+    subType: 'Fruit',
+    url: '/images/blox/yeti.png',
+  },
+  {
     name: 'Venom Fruit',
     th: 'ผลพิษ (Venom)',
     category: 'ผลปีศาจ',
@@ -1107,6 +1115,7 @@ export function resolveBloxImageUrl(url?: string | null, name?: string): string 
   if (target.includes('dragon') || target.includes('มังกร')) return '/images/blox/dragon.png';
   if (target.includes('leopard') || target.includes('เสือ')) return '/images/blox/leopard.png';
   if (target.includes('gas') || target.includes('แก๊ส')) return '/images/blox/gas.png';
+  if (target.includes('yeti') || target.includes('เยติ')) return '/images/blox/yeti.png';
   if (target.includes('dough') || target.includes('โมจิ')) return '/images/blox/dough.png';
   if (target.includes('trex') || target.includes('t-rex') || target.includes('ทีเร็กซ์')) return '/images/blox/trex.png';
   if (target.includes('mammoth') || target.includes('ช้าง') || target.includes('แมมมอธ')) return '/images/blox/mammoth.png';

@@ -2367,6 +2367,7 @@ export async function ensureGachaProducts(): Promise<void> {
     let magnetAvailableCount = 0;
     let controlAvailableCount = 0;
     let gasAvailableCount = 0;
+    let yetiAvailableCount = 0;
 
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('status', '==', 'available')));
@@ -2378,6 +2379,8 @@ export async function ensureGachaProducts(): Promise<void> {
           controlAvailableCount++;
         } else if (data.productId === 'prod_gacha_gas_30') {
           gasAvailableCount++;
+        } else if (data.productId === 'prod_gacha_yeti_40') {
+          yetiAvailableCount++;
         } else if (data.productId === 'prod_gacha_cdk_35' || !data.productId) {
           cdkAvailableCount++;
         }
@@ -2522,6 +2525,42 @@ export async function ensureGachaProducts(): Promise<void> {
         category: 'ไอดี',
         price: 30,
         stock: gasAvailableCount || Number(gasSnap.data()?.stock ?? 10),
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // 5. Ensure Yeti in box 40 THB
+    const yetiRef = doc(db, 'products', 'prod_gacha_yeti_40');
+    const yetiSnap = await getDoc(yetiRef);
+    if (!yetiSnap.exists()) {
+      await setDoc(yetiRef, sanitizeForFirestore({
+        productId: 'prod_gacha_yeti_40',
+        name: 'ไก่ตันผลเยติในกล่อง 40 บาท',
+        slug: 'gacha-yeti-box-40-baht',
+        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลเยติ (Yeti Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
+        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลเยติในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
+        category: 'ไอดี',
+        price: 40,
+        oldPrice: 80,
+        image: '/images/blox/yeti.png',
+        stock: yetiAvailableCount || 10,
+        isActive: true,
+        isFeatured: true,
+        isBestSeller: true,
+        deliveryType: 'account_code',
+        rarity: 'Mythical',
+        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
+        claimCode: '',
+        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
+        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+    } else {
+      await updateDoc(yetiRef, {
+        category: 'ไอดี',
+        price: 40,
+        stock: yetiAvailableCount || Number(yetiSnap.data()?.stock ?? 10),
         updatedAt: new Date().toISOString()
       });
     }
