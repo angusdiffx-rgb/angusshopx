@@ -521,8 +521,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (!isAdmin) return;
     const now = Date.now();
     const lastLoaded = tabLastLoaded[tab] || Number(sessionStorage.getItem(`angus_admin_tab_time_${tab}`) || 0);
-    // Smart cache: 3 minutes per tab unless force refreshed so admin operations don't exhaust daily quota
-    if (!force && now - lastLoaded < 180000) {
+    // Smart cache: 8 minutes per tab unless force refreshed so admin operations don't exhaust daily quota
+    if (!force && now - lastLoaded < 480000) {
       return;
     }
 
@@ -621,7 +621,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         setSystemUsers(list);
         try { localStorage.setItem('angus_admin_users', JSON.stringify(list)); } catch {}
       } else if (tab === 'products') {
-        const res = await fetch(`/api/products?force=true`);
+        const res = await fetch(`/api/products${force ? '?force=true' : ''}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.products)) {

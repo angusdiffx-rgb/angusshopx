@@ -50,6 +50,22 @@ export const InventoryView: React.FC = () => {
     const cacheKey = `user_inventory_${user.uid}`;
     const cacheTimeKey = `user_inventory_time_${user.uid}`;
     const now = Date.now();
+    const lastTime = Number(sessionStorage.getItem(cacheTimeKey) || 0);
+
+    // 1. If not forced and cached within 8 minutes, use cached items
+    if (!force && now - lastTime < 8 * 60 * 1000) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setItems(parsed);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+    }
 
     // Check recent delivered items from checkout storage first for zero-delay instant render
     try {
@@ -70,36 +86,40 @@ export const InventoryView: React.FC = () => {
 
     try {
       let list: InventoryItem[] = [];
+      let apiSucceeded = false;
 
       // 1. Fetch from server API first (which contains inMemoryInventory + fresh Firestore data)
       try {
         const res = await fetch(`/api/inventory?uid=${user.uid}`);
         if (res.ok) {
           const apiData = await res.json();
-          if (Array.isArray(apiData.items) && apiData.items.length > 0) {
+          if (Array.isArray(apiData.items)) {
             list = apiData.items;
+            apiSucceeded = true;
           }
         }
       } catch (e) {
         console.warn('API inventory fetch error:', e);
       }
 
-      // 2. Also query Firestore collection 'inventory'
-      try {
-        const q = query(
-          collection(db, 'inventory'),
-          where('uid', '==', user.uid),
-          limit(displayLimit)
-        );
-        const snapshot = await getDocsSmart(q);
-        snapshot.forEach((d: any) => {
-          const dData = { id: d.id, ...(d.data() as InventoryItem) };
-          if (!list.some(it => (it.id && it.id === dData.id) || (it.inventoryId && it.inventoryId === dData.inventoryId))) {
-            list.push(dData);
-          }
-        });
-      } catch (err) {
-        console.warn('Inventory fetch firestore notice:', err);
+      // 2. Query direct Firestore ONLY if server API completely failed (offline/network error)
+      if (!apiSucceeded) {
+        try {
+          const q = query(
+            collection(db, 'inventory'),
+            where('uid', '==', user.uid),
+            limit(displayLimit)
+          );
+          const snapshot = await getDocsSmart(q);
+          snapshot.forEach((d: any) => {
+            const dData = { id: d.id, ...(d.data() as InventoryItem) };
+            if (!list.some(it => (it.id && it.id === dData.id) || (it.inventoryId && it.inventoryId === dData.inventoryId))) {
+              list.push(dData);
+            }
+          });
+        } catch (err) {
+          console.warn('Inventory fetch firestore notice:', err);
+        }
       }
 
       // 3. Merge with any recent items from checkout in localStorage

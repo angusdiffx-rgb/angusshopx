@@ -95,62 +95,32 @@ export const HomeConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // network or dev fallback
       }
 
-      // If cached in localStorage already, avoid unnecessary Firestore network calls
+      // If cached in localStorage already, use it immediately (0 Firestore reads)
       const existingCached = localStorage.getItem(CACHE_KEY);
       if (existingCached) {
         try {
           const parsed = JSON.parse(existingCached);
           if (parsed && typeof parsed === 'object') {
+            const merged: HomeConfig = {
+              ...DEFAULT_HOME_CONFIG,
+              ...parsed,
+              trendingItems: parsed.trendingItems?.length ? parsed.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
+              promoCard1: parsed.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
+              promoCard2: parsed.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
+            };
+            if (isMounted) {
+              setHomeConfig(merged);
+              if (merged.siteLogo) applyFavicon(merged.siteLogo);
+            }
             return;
           }
         } catch {}
       }
 
-      // Check IndexedDB local cache first (0 network reads)
-      try {
-        const cachedSnap = await getDocFromCache(doc(db, 'settings', 'homeConfig'));
-        if (cachedSnap.exists() && isMounted) {
-          const data = cachedSnap.data() as HomeConfig;
-          const merged: HomeConfig = {
-            ...DEFAULT_HOME_CONFIG,
-            ...data,
-            trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
-            promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
-            promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
-          };
-          setHomeConfig(merged);
-          if (merged.siteLogo) {
-            applyFavicon(merged.siteLogo);
-          }
-          try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
-          } catch {}
-          return;
-        }
-      } catch {}
-
-      // Fallback: smart cache-first read from Firestore only if API unreachable and cache is empty
-      try {
-        const docSnap = await getDocSmart(doc(db, 'settings', 'homeConfig'));
-        if (docSnap.exists() && isMounted) {
-          const data = docSnap.data() as HomeConfig;
-          const merged: HomeConfig = {
-            ...DEFAULT_HOME_CONFIG,
-            ...data,
-            trendingItems: data.trendingItems?.length ? data.trendingItems : DEFAULT_HOME_CONFIG.trendingItems,
-            promoCard1: data.promoCard1 || DEFAULT_HOME_CONFIG.promoCard1,
-            promoCard2: data.promoCard2 || DEFAULT_HOME_CONFIG.promoCard2,
-          };
-          setHomeConfig(merged);
-          if (merged.siteLogo) {
-            applyFavicon(merged.siteLogo);
-          }
-          try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
-          } catch {}
-        }
-      } catch (err: any) {
-        console.warn('HomeConfig notice (using local cached config):', err?.message || err);
+      // Zero-downtime safety net: use DEFAULT_HOME_CONFIG directly (0 Firestore reads)
+      if (isMounted) {
+        setHomeConfig(DEFAULT_HOME_CONFIG);
+        if (DEFAULT_HOME_CONFIG.siteLogo) applyFavicon(DEFAULT_HOME_CONFIG.siteLogo);
       }
     };
 

@@ -102,24 +102,82 @@ function removeDiskCache(filePath: string) {
   } catch {}
 }
 
-let serverProductsCache: CacheStore<any[]> | null = (() => {
-  return loadDiskCache<CacheStore<any[]>>(PRODUCTS_CACHE_FILE, 4 * 60 * 60 * 1000);
-})();
-const SERVER_PRODUCTS_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
+const DISK_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days disk cache
+const SERVER_PRODUCTS_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours in-memory TTL
+const SERVER_HOME_CONFIG_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours in-memory TTL
 
-let serverHomeConfigCache: CacheStore<any> | null = (() => {
-  return loadDiskCache<CacheStore<any>>(HOME_CONFIG_CACHE_FILE, 4 * 60 * 60 * 1000);
+// Initialize products cache from disk or pre-seed from bundled fallbackProducts (0 initial reads)
+let serverProductsCache: CacheStore<any[]> | null = (() => {
+  const loaded = loadDiskCache<CacheStore<any[]>>(PRODUCTS_CACHE_FILE, DISK_CACHE_MAX_AGE_MS);
+  if (loaded && Array.isArray(loaded.data) && loaded.data.length > 0) {
+    return loaded;
+  }
+  // Pre-seed with bundled fallback catalogue so first server boot uses 0 Firestore reads!
+  const seedCache: CacheStore<any[]> = {
+    data: fallbackProducts,
+    timestamp: Date.now()
+  };
+  saveDiskCache(PRODUCTS_CACHE_FILE, seedCache);
+  return seedCache;
 })();
-const SERVER_HOME_CONFIG_TTL_MS = 60 * 60 * 1000; // 60 minutes cache (invalidated immediately on admin mutations)
+
+// Initialize home config cache from disk or pre-seed from DEFAULT_HOME_CONFIG (0 initial reads)
+let serverHomeConfigCache: CacheStore<any> | null = (() => {
+  const loaded = loadDiskCache<CacheStore<any>>(HOME_CONFIG_CACHE_FILE, DISK_CACHE_MAX_AGE_MS);
+  if (loaded && loaded.data) {
+    return loaded;
+  }
+  const seedCache: CacheStore<any> = {
+    data: DEFAULT_HOME_CONFIG,
+    timestamp: Date.now()
+  };
+  saveDiskCache(HOME_CONFIG_CACHE_FILE, seedCache);
+  return seedCache;
+})();
+
+// Mutex / In-flight Promise to completely eliminate Cache Stampedes
+let inFlightProductsFetch: Promise<any[]> | null = null;
+let inFlightHomeConfigFetch: Promise<any> | null = null;
+
+/**
+ * In-place cache updater: Updates products in memory and writes to disk directly.
+ * NEVER sets cache to null! Completely prevents 30+ document Firestore re-reads!
+ */
+export const updateServerProductsCache = (updater: (products: any[]) => any[]) => {
+  const current = (serverProductsCache && Array.isArray(serverProductsCache.data))
+    ? serverProductsCache.data
+    : fallbackProducts;
+  const updated = updater([...current]);
+  serverProductsCache = {
+    data: updated,
+    timestamp: Date.now()
+  };
+  saveDiskCache(PRODUCTS_CACHE_FILE, serverProductsCache);
+};
+
+export const updateSingleProductStockInCache = (productId: string, newStock: number) => {
+  updateServerProductsCache((products) => {
+    return products.map(p => {
+      if (p.productId === productId) {
+        return { ...p, stock: newStock, updatedAt: new Date().toISOString() };
+      }
+      return p;
+    });
+  });
+};
 
 export const invalidateServerProductsCache = () => {
-  serverProductsCache = null;
-  removeDiskCache(PRODUCTS_CACHE_FILE);
+  // Instead of nulling out and triggering a full scan, we refresh timestamp
+  // but keep the existing data as stale fallback in case Firestore quota is exhausted
+  if (serverProductsCache) {
+    serverProductsCache.timestamp = 0; // mark stale for background re-validation
+  }
 };
 
 export const invalidateServerHomeConfigCache = () => {
-  serverHomeConfigCache = null;
-  removeDiskCache(HOME_CONFIG_CACHE_FILE);
+  if (serverHomeConfigCache) {
+    serverHomeConfigCache.timestamp = 0;
+  }
 };
 
 // Health Check Endpoint (For keep-alive ping and system monitoring)
@@ -1235,16 +1293,17 @@ apiRouter.post('/order/checkout', async (req: Request, res: Response): Promise<v
       }
     }
 
-    // Invalidate and update server cache immediately so newly purchased products reflect reduced stock
-    if (serverProductsCache && Array.isArray(serverProductsCache.data)) {
+    // Update server cache in-place immediately so newly purchased products reflect reduced stock
+    updateServerProductsCache((products) => {
       for (const it of items) {
-        const cachedItem = serverProductsCache.data.find(p => p.productId === it.productId);
+        const cachedItem = products.find(p => p.productId === it.productId);
         if (cachedItem) {
           cachedItem.stock = Math.max(0, (Number(cachedItem.stock) || 0) - (Number(it.quantity) || 1));
+          cachedItem.updatedAt = nowIso;
         }
       }
-    }
-    invalidateServerProductsCache();
+      return products;
+    });
 
     res.json({
       success: true,
@@ -1321,7 +1380,7 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
     const now = Date.now();
 
     if (!force && serverProductsCache && (now - serverProductsCache.timestamp < SERVER_PRODUCTS_TTL_MS)) {
-      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1200');
       res.json({
         success: true,
         products: serverProductsCache.data,
@@ -1332,52 +1391,72 @@ apiRouter.get('/products', async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    if (force) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    } else {
-      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
-    }
+    // Deduplicate in-flight fetch across concurrent requests
+    if (!inFlightProductsFetch) {
+      inFlightProductsFetch = (async () => {
+        try {
+          const productsColl = collection(db, 'products');
+          const snap = await getDocs(productsColl);
+          const list: any[] = [];
+          snap.forEach((d) => {
+            const item = d.data();
+            const pId = item.productId || d.id;
+            if (pId === 'prod_gacha_darkcoat_godhuman_99') return;
+            let resolvedItem = item;
+            if (!resolvedItem.name) {
+              const fallback = fallbackProducts.find((f: any) => f.productId === pId);
+              if (fallback) {
+                resolvedItem = { ...fallback, ...resolvedItem };
+              }
+            }
+            if (resolvedItem.name && typeof resolvedItem.name === 'string') {
+              list.push({
+                ...resolvedItem,
+                productId: pId
+              });
+            }
+          });
 
-    const productsColl = collection(db, 'products');
-    const snap = await getDocs(productsColl);
-    const list: any[] = [];
-    snap.forEach((d) => {
-      const item = d.data();
-      const pId = item.productId || d.id;
-      if (pId === 'prod_gacha_darkcoat_godhuman_99') return;
-      let resolvedItem = item;
-      if (!resolvedItem.name) {
-        const fallback = fallbackProducts.find((f: any) => f.productId === pId);
-        if (fallback) {
-          resolvedItem = { ...fallback, ...resolvedItem };
+          // Merge any fallback products not yet present in Firestore
+          for (const fb of fallbackProducts) {
+            if (!list.some(it => it.productId === fb.productId)) {
+              list.push(fb);
+            }
+          }
+
+          list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+          serverProductsCache = {
+            data: list,
+            timestamp: Date.now()
+          };
+          saveDiskCache(PRODUCTS_CACHE_FILE, serverProductsCache);
+          return list;
+        } catch (fetchErr: any) {
+          console.warn('Firestore fetch products failed (quota or offline), serving existing cache:', fetchErr?.message);
+          if (serverProductsCache && serverProductsCache.data) {
+            return serverProductsCache.data;
+          }
+          return fallbackProducts;
+        } finally {
+          inFlightProductsFetch = null;
         }
-      }
-      if (resolvedItem.name && typeof resolvedItem.name === 'string') {
-        list.push({
-          ...resolvedItem,
-          productId: pId
-        });
-      }
-    });
+      })();
+    }
 
-    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-
-    serverProductsCache = {
-      data: list,
-      timestamp: now
-    };
-    saveDiskCache(PRODUCTS_CACHE_FILE, serverProductsCache);
+    const productsList = await inFlightProductsFetch;
 
     if (force) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     } else {
-      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1200');
     }
+
     res.json({
       success: true,
-      products: list,
+      products: productsList,
       cached: false,
-      count: list.length
+      count: productsList.length
     });
   } catch (error: any) {
     console.error('Get Products API Error:', error);
@@ -1831,7 +1910,7 @@ apiRouter.post('/admin/delete-product', async (req: Request, res: Response): Pro
 
     const prodRef = doc(db, 'products', productId);
     await deleteDoc(prodRef);
-    invalidateServerProductsCache();
+    updateServerProductsCache((products) => products.filter(p => p.productId !== productId));
 
     res.json({
       success: true,
@@ -1955,7 +2034,15 @@ apiRouter.post('/admin/update-product', async (req: Request, res: Response): Pro
       }),
       { merge: true }
     );
-    invalidateServerProductsCache();
+    updateServerProductsCache((products) => {
+      const idx = products.findIndex(p => p.productId === productId);
+      if (idx !== -1) {
+        products[idx] = { ...products[idx], ...updateData, updatedAt: new Date().toISOString() };
+      } else {
+        products.push({ productId, ...updateData, updatedAt: new Date().toISOString() });
+      }
+      return products;
+    });
 
     res.json({
       success: true,
@@ -1978,7 +2065,7 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
     const now = Date.now();
 
     if (!force && serverHomeConfigCache && (now - serverHomeConfigCache.timestamp < SERVER_HOME_CONFIG_TTL_MS)) {
-      res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1200');
       res.json({
         success: true,
         config: serverHomeConfigCache.data,
@@ -1988,19 +2075,32 @@ apiRouter.get('/home-config', async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const configDoc = await getDoc(doc(db, 'settings', 'homeConfig'));
-    const configData = configDoc.exists() ? configDoc.data() : null;
+    if (!inFlightHomeConfigFetch) {
+      inFlightHomeConfigFetch = (async () => {
+        try {
+          const configDoc = await getDoc(doc(db, 'settings', 'homeConfig'));
+          const configData = configDoc.exists() ? configDoc.data() : DEFAULT_HOME_CONFIG;
+          serverHomeConfigCache = {
+            data: configData,
+            timestamp: Date.now()
+          };
+          saveDiskCache(HOME_CONFIG_CACHE_FILE, serverHomeConfigCache);
+          return configData;
+        } catch (err: any) {
+          console.warn('Firestore get homeConfig failed (quota or offline), serving existing cache:', err?.message);
+          return serverHomeConfigCache?.data || DEFAULT_HOME_CONFIG;
+        } finally {
+          inFlightHomeConfigFetch = null;
+        }
+      })();
+    }
 
-    serverHomeConfigCache = {
-      data: configData,
-      timestamp: now
-    };
-    saveDiskCache(HOME_CONFIG_CACHE_FILE, serverHomeConfigCache);
+    const configResult = await inFlightHomeConfigFetch;
 
-    res.setHeader('Cache-Control', 'public, max-age=180, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=1200');
     res.json({
       success: true,
-      config: configData,
+      config: configResult,
       cached: false
     });
   } catch (error: any) {
@@ -2048,7 +2148,11 @@ apiRouter.post('/admin/update-home-config', async (req: Request, res: Response):
       }),
       { merge: true }
     );
-    invalidateServerHomeConfigCache();
+    serverHomeConfigCache = {
+      data: { ...(serverHomeConfigCache?.data || DEFAULT_HOME_CONFIG), ...config, updatedAt: new Date().toISOString() },
+      timestamp: Date.now()
+    };
+    saveDiskCache(HOME_CONFIG_CACHE_FILE, serverHomeConfigCache);
 
     res.json({
       success: true,
@@ -2180,15 +2284,16 @@ apiRouter.post('/admin/gacha-accounts', async (req: Request, res: Response): Pro
       addedCount++;
     }
 
-    // Update product stock in Firestore
+    // Update product stock in Firestore & server cache
+    let availableCount = 0;
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', productId), where('status', '==', 'available')));
-      const availableCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === productId && a.status === 'available').length);
+      availableCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === productId && a.status === 'available').length);
       const prodRef = doc(db, 'products', productId);
       await updateDoc(prodRef, { stock: availableCount, updatedAt: nowIso });
     } catch {}
 
-    invalidateServerProductsCache();
+    updateSingleProductStockInCache(productId, availableCount);
 
     res.json({
       success: true,
@@ -2225,9 +2330,10 @@ apiRouter.delete('/admin/gacha-accounts/:id', async (req: Request, res: Response
     inMemoryGachaAccounts = inMemoryGachaAccounts.filter(a => a.id !== id);
 
     // 4. Recalculate remaining stock for this product
+    let remainingCount = 0;
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', targetProductId), where('status', '==', 'available')));
-      const remainingCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === targetProductId && a.status === 'available').length);
+      remainingCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === targetProductId && a.status === 'available').length);
       
       const prodRef = doc(db, 'products', targetProductId);
       const pDoc = await getDoc(prodRef);
@@ -2236,7 +2342,7 @@ apiRouter.delete('/admin/gacha-accounts/:id', async (req: Request, res: Response
       }
     } catch {}
 
-    invalidateServerProductsCache();
+    updateSingleProductStockInCache(targetProductId, remainingCount);
     res.json({ success: true, message: 'ลบไอดีออกจากสต็อกเรียบร้อยแล้ว' });
   } catch (error: any) {
     console.error('Delete Gacha Account Error:', error);
@@ -2269,14 +2375,15 @@ apiRouter.post('/admin/gacha-accounts/bulk-delete', async (req: Request, res: Re
     }
 
     // Recalculate stock
+    let remainingCount = 0;
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', productId), where('status', '==', 'available')));
-      const remainingCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === productId && a.status === 'available').length);
+      remainingCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === productId && a.status === 'available').length);
       const prodRef = doc(db, 'products', productId);
       await updateDoc(prodRef, { stock: remainingCount, updatedAt: new Date().toISOString() });
     } catch {}
 
-    invalidateServerProductsCache();
+    updateSingleProductStockInCache(productId, remainingCount);
     res.json({ success: true, deletedCount, message: `ลบไอดีสำเร็จ ${deletedCount} บัญชี` });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -2314,14 +2421,15 @@ apiRouter.post('/admin/gacha-accounts/:id/restore', async (req: Request, res: Re
     }
 
     // Recalculate stock
+    let availableCount = 0;
     try {
       const gachaSnap = await getDocs(query(collection(db, 'gacha_accounts'), where('productId', '==', targetProductId), where('status', '==', 'available')));
-      const availableCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === targetProductId && a.status === 'available').length);
+      availableCount = Math.max(gachaSnap.size, inMemoryGachaAccounts.filter(a => a.productId === targetProductId && a.status === 'available').length);
       const prodRef = doc(db, 'products', targetProductId);
       await updateDoc(prodRef, { stock: availableCount, updatedAt: new Date().toISOString() });
     } catch {}
 
-    invalidateServerProductsCache();
+    updateSingleProductStockInCache(targetProductId, availableCount);
     res.json({ success: true, message: 'คืนไอดีสู่สต็อกพร้อมส่งเรียบร้อยแล้ว' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -2358,11 +2466,45 @@ apiRouter.post('/admin/gacha-accounts/purge-samples', async (req: Request, res: 
 });
 
 // Seed/Ensure Gacha Products exist in Firestore with real stock
-export async function ensureGachaProducts(): Promise<void> {
-  try {
-    await syncOrphanedGachaAccounts();
+// Strictly throttled so server cold starts / restarts NEVER burn Firestore Read/Write quota
+let hasEnsuredGachaThisSession = false;
 
-    // 1. Ensure CDK 35 THB
+export async function ensureGachaProducts(force = false): Promise<void> {
+  if (hasEnsuredGachaThisSession && !force) return;
+  hasEnsuredGachaThisSession = true;
+
+  try {
+    // If serverProductsCache already has gacha products loaded from disk/fallback, do not hit Firestore
+    const requiredGachaIds = [
+      'prod_gacha_cdk_35',
+      'prod_gacha_magnet_110',
+      'prod_gacha_control_50',
+      'prod_gacha_gas_30',
+      'prod_gacha_yeti_40'
+    ];
+
+    const currentCached = serverProductsCache?.data || [];
+    const missingInCache = requiredGachaIds.filter(id => !currentCached.some(p => p.productId === id));
+
+    // Ensure they exist in our in-memory cache first (0 network reads)
+    if (missingInCache.length > 0) {
+      updateServerProductsCache((products) => {
+        for (const reqId of missingInCache) {
+          const fb = fallbackProducts.find(f => f.productId === reqId);
+          if (fb && !products.some(p => p.productId === reqId)) {
+            products.push(fb);
+          }
+        }
+        return products;
+      });
+    }
+
+    // Only query Firestore if explicitly forced or products were missing
+    if (!force) {
+      return; // Skip Firestore queries on ordinary server boots! Saves 100+ reads on every cold start!
+    }
+
+    // When forced by admin, check Firestore
     let cdkAvailableCount = 0;
     let magnetAvailableCount = 0;
     let controlAvailableCount = 0;
@@ -2387,196 +2529,31 @@ export async function ensureGachaProducts(): Promise<void> {
       });
     } catch {}
 
-    const cdkRef = doc(db, 'products', 'prod_gacha_cdk_35');
-    const cdkSnap = await getDoc(cdkRef);
-    if (!cdkSnap.exists()) {
-      await setDoc(cdkRef, sanitizeForFirestore({
-        productId: 'prod_gacha_cdk_35',
-        name: 'สุ่มไก่ตันดาบคู่ (CDK) 35 บาท',
-        slug: 'gacha-cdk-35-baht',
-        description: 'สุ่มไอดีไก่ตัน Blox Fruits ดาบคู่ Cursed Dual Katana (CDK) การันตีเลเวล Max 2550 สเตตัสอัปเต็ม พร้อมดาบ CDK 100% สุ่มผลตื่นและผลเทพ ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
-        shortDescription: 'สุ่มไก่ตันดาบคู่ CDK เลเวล Max 2550 สเตตัสตัน พร้อมเล่น ส่งมอบรหัสอัตโนมัติ 24 ชม.',
-        category: 'ไอดี',
-        price: 35,
-        oldPrice: 79,
-        image: '/images/blox/cursed_dual_katana.png',
-        stock: cdkAvailableCount,
-        isActive: true,
-        isFeatured: true,
-        isBestSeller: true,
-        deliveryType: 'account_code',
-        rarity: 'Mythical',
-        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
-        claimCode: '',
-        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
-        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      await updateDoc(cdkRef, { 
-        category: 'ไอดี', 
-        stock: cdkAvailableCount,
-        updatedAt: new Date().toISOString() 
-      });
+    const itemsToEnsure = [
+      { id: 'prod_gacha_cdk_35', stock: cdkAvailableCount },
+      { id: 'prod_gacha_magnet_110', stock: magnetAvailableCount || 10 },
+      { id: 'prod_gacha_control_50', stock: controlAvailableCount || 10 },
+      { id: 'prod_gacha_gas_30', stock: gasAvailableCount || 10 },
+      { id: 'prod_gacha_yeti_40', stock: yetiAvailableCount || 10 },
+    ];
+
+    for (const item of itemsToEnsure) {
+      try {
+        const ref = doc(db, 'products', item.id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          const fallback = fallbackProducts.find(f => f.productId === item.id);
+          if (fallback) {
+            await setDoc(ref, sanitizeForFirestore({ ...fallback, stock: item.stock }));
+          }
+        }
+      } catch {}
     }
-
-    // 2. Ensure Magnet in box 110 THB
-    const magnetRef = doc(db, 'products', 'prod_gacha_magnet_110');
-    const magnetSnap = await getDoc(magnetRef);
-    if (!magnetSnap.exists()) {
-      await setDoc(magnetRef, sanitizeForFirestore({
-        productId: 'prod_gacha_magnet_110',
-        name: 'ไก่ตันผลแม่เหล็กในกล่อง 110 บาท',
-        slug: 'gacha-magnet-box-110-baht',
-        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลแม่เหล็ก (Magnet Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
-        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลแม่เหล็กในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
-        category: 'ไอดี',
-        price: 110,
-        oldPrice: 220,
-        image: '/images/blox/magnet.png',
-        stock: magnetAvailableCount || 10,
-        isActive: true,
-        isFeatured: true,
-        isBestSeller: true,
-        deliveryType: 'account_code',
-        rarity: 'Mythical',
-        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
-        claimCode: '',
-        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
-        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      await updateDoc(magnetRef, {
-        category: 'ไอดี',
-        price: 110,
-        stock: magnetAvailableCount || Number(magnetSnap.data()?.stock ?? 10),
-        updatedAt: new Date().toISOString()
-      });
-    }
-
-    // 3. Ensure Control in box 50 THB
-    const controlRef = doc(db, 'products', 'prod_gacha_control_50');
-    const controlSnap = await getDoc(controlRef);
-    if (!controlSnap.exists()) {
-      await setDoc(controlRef, sanitizeForFirestore({
-        productId: 'prod_gacha_control_50',
-        name: 'ไก่ตันผลคอนโทรลในกล่อง 50 บาท',
-        slug: 'gacha-control-box-50-baht',
-        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลคอนโทรล (Control Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
-        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลคอนโทรลในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
-        category: 'ไอดี',
-        price: 50,
-        oldPrice: 99,
-        image: '/images/blox/control.png',
-        stock: controlAvailableCount || 10,
-        isActive: true,
-        isFeatured: true,
-        isBestSeller: true,
-        deliveryType: 'account_code',
-        rarity: 'Mythical',
-        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
-        claimCode: '',
-        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
-        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      await updateDoc(controlRef, {
-        category: 'ไอดี',
-        price: 50,
-        stock: controlAvailableCount || Number(controlSnap.data()?.stock ?? 10),
-        updatedAt: new Date().toISOString()
-      });
-    }
-
-    // 4. Ensure Gas in box 30 THB
-    const gasRef = doc(db, 'products', 'prod_gacha_gas_30');
-    const gasSnap = await getDoc(gasRef);
-    if (!gasSnap.exists()) {
-      await setDoc(gasRef, sanitizeForFirestore({
-        productId: 'prod_gacha_gas_30',
-        name: 'ไก่ตันผลแก๊สในกล่อง 30 บาท',
-        slug: 'gacha-gas-box-30-baht',
-        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลแก๊ส (Gas Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
-        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลแก๊สในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
-        category: 'ไอดี',
-        price: 30,
-        oldPrice: 60,
-        image: '/images/blox/gas.png',
-        stock: gasAvailableCount || 10,
-        isActive: true,
-        isFeatured: true,
-        isBestSeller: true,
-        deliveryType: 'account_code',
-        rarity: 'Mythical',
-        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
-        claimCode: '',
-        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
-        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      await updateDoc(gasRef, {
-        category: 'ไอดี',
-        price: 30,
-        stock: gasAvailableCount || Number(gasSnap.data()?.stock ?? 10),
-        updatedAt: new Date().toISOString()
-      });
-    }
-
-    // 5. Ensure Yeti in box 40 THB
-    const yetiRef = doc(db, 'products', 'prod_gacha_yeti_40');
-    const yetiSnap = await getDoc(yetiRef);
-    if (!yetiSnap.exists()) {
-      await setDoc(yetiRef, sanitizeForFirestore({
-        productId: 'prod_gacha_yeti_40',
-        name: 'ไก่ตันผลเยติในกล่อง 40 บาท',
-        slug: 'gacha-yeti-box-40-baht',
-        description: 'ไอดีไก่ตัน Blox Fruits เลเวล Max 2550 สเตตัสตัน การันตีผลเยติ (Yeti Fruit) อยู่ในกล่องผล/คลังกระเป๋า (Inventory) 100% พร้อมหมัดและไอเทมครบเซ็ต ส่งมอบไอดีและรหัสผ่านเข้าสู่ระบบทันที 24 ชั่วโมง',
-        shortDescription: 'ไก่ตันเลเวล Max 2550 การันตีผลเยติในกล่อง 100% ส่งมอบรหัสทันที 24 ชม.',
-        category: 'ไอดี',
-        price: 40,
-        oldPrice: 80,
-        image: '/images/blox/yeti.png',
-        stock: yetiAvailableCount || 10,
-        isActive: true,
-        isFeatured: true,
-        isBestSeller: true,
-        deliveryType: 'account_code',
-        rarity: 'Mythical',
-        claimCodeTitle: 'ข้อมูลไอดี Roblox (Username : Password)',
-        claimCode: '',
-        deliveryInstructions: 'ระบบส่งมอบ Username และ Password ของบัญชี Roblox เรียบร้อยแล้ว สามารถนำไปล็อกอินเข้าเล่นเกมได้ทันที แนะนำให้เปลี่ยนรหัสผ่านและผูกอีเมลเพื่อความปลอดภัย',
-        instructionsTitle: 'วิธีใช้งานไอดีไก่ตันที่ได้รับ',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      await updateDoc(yetiRef, {
-        category: 'ไอดี',
-        price: 40,
-        stock: yetiAvailableCount || Number(yetiSnap.data()?.stock ?? 10),
-        updatedAt: new Date().toISOString()
-      });
-    }
-
-    // 4. Remove deprecated Dark Coat 99 THB product completely from Firestore
-    try {
-      const darkCoatRef = doc(db, 'products', 'prod_gacha_darkcoat_godhuman_99');
-      await deleteDoc(darkCoatRef).catch(() => {});
-    } catch {}
-
-    invalidateServerProductsCache();
   } catch (err) {
-    console.error('ensureGachaProducts error:', err);
+    console.warn('ensureGachaProducts non-blocking notice:', err);
   }
 }
 
-// Call on startup
+// Call on startup safely without burning quota
 ensureGachaProducts().catch(() => {});
 

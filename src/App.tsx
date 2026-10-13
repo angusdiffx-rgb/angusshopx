@@ -229,71 +229,24 @@ function MainShop() {
         console.warn('API /api/products notice:', err);
       }
 
-      // Step 2: API unavailable — try IndexedDB local Firestore cache (0 network reads)
+      // Step 2: If server API is cold or starting, serve from localStorage cache immediately (0 Firestore reads)
       try {
-        const cachedSnap = await getDocsFromCache(collection(db, 'products'));
-        if (!cachedSnap.empty && isMounted) {
-          const list: Product[] = [];
-          cachedSnap.forEach((d) => {
-            const item = d.data() as Product;
-            list.push({ ...item, productId: item.productId || d.id });
-          });
-          list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-          const cleanList = deduplicateProducts(list);
-          if (isMounted) setProducts(cleanList);
-          try {
-            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
-          } catch {}
-          return;
+        const cachedStr = localStorage.getItem(PRODUCTS_CACHE_KEY);
+        if (cachedStr) {
+          const parsed = JSON.parse(cachedStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const cleanList = deduplicateProducts(parsed);
+            if (isMounted) setProducts(cleanList);
+            return;
+          }
         }
-      } catch {
-        // IndexedDB cache miss
-      }
+      } catch {}
 
-      // Step 2.5: If localStorage already has valid products, serve immediately to preserve Firestore quota
-      if (!force) {
-        try {
-          const cachedStr = localStorage.getItem(PRODUCTS_CACHE_KEY);
-          if (cachedStr) {
-            const parsed = JSON.parse(cachedStr);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              const cleanList = deduplicateProducts(parsed);
-              if (isMounted) setProducts(cleanList);
-              return;
-            }
-          }
-        } catch {}
-      }
-
-      // Step 3: Smart fetch (checks IndexedDB first, only network if needed)
-      try {
-        const snap = await getDocsSmart(collection(db, 'products'));
-        if (!snap.empty && isMounted) {
-          const list: Product[] = [];
-          snap.forEach((d: any) => {
-            const item = d.data() as Product;
-            list.push({ ...item, productId: item.productId || d.id });
-          });
-          list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-          const cleanList = deduplicateProducts(list);
-          if (isMounted) {
-            setProducts(cleanList);
-            setQuotaExceeded(false);
-          }
-          try {
-            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(cleanList));
-          } catch {}
-        }
-      } catch (fbErr: any) {
-        if (isQuotaExceededError(fbErr)) {
-          if (isMounted) setQuotaExceeded(true);
-        }
-        // Step 4: Zero-downtime safety net — show bundled fallback if nothing else loaded
-        if (isMounted) {
-          const safeFallback = deduplicateProducts(fallbackProducts || initialProducts || []);
-          if (safeFallback.length > 0) {
-            setProducts(prev => prev.length > 0 ? prev : safeFallback);
-          }
+      // Step 3: Zero-downtime safety net — show bundled fallback catalogue directly (0 Firestore reads)
+      if (isMounted) {
+        const safeFallback = deduplicateProducts(fallbackProducts || initialProducts || []);
+        if (safeFallback.length > 0) {
+          setProducts(safeFallback);
         }
       }
     };
